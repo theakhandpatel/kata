@@ -13,6 +13,48 @@ package hints
 
 // Table maps chapter number -> case id -> the three rungs.
 var Table = map[string]map[string][3]string{
+	"04": {
+		"loops-until-done": {
+			"A one-hop program handles one tool. A loop handles a task.",
+			"Wrap the request and the tool batch in a for loop; decide to continue from the reply, not from a counter.",
+			"Continue while the assistant message has tool calls. Append the message, append one result per call, then ask again.",
+		},
+		"preserves-result-order": {
+			"Two calls in one message are one batch, and the conversation must mirror it.",
+			"Append results in the same order as the calls, each carrying its own id.",
+			"Iterate msg.ToolCalls twice: once to announce, once to execute and append. Sorting or parallel collection loses the order.",
+		},
+		"step-cap-stops": {
+			"A model can ask for tools forever, so the loop needs a ceiling.",
+			"Count requests, and when the count reaches the limit, stop and return an error.",
+			"Return an error wrapping a step-limit sentinel after N turns, and make main exit 1 so the failure is visible to a caller.",
+		},
+		"events-sequence": {
+			"An event stream is a sequence with rules, not a set of logs.",
+			"Emit turn_start, then the turn's events, then turn_end; emit agent_end exactly once, last.",
+			"Announce every tool_call before executing, then emit one tool_result per call with the same id, then turn_end, then agent_end.",
+		},
+		"events-text-deltas": {
+			"Collecting a reply into one message hides the stream.",
+			"Pass a callback into the provider and emit an event for every delta.",
+			"Stream(ctx, req, func(text string) { emit(Event{Type: EventText, Text: text}) }) and keep Chat as a wrapper that passes nil.",
+		},
+		"single-turn-no-tools": {
+			"A reply without tool calls is the end of the run.",
+			"Check for tool calls before looping again, not after.",
+			"If len(msg.ToolCalls) == 0, emit turn_end and agent_end, then return the message.",
+		},
+		"continues-after-tool-error": {
+			"A failed tool is information the model can act on.",
+			"Keep looping after an error result; only a transport failure ends the run.",
+			"Registry.Run already converts tool errors into results, so the loop needs no special case. Do not return on IsError.",
+		},
+		"turn-count-matches-requests": {
+			"The event stream makes a claim about what happened; the request log can check it.",
+			"Count one turn per model request, including the last one.",
+			"Emit agent_end with Turns set to the number of requests made, and compare it with the recorded requests.",
+		},
+	},
 	"03": {
 		"advertises-three-tools": {
 			"Registering a tool and advertising it are two steps, and only the second one is visible to the model.",
