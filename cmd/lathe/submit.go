@@ -224,7 +224,8 @@ func runChapterKind(root string, ch chapter, kind string) (bool, string, error) 
 	repPath := filepath.Join(os.TempDir(), fmt.Sprintf("lathe-report-%d.json", os.Getpid()))
 	defer os.Remove(repPath)
 
-	cmd := exec.Command("go", "test", "./chapters/"+ch.Slug+"/checks/", "-count=1", "-v")
+	cmd := exec.Command("go", "test", "-tags=lathe_checks", "-count=1", "-v",
+		"./chapters/"+ch.Slug+"/checks/")
 	cmd.Dir = workDir
 	cmd.Env = append(os.Environ(),
 		"NO_COLOR="+os.Getenv("NO_COLOR"),

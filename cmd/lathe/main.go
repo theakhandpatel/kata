@@ -49,6 +49,8 @@ func run(args []string) error {
 		return cmdList()
 	case "verify":
 		return cmdVerify(args[1:])
+	case "reset":
+		return cmdReset(args[1:])
 	case "progress", "p":
 		return cmdProgress()
 	case "help", "-h", "--help":
@@ -68,6 +70,7 @@ func usage() {
   lathe read [NN] [doc]       problem (default) | overview | example
   lathe hint NN <case-id>     the three-rung ladder for one case
   lathe verify                prove every chapter rejects its starter and accepts its reference
+  lathe reset [NN]            restore harness/ to the start of a chapter
   lathe list                  the arc, with what is written and what is passed
   lathe progress              summary
 

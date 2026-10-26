@@ -7,14 +7,12 @@ import (
 	"time"
 )
 
-// Meta-tests. The grader decides whether a learner passed, so a bug here
-// misgrades silently. This project already shipped one: a negated assertion
-// ("expect an error") passed against a blank stub, so an unstarted chapter
-// reported a green case.
+// Tests for the grader itself. A bug here misgrades every learner without any
+// visible symptom, so each failure mode the grader claims to handle has a test.
 //
-// The tests use Run, not Suite, because a failing Suite marks the calling test
-// failed. That is correct behaviour for a real chapter and useless for asserting
-// "this should fail".
+// The tests call Run, not Suite, because a failing Suite marks the calling test
+// failed. That is right for a real chapter and useless for asserting that a
+// suite should fail.
 
 func TestRunPassesWhenCasesPass(t *testing.T) {
 	rep := Run(t, "99", "synthetic", []Case{

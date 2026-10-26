@@ -1,3 +1,5 @@
+//go:build lathe_checks
+
 package checks
 
 import (

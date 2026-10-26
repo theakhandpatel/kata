@@ -188,11 +188,12 @@ crush/main.go:25 → crush/internal/cmd/root.go:188
     concurrently with a semaphore of 5; the rest run sequentially on the
     dispatcher goroutine (`:1690-1740`). Results are sorted back into call order
     (`:1803-1820`).
-11. The loop continues only when `ShouldContinue` is true:
+11. The loop continues when `ShouldContinue` is true and no `StopWhen`
+    condition fires. `ShouldContinue` is
     `len(stepToolCalls) > 0 && stepFinishReason == FinishReasonToolCalls &&
-    !hasStopTurn(toolResults)` (`fantasy@v0.45.1/agent.go:1828-1838`), plus
-    Crush's `StopWhen` conditions for context exhaustion and repeated tool calls
-    (`crush/internal/agent/agent.go:1108-1135`).
+    !hasStopTurn(toolResults)` (`fantasy@v0.45.1/agent.go:1828-1838`).
+    Crush's `StopWhen` conditions cover context exhaustion and repeated tool
+    calls (`crush/internal/agent/agent.go:1108-1135`).
 12. After `Stream` returns, Crush settles unanswered tool calls
     (`crush/internal/agent/settle.go:85`), optionally summarizes, removes the
     active request, publishes `RunComplete`, and re-enters `Run` for a queued
@@ -234,12 +235,14 @@ streaming deltas, with terminal updates flushing synchronously:
 slice (`:773`). The request is therefore a snapshot of the database, not a live
 view.
 
-One subtlety: the user row is created *after* `getSessionMessages` and
-`preparePrompt`, so it is **not** in `history` for the first request. It is
-passed separately as `Prompt` (`crush/internal/agent/agent.go:854`), and
-fantasy's `createPrompt` adds it as the leading user message. That is why the
-first request contains the prompt once, not twice. A naive port that appends
-the user message to both `history` and `Prompt` duplicates it.
+One subtlety: `getSessionMessages` reads the row set at
+`crush/internal/agent/agent.go:805`, the user row is created at `:819`, and
+`preparePrompt` builds `history` from the **earlier** `msgs` slice at `:831`.
+The new user row is therefore not in `history` for the first request. It is
+passed separately as `Prompt` (`:854`), and fantasy's `createPrompt` adds it as
+the leading user message. That is why the first request contains the prompt
+once, not twice. A naive port that appends the user message to both `history`
+and `Prompt` duplicates it.
 
 **One important repair:** `preparePrompt` collects all tool-call IDs from
 assistant rows, indexes every tool result by call ID, then re-emits each result
@@ -453,7 +456,7 @@ PiG has **two sources**, synchronized at message boundaries:
 
 - The `Agent` appends assistant and tool-result messages to its in-memory slice
   as the loop runs (`runTurn` → `appendAssistant`, `appendToolResult`).
-- The Session's `message_end` handler persists a copy: `persistMessage`
+- The Session's `message_end` handler persists the message: `persistMessage`
   (`coding/session.go:810`) → `AppendMessage` (`internal/codingagent/session.go:570`)
   → one JSON line.
 - On resume, branch, or compaction, `BuildContext` projects the entry chain into

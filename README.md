@@ -1,94 +1,33 @@
-# lathe
+# Lathe
 
-Build a coding-agent harness in Go, one chapter at a time, where every chapter
-tells you exactly what is wrong.
+Build a coding-agent harness in Go, with a grader that tells you what is broken.
 
-This is not a tutorial you read. It is a **graded build**: you edit `harness/`,
-run `lathe test 01`, and get a report that names the mechanism you got wrong —
-the way CodeCrafters does, but for something CodeCrafters cannot grade, because a
-model's output is random, slow, and paid for.
+Lathe is a course of eleven chapters and one local tool. You write the harness:
+the provider client, the tools, the loop, sessions, the context budget,
+steering, skills, subagents, and an MCP client. The tool runs your code against a
+scripted model and reports which claim failed and why.
 
-## The one idea
+```sh
+git clone <this repo> && cd lathe
+go build -o lathe ./cmd/lathe
 
-An agent is not testable. A harness is.
-
-So the course is built around a seam you implement in chapter 01:
-
-```go
-type Provider interface {
-    Chat(ctx context.Context, req Request) (Message, Usage, error)
-}
+./lathe                 # where you are, what to do next
+./lathe read 01         # the task for chapter 01
+./lathe submit 01       # compile, grade, report
 ```
 
-Everything above the seam — loop, tools, sessions, context budget, skills,
-subagents — is deterministic. `internal/fake` is a scripted
-OpenAI-compatible server that plays the model, so every check is offline, instant,
-free, and byte-precise.
+No account, no API key, no Docker, no network after the clone.
 
-That leaves exactly one thing that is genuinely hard to fake: a real model. So
-that is the one thing no chapter requires.
+## Why a grader
 
-## Run it
+A harness sits around a model that is random, slow, and paid for. That makes the
+obvious teaching method, "run it and see", useless: the answer changes each time
+and a failure costs money.
 
-```bash
-go build -o lathe ./cmd/lathe     # or: go run ./cmd/lathe ...
-
-./lathe list              # chapters + status
-./lathe test 01           # grade chapter 01
-./lathe hint 01 usage     # three-tier hint ladder for one case
-./lathe test 01 --solution   # grade the reference implementation
-./lathe progress          # the whole arc
-```
-
-Requires Go. No API key, no network, no Docker, no account.
-
-## The arc
-
-Ten chapters. Each one is a *falsifiable* claim about the harness you built.
-
-| # | Chapter | The claim you can prove |
-|---|---|---|
-| 01 | Talk to the model | request shape + SSE reassembly, byte-exact |
-| 02 | Tool calling | streamed `tool_call` fragments reassembled by index |
-| 03 | Tools that touch disk | `read`/`write`/`bash` honour schema, errors, truncation |
-| 04 | The agent loop | event log matches a grammar; no orphan `tool_result` |
-| 05 | Prompt assembly | `AGENTS.md` discovery, injection, attribution |
-| 06 | Sessions | JSONL append, replay, resume, idempotence |
-| 07 | Context budget & pruning | never exceeds budget; tool pairs never split; pruned content is marked, not vanished |
-| 08 | Interrupt & steering | abort mid-stream; queued message enters at the seam |
-| 09 | Skills | frontmatter discovery, lazy body load, args, stacking |
-| 10 | Subagent | child loop, isolated context, result returned |
-| 11 | MCP (advanced) | stdio JSON-RPC handshake, `tools/list` → `ToolDef`s, `tools/call` |
-
-## Deliberately out of scope
-
-Feature parity with [pi](https://github.com/earendil-works/pi) is not the goal and
-never was. The course teaches the *machine*, not every attachment. Skipped on
-purpose, with pointers instead of chapters:
-
-TUI · extension/plugin runtime · LSP · multi-provider fan-out beyond two
-wire formats · OAuth · images · RPC/SDK · packaging · telemetry.
-([crush](https://github.com/charmbracelet/crush) is the Go reference for most of
-those; [PiG](https://github.com/MichaelKinsy/PiG) is pi ported to Go line by
-line.)
-
-## Layout
-
-```
-harness/            ← the only place you edit
-internal/fake/      scripted OpenAI-compatible server (the seam's far side)
-internal/grader/    assertion engine: expected/actual, diff, Why, hints
-internal/hints/     the hint ladder for every case
-chapters/NN-*/      README.md (lesson) + checks/ (what "done" means)
-solutions/          reference implementations, cumulative, separate Go module
-cmd/lathe/          the runner
-```
-
-## How grading works
-
-Each chapter's `checks/` is an ordinary Go test that imports your `harness`
-package through the seam. Cases do not stop each other, so one run gives you the
-whole picture. A failed case prints four things:
+Lathe replaces the model with a scripted HTTP server and keeps the wire. You
+speak real Server-Sent Events to a real socket. Only the reply is fixed. So every
+check is instant, offline, and byte-precise, and a failure names the mechanism
+rather than showing a diff of prose.
 
 ```
   FAIL 04 surfaces a non-2xx response as *harness.HTTPError
@@ -101,15 +40,86 @@ whole picture. A failed case prints four things:
         more: lathe hint 01 http-error
 ```
 
-`why` is the mechanism, `expected`/`actual` is the evidence, `hint` is rung one
-of three. The solution never gates your progress; `--solution` runs in a
-throwaway copy of the repo and is not recorded.
+## The arc
 
-## Adding a chapter
+| # | Chapter | You prove |
+|---|---|---|
+| 01 | Talk to the model | request shape, SSE reassembly, framing, errors, cancellation |
+| 02 | Tool calling | tool-call fragments folded by index, ids omitted on continuations |
+| 03 | Tools that touch disk | `read`, `write`, `bash` honour the schema, errors, truncation |
+| 04 | The agent loop | event order, one result per call, clean termination |
+| 05 | Prompt assembly | `AGENTS.md` discovery and attribution |
+| 06 | Sessions | JSONL append, replay, resume, idempotence |
+| 07 | Context budget | a hard ceiling, no orphaned pairs, marked pruning, recall |
+| 08 | Steer and abort | abort mid-stream, a queued message entering at the seam |
+| 09 | Skills | frontmatter, lazy body load, arguments, stacking |
+| 10 | Subagent | fresh context, scoped tools, exactly one result |
+| 11 | MCP (advanced) | stdio JSON-RPC, initialize, `tools/list`, `tools/call` |
 
-1. `chapters/NN-slug/README.md` — the lesson, ending in a definition of done.
-2. `chapters/NN-slug/checks/chNN_test.go` — cases in the `grader.Suite` DSL.
-3. `internal/hints/hints.go` — three rungs per case.
-4. `solutions/chNN/` — only the files this chapter changes.
-5. `lathe test NN` fails; `lathe test NN --solution` passes. That pair is the
-   contract.
+Chapter 11 is optional. Chapters 01 to 04 give you a working harness you can
+point at Ollama or any OpenAI-compatible endpoint.
+
+## What each chapter contains
+
+| File | Read when | Contains |
+|---|---|---|
+| `overview.md` | before you start | how the mechanism works, with diagrams |
+| `problem.md` | at the keyboard | the task, the graded claims, the hint ladder |
+| `example.md` | after an attempt | a full annotated implementation |
+
+`problem.md` states every claim the verifier makes, by case id. If a claim and a
+case ever disagree, the case is correct and the page is a bug.
+
+## Commands
+
+```sh
+lathe                      status: current chapter, next action
+lathe submit [NN]          compile, grade, record
+lathe submit NN --solution grade the reference instead of your code
+lathe read [NN] [doc]      problem (default), overview, example
+lathe hint NN <case-id>    three rungs, from nudge to answer
+lathe list                 the arc, grouped into parts
+lathe progress             what passed, and when
+lathe verify               prove each chapter rejects its starter and accepts its reference
+lathe reset [NN]           restore harness/ from starter/
+```
+
+## How it works
+
+The grader imports your `harness` package and talks to it through one interface:
+
+```go
+type Provider interface {
+    Chat(ctx context.Context, req Request) (Message, Usage, error)
+}
+```
+
+Everything above that seam is deterministic, so it can be tested. The scripted
+server sits below it. Design notes, diagrams, and the grading pipeline are in
+[docs/architecture.md](docs/architecture.md). The chapter file contract is in
+[docs/chapter-format.md](docs/chapter-format.md).
+
+## Requirements
+
+Go 1.26 or newer. Nothing else. The reference harness uses only the standard
+library.
+
+## What Lathe is not
+
+Lathe teaches the machine, not every attachment. It does not ship a terminal UI,
+an extension runtime, an LSP client, provider authentication, image input, or a
+cloud runner. Chapter 11 covers MCP because the client is small enough to teach.
+For a full harness, read [pi](https://github.com/earendil-works/pi),
+[crush](https://github.com/charmbracelet/crush), and
+[PiG](https://github.com/MichaelKinsy/PiG).
+
+## Contributing
+
+A chapter is done when `lathe verify` is clean: its reference passes every case
+and its starter fails at least one. Hints are validated in both directions, so a
+case without a ladder fails the test suite. Prose follows
+[docs/writing-style.md](docs/writing-style.md).
+
+## License
+
+MIT. See [LICENSE](LICENSE).

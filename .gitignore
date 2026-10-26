@@ -1,4 +1,19 @@
-# learner progress and build output
-.lathe/
+# local agent skills installed by `npx skills`; not part of the project
+.agents/
+
+# planning and build bookkeeping
+.scratch/
+.planning/
+BUILD-STATE.md
+
+# build output
 /lathe
+/craft
 /site/dist/
+*.test
+
+# learner progress
+.lathe/
+
+# local tool lockfile
+skills-lock.json
