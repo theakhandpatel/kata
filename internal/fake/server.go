@@ -26,6 +26,7 @@ import (
 	"net/http/httptest"
 	"sync"
 	"testing"
+	"time"
 )
 
 // Usage mirrors the token accounting a real server reports.
@@ -77,6 +78,10 @@ type Reply struct {
 	// FailMidStream closes the connection after the first chunk, simulating a
 	// provider dying mid-response.
 	FailMidStream bool
+
+	// Delay holds the response before the first byte, so a client timeout can be
+	// tested without a real slow network.
+	Delay time.Duration
 
 	// Usage is reported in the final chunk of the convenience form.
 	Usage *Usage
@@ -255,6 +260,9 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 	s.mu.Unlock()
 
 	reply, ok := s.next()
+	if reply.Delay > 0 {
+		time.Sleep(reply.Delay)
+	}
 	if !ok {
 		// An unscripted request is a failure, never a polite empty answer. A
 		// harness that loops forever must not be able to "pass" on the final text.

@@ -1,6 +1,6 @@
 # Writing style
 
-Every page in this repository follows these rules. They come from the Querylathe
+Every page in this repository follows these rules. They come from the Queryassay
 house style, which applies three published standards together: Diátaxis for
 structure, Vercel's writing guidelines for sentences, and the `unslop` catalogue
 for AI tells. The rules below are the operative subset and stand on their own.

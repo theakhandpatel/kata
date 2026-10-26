@@ -5,7 +5,7 @@
 // line to look at. Rung 3 states the answer. The ladder exists so that being
 // stuck costs you a nudge, not the exercise.
 //
-// Hints live here rather than beside each check so that `lathe hint` can print
+// Hints live here rather than beside each check so that `assay hint` can print
 // them without parsing Go source. The type is a fixed [3]string rather than a
 // slice because a missing rung must be a compile error, not an invisible gap in
 // the ladder.
@@ -29,15 +29,15 @@ var Table = map[string]map[string][3]string{
 			"Use a pointer for optional numbers so a zero value can be omitted from the JSON entirely.",
 			"`*int` with `omitempty`: when the caller leaves MaxTokens at 0, the key must not appear in the body at all.",
 		},
-		"text-reassembly": {
-			"Each data: line is a partial update, not a full message.",
-			"Accumulate with strings.Builder or []byte, then convert once at the end.",
-			`Payloads end with "data: [DONE]"; that line is not JSON and must be skipped before decoding.`,
+		"prints-reply": {
+			"The answer is printed, not returned. text arrives in pieces.",
+			"Accumulate every delta, then print once at the end with fmt.Println.",
+			`Assigning instead of appending keeps only the last fragment. Use strings.Builder and write it out after the stream ends.`,
 		},
-		"usage": {
-			"Usage rides on the last chunk only.",
-			"Decode every chunk into the same struct; a later non-nil usage overwrites the zero value.",
-			"Fields sit at the top level of the chunk: usage.prompt_tokens, usage.completion_tokens, usage.total_tokens.",
+		"debug-usage": {
+			"stdout carries the answer only; diagnostics go to stderr.",
+			"Read usage from the final chunk, then write it with fmt.Fprintf(os.Stderr, ...).",
+			"Print a line containing prompt=, completion= and total= on stderr when HARNESS_DEBUG is set, and keep stdout to the answer plus one newline.",
 		},
 		"http-error": {
 			"Check resp.StatusCode before you touch the body.",
@@ -49,10 +49,10 @@ var Table = map[string]map[string][3]string{
 			"Check scanner.Err() after the loop, before returning success.",
 			"An ignored scanner.Err() turns a dropped connection into a short but 'successful' answer.",
 		},
-		"context-cancel": {
-			"Pass the caller's ctx into the request, not context.Background().",
-			"http.NewRequestWithContext is the only place the context enters.",
-			"With a cancelled ctx, client.Do returns an error that wraps context.Canceled.",
+		"request-timeout": {
+			"The request must be cancellable; that only happens if it carries the context.",
+			"Pass the ctx from run() into http.NewRequestWithContext, not context.Background().",
+			"With a cancelled ctx, client.Do returns an error wrapping context.DeadlineExceeded. Return it so main exits 1.",
 		},
 		"sse-framing": {
 			"SSE is a line protocol with more than data: lines in it.",

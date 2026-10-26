@@ -13,15 +13,15 @@ into a single `Message`.
 | **Full implementation** | [example.md](example.md) — annotated, after an attempt |
 | **You edit** | `harness/provider_openai.go` only |
 | **Given to you** | `harness/types.go`, `internal/fake/` (a scripted server) |
-| **Submit** | `lathe submit 01` |
+| **Submit** | `assay submit 01` |
 | **Reference** | `solutions/ch01/` |
 
 Read `overview.md` first. Then work from `problem.md`. Open `example.md` only
-after `lathe submit 01` passes or after you have been genuinely stuck.
+after `assay submit 01` passes or after you have been genuinely stuck.
 
 ## Done when
 
-`lathe submit 01` reports `6/6`, and you can answer the self-check at the bottom
+`assay submit 01` reports `6/6`, and you can answer the self-check at the bottom
 of `overview.md` without scrolling up.
 
 ---

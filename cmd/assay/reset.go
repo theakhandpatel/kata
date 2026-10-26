@@ -10,9 +10,9 @@ import (
 
 // cmdReset restores harness/ to the state at the start of a chapter.
 //
-// The state is derived, not stored: `lathe reset 04` applies solutions/ch01
+// The state is derived, not stored: `assay reset 04` applies solutions/ch01
 // through ch03 and drops the result into harness/. That is the same before-state
-// `lathe verify` grades, so what you reset to is exactly what the previous
+// `assay verify` grades, so what you reset to is exactly what the previous
 // chapter proved.
 //
 // Only .go files are replaced. Notes and scratch files in harness/ survive.

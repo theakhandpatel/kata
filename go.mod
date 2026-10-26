@@ -1,3 +1,3 @@
-module lathe
+module assay
 
 go 1.26

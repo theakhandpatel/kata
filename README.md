@@ -8,12 +8,12 @@ steering, skills, subagents, and an MCP client. The tool runs your code against 
 scripted model and reports which claim failed and why.
 
 ```sh
-git clone <this repo> && cd lathe
-go build -o lathe ./cmd/lathe
+git clone <this repo> && cd assay
+go build -o assay ./cmd/assay
 
-./lathe                 # where you are, what to do next
-./lathe read 01         # the task for chapter 01
-./lathe submit 01       # compile, grade, report
+./assay                 # where you are, what to do next
+./assay read 01         # the task for chapter 01
+./assay submit 01       # compile, grade, report
 ```
 
 No account, no API key, no Docker, no network after the clone.
@@ -37,7 +37,7 @@ rather than showing a diff of prose.
         expected: "*harness.HTTPError"
         actual:   provider: HTTP 429: {"error":"slow down"}
         hint: Check resp.StatusCode before you touch the body.
-        more: lathe hint 01 http-error
+        more: assay hint 01 http-error
 ```
 
 ## The arc
@@ -73,29 +73,33 @@ case ever disagree, the case is correct and the page is a bug.
 ## Commands
 
 ```sh
-lathe                      status: current chapter, next action
-lathe submit [NN]          compile, grade, record
-lathe submit NN --solution grade the reference instead of your code
-lathe read [NN] [doc]      problem (default), overview, example
-lathe hint NN <case-id>    three rungs, from nudge to answer
-lathe list                 the arc, grouped into parts
-lathe progress             what passed, and when
-lathe verify               prove each chapter rejects its starter and accepts its reference
-lathe reset [NN]           restore harness/ from starter/
+assay                      status: current chapter, next action
+assay submit [NN]          compile, grade, record
+assay submit NN --solution grade the reference instead of your code
+assay read [NN] [doc]      problem (default), overview, example
+assay hint NN <case-id>    three rungs, from nudge to answer
+assay list                 the arc, grouped into parts
+assay progress             what passed, and when
+assay verify               prove each chapter rejects its starter and accepts its reference
+assay reset [NN]           restore harness/ from starter/
 ```
 
 ## How it works
 
-The grader imports your `harness` package and talks to it through one interface:
+Every chapter leaves you with a program you can run. Chapter 01 gives you an
+application that answers a prompt; chapter 04 gives you one that completes a
+multi-step task; chapter 09 one that follows skills you write.
 
-```go
-type Provider interface {
-    Chat(ctx context.Context, req Request) (Message, Usage, error)
-}
+The checks build `./harness/cmd/harness`, start a scripted server, point
+`OPENAI_BASE_URL` at it, and run your binary. They assert on stdout, stderr, exit
+codes, and the requests your program sent. Nothing imports your package, so the
+internal design is yours.
+
+```sh
+OPENAI_BASE_URL=http://localhost:11434/v1 ./harness -p "list the files here"
 ```
 
-Everything above that seam is deterministic, so it can be tested. The scripted
-server sits below it. Design notes, diagrams, and the grading pipeline are in
+Design notes, diagrams, and the grading pipeline are in
 [docs/architecture.md](docs/architecture.md). The chapter file contract is in
 [docs/chapter-format.md](docs/chapter-format.md).
 
@@ -115,7 +119,7 @@ For a full harness, read [pi](https://github.com/earendil-works/pi),
 
 ## Contributing
 
-A chapter is done when `lathe verify` is clean: its reference passes every case
+A chapter is done when `assay verify` is clean: its reference passes every case
 and its starter fails at least one. Hints are validated in both directions, so a
 case without a ladder fails the test suite. Prose follows
 [docs/writing-style.md](docs/writing-style.md).

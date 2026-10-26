@@ -61,7 +61,7 @@ Fixed sections, in this order. No freestyle.
 5. **Notes** — edge cases you must handle; deliberate omissions with a link to
    the real implementation; the output contract (stdout vs stderr, exit codes).
 6. **Hints** — three rungs, spoiler-collapsed, identical to `internal/hints`.
-7. **Done when** — `lathe submit NN` green, plus one self-check sentence.
+7. **Done when** — `assay submit NN` green, plus one self-check sentence.
 
 ### `example.md` — the implementation doc
 
@@ -76,15 +76,32 @@ order:
 6. **Comparison checklist** — differences that are bugs vs differences that are
    style.
 
+## Which driver
+
+Each case names its driver, and the chapter's `problem.md` groups the claims by
+it. The rule is in [architecture.md](architecture.md#grading-policy): black box
+by default, function level only for pure transforms with awkward inputs.
+
+```go
+// black box: build and run ./harness/cmd/harness
+res := blackbox.Run(t, env(srv.BaseURL()), "-p", "list the files")
+
+// function level: a pinned, deliberately small surface
+got := harness.SubstituteArgs("Deploy to $0 in $1", []string{"staging", "eu"})
+```
+
+A case that pins a function must say so in `problem.md` under "given surface",
+so a learner never discovers the requirement from a compile error.
+
 ## The build tag
 
-Chapter checks carry `//go:build lathe_checks`. That keeps `go test ./...` green
+Chapter checks carry `//go:build assay_checks`. That keeps `go test ./...` green
 in a fresh clone, where `harness/` is still the starter and every case is
-supposed to fail. `lathe submit` and `lathe verify` add the tag themselves, so
+supposed to fail. `assay submit` and `assay verify` add the tag themselves, so
 you never pass it by hand.
 
 ```sh
-go test -tags=lathe_checks ./chapters/01-chat-with-the-model/checks/
+go test -tags=assay_checks ./chapters/01-chat-with-the-model/checks/
 ```
 
 ## Indexing

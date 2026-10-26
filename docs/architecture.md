@@ -1,7 +1,8 @@
 # Architecture
 
-Lathe has two halves. One is the harness you build. The other is the tool that
-checks it. They share one interface, so the checks never look inside your code.
+Assay has two halves. One is the application you build. The other is the tool that
+checks it. The checks build your binary and run it, so nothing reaches inside your
+code and your internal design is yours.
 
 ```mermaid
 flowchart LR
@@ -19,12 +20,15 @@ flowchart LR
     end
 
     C["chapters/NN/checks<br/>what done means"]
-    CLI["lathe<br/>the runner"]
+    CLI["assay<br/>the runner"]
+    BIN["your binary<br/>harness -p ..."]
 
+    C -->|"go build"| BIN
+    BIN --> P
     L --> P
-    P <--> F
     L --> T
     L --> S
+    P <--> F
     C --> G
     G --> F
     CLI --> C
@@ -42,13 +46,13 @@ model, keep the wire.
 | Path | Role |
 |---|---|
 | `harness/` | The harness. The only directory a learner edits. |
-| `starter/` | The initial state of `harness/`. Used to grade chapter 01 and by `lathe reset`. |
+| `starter/` | The initial state of `harness/`. Used to grade chapter 01 and by `assay reset`. |
 | `solutions/chNN/` | Overlay of the files as they must be after chapter NN. |
 | `chapters/NN-slug/` | `README.md`, `overview.md`, `problem.md`, `example.md`, `checks/`. |
 | `internal/fake/` | Scripted OpenAI-compatible server. The far side of the seam. |
 | `internal/grader/` | Case DSL, bounded execution, report, diffs. |
 | `internal/hints/` | The three-rung hint ladder, keyed by chapter and case. |
-| `cmd/lathe/` | The CLI: `submit`, `read`, `hint`, `list`, `progress`, `verify`, `reset`. |
+| `cmd/assay/` | The CLI: `submit`, `read`, `hint`, `list`, `progress`, `verify`, `reset`. |
 | `docs/` | Architecture, chapter format, writing style. |
 
 ## A submit run
@@ -56,13 +60,13 @@ model, keep the wire.
 ```mermaid
 sequenceDiagram
     actor You
-    participant CLI as lathe submit
+    participant CLI as assay submit
     participant Go as go build
     participant Test as chapter checks
     participant Fake as fake server
     participant Rep as report JSON
 
-    You->>CLI: lathe submit 03
+    You->>CLI: assay submit 03
     CLI->>Go: build ./...
     alt does not compile
         Go-->>CLI: errors
@@ -101,7 +105,7 @@ flowchart LR
 The state before chapter NN is derived by applying `solutions/ch01` through
 `solutions/chNN-1`. It is not stored, so it cannot drift.
 
-`lathe verify` grades every chapter twice: once against its after state, which
+`assay verify` grades every chapter twice: once against its after state, which
 must pass, and once against its before state, which must fail at least one case.
 A chapter whose starter passes grades nothing. A chapter whose reference fails
 cannot be completed. Both are caught offline.
@@ -110,7 +114,7 @@ cannot be completed. Both are caught offline.
 
 ```mermaid
 flowchart TD
-    A["lathe submit NN"] --> B{harness/ compiles?}
+    A["assay submit NN"] --> B{harness/ compiles?}
     B -- no --> C["not ready<br/>file:line, message, cause"]
     B -- yes --> D["run chapter checks"]
     D --> E["for each case:<br/>bounded, panic-proof"]
@@ -158,10 +162,48 @@ flowchart TD
 A change that makes a later chapter edit `loop.go` is a design error, not a
 scheduling problem. The seams exist so the course stays additive.
 
+## Grading policy
+
+Two drivers, one rule. Grade the largest thing that can carry the claim.
+
+| Claim type | Driver | Why |
+|---|---|---|
+| "the program answers a prompt" | black box | only the process proves it is an application |
+| "the program runs a tool and continues" | black box | the loop, the registry and the wire all participate |
+| "the session resumes with prior turns" | black box | needs a real process, a real file, a second run |
+| "the request stays under the budget" | black box | inspect the third request the program sent |
+| "this pure transform is correct" | function | no process needed, and the diff is far more precise |
+| "all 40 combinations of chunk boundaries" | function | one process per split is 40 processes for no realism |
+
+Black box is the default. It is the only driver that can prove the thing you
+built runs, and it leaves the internal design free.
+
+Function level is the exception, and it needs a pinned surface: a small exported
+function whose signature the chapter states up front. Two rules keep it honest:
+
+1. The pinned surface is the smallest possible type. If a `[]Message` in and
+   `[]Message` out can express it, do not pin anything larger.
+2. A pinned function is a contract, not an architecture. The chapter says what
+   it must do, never how it is built.
+
+A chapter that mixes the two declares both, case by case:
+
+```
+checks/ch07_test.go
+  budget-ceiling      black box   run the program, inspect request 3
+  budget-orphans      black box   inspect every request for unpaired calls
+  estimate-tokens     function    EstimateTokens, pinned in harness/contract.go
+```
+
+Neither driver is allowed to weaken the other. A black-box case never asserts on
+a log line the program could fake, and a function case never stands in for a
+behaviour a user would notice.
+
 ## Determinism
 
 | Layer | Faked | Proves |
 |---|---|---|
+| Process | nothing: your binary runs for real | the program works when invoked |
 | Transport | HTTP server speaking SSE | your wire code is correct |
 | Behaviour | scripted model decisions | your loop, tools, and context logic |
 | Output | full request traces, per case | nothing drifted silently |
@@ -176,7 +218,7 @@ money, and judgement. Lathe grades correctness of the harness, and says so.
    fails if a case has no ladder or a ladder has no case.
 3. `solutions/chNN/` with only the files this chapter changes.
 4. `overview.md`, `problem.md`, `example.md`, `README.md`.
-5. `lathe verify`. It must be clean before the chapter counts as written.
+5. `assay verify`. It must be clean before the chapter counts as written.
 
 ## Glossary
 

@@ -1,7 +1,7 @@
 # 01 — Example
 
 *Full, annotated implementation. Open this after a real attempt — ideally after
-`lathe submit 01` passes, then compare. Reading it first turns the exercise into
+`assay submit 01` passes, then compare. Reading it first turns the exercise into
 copy-typing.*
 
 The complete compilable file is `solutions/ch01/harness/provider_openai.go`. This

@@ -7,13 +7,13 @@
 BUILD-STATE.md
 
 # build output
-/lathe
+/assay
 /craft
 /site/dist/
 *.test
 
 # learner progress
-.lathe/
+.assay/
 
 # local tool lockfile
 skills-lock.json

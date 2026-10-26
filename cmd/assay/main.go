@@ -1,14 +1,14 @@
-// Command lathe is the course runner.
+// Command assay is the course runner.
 //
 // The learner should never have to type `go test`. This binary owns the
 // vocabulary:
 //
-//	lathe                where am I, what is next, one action
-//	lathe submit 01      compile triage, then grade
-//	lathe read 01        the contract, in a pager
-//	lathe read 01 overview   how it works, in general
-//	lathe read 01 example    a full annotated implementation
-//	lathe hint 01 usage  three rungs, no answer
+//	assay                where am I, what is next, one action
+//	assay submit 01      compile triage, then grade
+//	assay read 01        the contract, in a pager
+//	assay read 01 overview   how it works, in general
+//	assay read 01 example    a full annotated implementation
+//	assay hint 01 usage  three rungs, no answer
 //
 // Grading is ordinary `go test` underneath, because the learner is building a
 // harness and should not be shielded from the tool that grades them. What is
@@ -28,7 +28,7 @@ import (
 
 func main() {
 	if err := run(os.Args[1:]); err != nil {
-		fmt.Fprintln(os.Stderr, "lathe:", err)
+		fmt.Fprintln(os.Stderr, "assay:", err)
 		os.Exit(1)
 	}
 }
@@ -57,22 +57,22 @@ func run(args []string) error {
 		usage()
 		return nil
 	default:
-		return fmt.Errorf("unknown command %q (try `lathe help`)", args[0])
+		return fmt.Errorf("unknown command %q (try `assay help`)", args[0])
 	}
 }
 
 func usage() {
-	fmt.Print(`lathe -- build a coding-agent harness, one provable chapter at a time
+	fmt.Print(`assay -- build a coding-agent harness, one provable chapter at a time
 
-  lathe                       where am I, what is next
-  lathe submit [NN]           compile triage, then grade  (aliases: run, test)
-  lathe submit NN --solution  grade the reference implementation instead
-  lathe read [NN] [doc]       problem (default) | overview | example
-  lathe hint NN <case-id>     the three-rung ladder for one case
-  lathe verify                prove every chapter rejects its starter and accepts its reference
-  lathe reset [NN]            restore harness/ to the start of a chapter
-  lathe list                  the arc, with what is written and what is passed
-  lathe progress              summary
+  assay                       where am I, what is next
+  assay submit [NN]           compile triage, then grade  (aliases: run, test)
+  assay submit NN --solution  grade the reference implementation instead
+  assay read [NN] [doc]       problem (default) | overview | example
+  assay hint NN <case-id>     the three-rung ladder for one case
+  assay verify                prove every chapter rejects its starter and accepts its reference
+  assay reset [NN]            restore harness/ to the start of a chapter
+  assay list                  the arc, with what is written and what is passed
+  assay progress              summary
 
 You edit harness/. Nothing else. No ` + "`go test`" + ` required.
 `)
@@ -81,7 +81,7 @@ You edit harness/. Nothing else. No ` + "`go test`" + ` required.
 // --- the arc ---
 
 // planned is the whole arc, including chapters not yet written, so that
-// `lathe list` communicates the shape of the course rather than only what
+// `assay list` communicates the shape of the course rather than only what
 // happens to exist on disk. Keep in sync with README.md.
 var planned = []struct {
 	ID    string
@@ -189,7 +189,7 @@ type progressEntry struct {
 type progressMap map[string]progressEntry
 
 func progressPath(root string) string {
-	return filepath.Join(root, ".lathe", "progress.json")
+	return filepath.Join(root, ".assay", "progress.json")
 }
 
 func loadProgress(root string) progressMap {
@@ -270,7 +270,7 @@ func plural(n int, one, many string) string {
 
 func mustWritten(c chapter) error {
 	if !c.written() {
-		return fmt.Errorf("%s is not written yet — the course is being built in order; try `lathe list`", c.ID)
+		return fmt.Errorf("%s is not written yet — the course is being built in order; try `assay list`", c.ID)
 	}
 	return nil
 }
