@@ -13,6 +13,48 @@ package hints
 
 // Table maps chapter number -> case id -> the three rungs.
 var Table = map[string]map[string][3]string{
+	"07": {
+		"budget-event-reported": {
+			"A budget nobody can see is a number in a comment.",
+			"Emit one event per request carrying the estimate and the configured ceiling.",
+			"After fitting, emit {type: budget, turn, tokens: EstimateTokens(fitted, tools), budget, pruned}.",
+		},
+		"estimate-counts-tools": {
+			"Tool schemas travel with every request and are often bigger than the conversation.",
+			"Count the bytes of name, description and the JSON schema for each tool, then divide by roughly four.",
+			"Sum len(t.Name) + len(t.Description) + len(json.Marshal(t.Parameters)) from the request's tools, not from the registry you built.",
+		},
+		"estimate-grows-with-history": {
+			"Monotonicity is the property pruning depends on.",
+			"Give every message a cost, even an empty one, so adding messages cannot lower the total.",
+			"len(role) + len(content) + a fixed envelope, divided by four at the end. Keep the division at the end, not per message.",
+		},
+		"ceiling-respected": {
+			"A threshold that fires eventually is not a ceiling.",
+			"Fit the messages to the budget on every request, not once at start-up.",
+			"Wrap the provider: before delegating, replace req.Messages with the fitted list. The loop then cannot bypass it.",
+		},
+		"prunes-when-over": {
+			"Reporting a number and sending everything is the easy way to look correct.",
+			"Walk from the newest message backwards and stop when the budget is reached.",
+			"Count how many were dropped and report it in the event, so the number can be checked against the request.",
+		},
+		"prune-marker-present": {
+			"A model that does not know history was removed will answer confidently about what it cannot see.",
+			"Insert exactly one record where the gap begins.",
+			"Prepend a system message such as '[context pruned: N earlier messages omitted]' before the kept tail.",
+		},
+		"no-orphaned-tool-pairs": {
+			"Pruning at a boundary is where conversations become invalid.",
+			"If the oldest kept message is a tool result, its call was dropped.",
+			"Drop leading tool messages after fitting, and count them as pruned. Never send a tool result whose call is absent.",
+		},
+		"keeps-system-and-newest": {
+			"Two things are not negotiable: the instructions and the newest question.",
+			"Handle the system message separately, and fit only the conversation after it.",
+			"Keep msgs[0] when it is a system message, walk backwards over the rest, and always keep at least the last message even if it alone exceeds the budget.",
+		},
+	},
 	"06": {
 		"creates-session-file": {
 			"A session path is a promise that the conversation outlives the process.",
