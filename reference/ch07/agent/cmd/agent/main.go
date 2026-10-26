@@ -75,7 +75,7 @@ func run() error {
 			os.Getenv("OPENAI_API_KEY"),
 			firstNonEmpty(*model, os.Getenv("HARNESS_MODEL"), "gpt-4o-mini"),
 		),
-		tools, *maxContext, emit,
+		*maxContext, emit,
 	)
 
 	// The system message is assembled, not pasted. Contributors decide what goes

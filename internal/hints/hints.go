@@ -13,6 +13,48 @@ package hints
 
 // Table maps chapter number -> case id -> the three rungs.
 var Table = map[string]map[string][3]string{
+	"10": {
+		"task-tool-advertised": {
+			"Delegation has to be a tool the model can call.",
+			"Register a task tool whose schema takes the full instruction for the child.",
+			"Parameters: description (optional label) and prompt (required), with the description saying the child cannot see this conversation.",
+		},
+		"child-gets-fresh-context": {
+			"Isolation is the reason to delegate at all.",
+			"Build the child history from the system message plus the task prompt, and nothing else.",
+			"[]Message{{Role: RoleSystem, Content: system}, {Role: RoleUser, Content: args.Prompt}}. Do not pass the parent history.",
+		},
+		"child-cannot-recurse": {
+			"Recursion is cheap to allow and expensive to debug.",
+			"Build the child registry before the task tool exists, and never add the task tool to it.",
+			"baseTools := []Tool{read, write, bash}; childTools := NewRegistry(baseTools...); tools := NewRegistry(append(baseTools, task)...).",
+		},
+		"result-returned-to-parent": {
+			"The parent asked one call and needs one answer.",
+			"Return the child's final text from Execute, so the registry turns it into the tool result.",
+			"Run the child loop, take res.Message.Content, and return it. The parent's next request carries it as the tool message for the call id.",
+		},
+		"exactly-one-result": {
+			"Two results for one call is an invalid conversation.",
+			"Return exactly once from Execute: either an answer or an error, never both.",
+			`On failure return ("", err) so Registry.Run produces a single IsError result; do not also return a success text.`,
+		},
+		"child-uses-tools": {
+			"A child that cannot read a file cannot summarise a repository.",
+			"Give the child the real tools, and let its loop run with the same provider.",
+			"TaskTool needs the provider and a registry containing read, write and bash; the child's RunLoop then works exactly like the parent's.",
+		},
+		"child-failure-is-a-result": {
+			"The parent is blocked on one call, so every outcome must resolve it.",
+			"A child that hits its step cap returns an error, and the registry records it as a failed result.",
+			"Wrap the child's error with %w and mention the partial answer; Registry.Run converts it to IsError and the parent loop continues.",
+		},
+		"parent-continues-after-task": {
+			"Delegation happens inside the parent's loop.",
+			"Return from Execute so the registry appends the result, and let the parent loop decide whether to continue.",
+			"Nothing special is needed beyond a correct result: the parent loop keeps going while there are tool calls, including further task calls.",
+		},
+	},
 	"09": {
 		"advertises-skills": {
 			"A model cannot invoke what it has not been told about.",

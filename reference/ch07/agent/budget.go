@@ -99,22 +99,24 @@ func Fit(msgs []Message, tools []ToolDef, budget int) ([]Message, int) {
 // WithBudget wraps a provider so that every request is fitted to a token budget
 // before it is sent.
 //
+// It needs no registry: the request already carries the tool schemas, and those are
+// what the estimate counts.
+//
 // This is a decorator rather than a change to the loop, and that is the point: the
 // loop sends a conversation, and where a conversation comes from is not its
 // business. Chapter 01 built the seam; this is what it was for.
-func WithBudget(p StreamingProvider, tools *Registry, budget int, emit Emitter) StreamingProvider {
+func WithBudget(p StreamingProvider, budget int, emit Emitter) StreamingProvider {
 	if budget <= 0 {
 		return p
 	}
 	if emit == nil {
 		emit = func(Event) {}
 	}
-	return &budgetedProvider{inner: p, tools: tools, budget: budget, emit: emit}
+	return &budgetedProvider{inner: p, budget: budget, emit: emit}
 }
 
 type budgetedProvider struct {
 	inner  StreamingProvider
-	tools  *Registry
 	budget int
 	emit   Emitter
 	calls  int

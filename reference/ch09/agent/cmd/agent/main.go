@@ -77,7 +77,7 @@ func run() (int, error) {
 			os.Getenv("OPENAI_API_KEY"),
 			firstNonEmpty(*model, os.Getenv("HARNESS_MODEL"), "gpt-4o-mini"),
 		),
-		tools, *maxContext, emit,
+		*maxContext, emit,
 	)
 
 	// Skills: descriptions go in the system prompt, bodies wait until invoked.

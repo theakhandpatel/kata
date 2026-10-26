@@ -73,7 +73,7 @@ later turns. There are two ways to get that:
 This chapter wraps:
 
 ```go
-provider = agent.WithBudget(provider, tools, maxContext, emit)
+provider = agent.WithBudget(provider, maxContext, emit)
 ```
 
 ```mermaid
