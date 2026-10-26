@@ -83,6 +83,9 @@ type Reply struct {
 	// tested without a real slow network.
 	Delay time.Duration
 
+	// FrameDelay pauses between frames, so a caller can be interrupted mid-stream.
+	FrameDelay time.Duration
+
 	// Usage is reported in the final chunk of the convenience form.
 	Usage *Usage
 }
@@ -316,6 +319,9 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, fr := range reply.Frames {
+		if reply.FrameDelay > 0 {
+			time.Sleep(reply.FrameDelay)
+		}
 		if fr.Cut {
 			if hj, ok := w.(http.Hijacker); ok {
 				if conn, _, err := hj.Hijack(); err == nil {

@@ -22,6 +22,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -92,6 +93,67 @@ func RunIn(t *testing.T, dir string, env map[string]string, args ...string) Resu
 	return run(t, dir, DefaultTimeout, env, args...)
 }
 
+// RunWithInput is Run with text on stdin. Steering reads it while the run is in
+// progress, so the input is available from the first turn boundary onward.
+func RunWithInput(t *testing.T, dir string, env map[string]string, stdin string, args ...string) Result {
+	t.Helper()
+	bin := Binary(t)
+
+	ctx, cancel := context.WithTimeout(context.Background(), DefaultTimeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, bin, args...)
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), flatten(env)...)
+	cmd.Stdin = strings.NewReader(stdin)
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	start := time.Now()
+	err := cmd.Run()
+	return finish(t, cmd, err, ctx, stdout.String(), stderr.String(), start)
+}
+
+// RunInterrupt starts the program, waits, sends SIGINT, then collects what it
+// printed. This is how a person stops a runaway answer, so it is how the abort
+// cases are graded.
+func RunInterrupt(t *testing.T, dir string, env map[string]string, after time.Duration, args ...string) Result {
+	t.Helper()
+	bin := Binary(t)
+
+	ctx, cancel := context.WithTimeout(context.Background(), DefaultTimeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, bin, args...)
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), flatten(env)...)
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	start := time.Now()
+	if err := cmd.Start(); err != nil {
+		t.Fatalf("start harness: %v", err)
+	}
+
+	time.Sleep(after)
+	_ = cmd.Process.Signal(os.Interrupt)
+
+	err := cmd.Wait()
+	res := finish(t, cmd, err, ctx, stdout.String(), stderr.String(), start)
+	// A signal-terminated process reports -1 from ExitCode. Use the shell
+	// convention of 128+signal so a test can assert 130 for SIGINT.
+	if cmd.ProcessState != nil {
+		if ws, ok := cmd.ProcessState.Sys().(syscall.WaitStatus); ok && ws.Signaled() {
+			res.ExitCode = 128 + int(ws.Signal())
+		}
+	}
+	return res
+}
+
 // RunTimeout is Run with an explicit wall-clock bound.
 func RunTimeout(t *testing.T, limit time.Duration, env map[string]string, args ...string) Result {
 	t.Helper()
@@ -115,11 +177,14 @@ func run(t *testing.T, dir string, limit time.Duration, env map[string]string, a
 
 	start := time.Now()
 	err := cmd.Run()
-	res := Result{
-		Stdout:   stdout.String(),
-		Stderr:   stderr.String(),
-		Duration: time.Since(start),
-	}
+	return finish(t, cmd, err, ctx, stdout.String(), stderr.String(), start)
+}
+
+// finish turns a process outcome into a Result.
+func finish(t *testing.T, cmd *exec.Cmd, err error, ctx context.Context,
+	stdout, stderr string, start time.Time) Result {
+	t.Helper()
+	res := Result{Stdout: stdout, Stderr: stderr, Duration: time.Since(start)}
 
 	if ctx.Err() == context.DeadlineExceeded {
 		res.ExitCode = -1

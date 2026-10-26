@@ -13,6 +13,48 @@ package hints
 
 // Table maps chapter number -> case id -> the three rungs.
 var Table = map[string]map[string][3]string{
+	"08": {
+		"steer-continues-after-done": {
+			"A steered message is a reason to keep going, not a new run.",
+			"After each turn, drain the queue; if anything arrived, append it and loop again even when the model asked for no tools.",
+			"Track a steered flag per turn and stop only when !askedForTools && !steered.",
+		},
+		"steer-enters-after-turn": {
+			"Order in the message list is meaning.",
+			"Append the steered line after the assistant message, as a new user message.",
+			"The request must be system, user(prompt), assistant(reply), user(steer). Not merged into the first user message.",
+		},
+		"steer-not-duplicated": {
+			"A queue that is drained but not cleared replays the same instruction forever.",
+			"Drain means take-and-clear, under a lock.",
+			"out := s.queue; s.queue = nil; return out.",
+		},
+		"no-steer-single-request": {
+			"Watching stdin must not change a run that has nothing to say.",
+			"Only loop again when the drain actually returned messages.",
+			"A nil or empty drain leaves steered false, so the turn ends normally after one request.",
+		},
+		"steer-event-reported": {
+			"The person needs to see that their message landed.",
+			"Emit an event for each injected message, with the text.",
+			"emit(Event{Type: EventSteer, Turn: turn, Text: m.Content}) before appending it to history.",
+		},
+		"abort-keeps-partial": {
+			"An interrupted answer is still an answer.",
+			"Return the accumulated message alongside the error instead of an empty one.",
+			"In readSSE, on scanner error return Message{Role: RoleAssistant, Content: content.String()} with the error, and let main print it.",
+		},
+		"abort-emits-event": {
+			"A consumer must tell 'finished' from 'stopped'.",
+			"Both end with agent_end; the reason field differs.",
+			"If errors.Is(err, context.Canceled) then emit agent_end with reason 'aborted' before returning.",
+		},
+		"abort-persists-session": {
+			"An interrupted run still produced work worth keeping.",
+			"Persist before deciding what to return.",
+			"Append the new history to the session first, then handle the cancellation and exit.",
+		},
+	},
 	"07": {
 		"budget-event-reported": {
 			"A budget nobody can see is a number in a comment.",
