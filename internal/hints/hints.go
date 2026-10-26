@@ -13,6 +13,48 @@ package hints
 
 // Table maps chapter number -> case id -> the three rungs.
 var Table = map[string]map[string][3]string{
+	"02": {
+		"advertises-read": {
+			"A tool the model cannot see is a tool it will never call.",
+			"Send the schema list in the request body, with name, description and a JSON Schema for the parameters.",
+			"Registry.Defs() must return the read tool with parameters {type:object, properties:{path:{type:string}}, required:[path]}.",
+		},
+		"reads-a-file": {
+			"The result of a call is a message, not a return value.",
+			"Append a message with role tool, the file contents, and the id of the call it answers.",
+			"tool_call_id must equal the id from the assistant message. Order the results the same way as the calls.",
+		},
+		"folds-arguments": {
+			"Argument text arrives in pieces, and only the first piece names the call.",
+			"Key the accumulator by the index field, not by the id.",
+			"Append every fragment's function.arguments into one buffer per index, then join the calls in index order.",
+		},
+		"missing-file": {
+			"A tool that fails is information, not a fatal error.",
+			"Return the failure text as a tool result and let the model continue.",
+			"os.IsNotExist becomes a result like 'no such file: <path>', with IsError set; the program still exits 0 after the model's next reply.",
+		},
+		"refuses-escape": {
+			"The model's path argument is untrusted input.",
+			"Resolve the path against the workspace root and check the result, not the string.",
+			"Compare filepath.Rel(root, resolved): reject when it is '..' or starts with '../'. Absolute paths are refused too.",
+		},
+		"truncates-large-file": {
+			"Context is the scarce resource, so a file read is bounded.",
+			"Read at most N bytes plus one, and if there is a byte left, cut and mark the cut.",
+			"Return the first 20000 bytes followed by a marker such as '... [truncated: N of M bytes shown]'.",
+		},
+		"invalid-arguments": {
+			"The model writes the arguments as text, and text can be malformed.",
+			"Validate before decoding, and turn a malformed call into an error result.",
+			"json.Valid([]byte(args)) fails; return a result saying the arguments are not valid JSON instead of calling the tool.",
+		},
+		"text-only-single-request": {
+			"Most replies are not tool calls.",
+			"Check the assistant message for tool calls before making another request.",
+			"If len(msg.ToolCalls) == 0, print the content and return. One request, one answer.",
+		},
+	},
 	"01": {
 		"request-shape": {
 			"Log the http.Request you build before you send it.",

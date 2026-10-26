@@ -1,14 +1,14 @@
-// Package harness is the coding-agent harness you are building.
+// Package agent is the coding agent you are building.
 //
-// This file is scaffolding, not exercise material. It defines the seam every
-// chapter is graded through: messages in, messages out. You own everything
-// behind it. Change these types only if you also change the checks in
-// chapters/*/checks, which is allowed but not recommended -- the point of a
-// stable seam is that next chapter's tests still compile.
+// This file is scaffolding, not exercise material. It defines the vocabulary
+// the rest of the program shares, and the one interface the provider
+// implementations satisfy. You own everything behind it: change these types if
+// your design needs it, but keep the meaning.
 package agent
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 )
@@ -99,4 +99,23 @@ func (e *HTTPError) Error() string {
 		body = body[:200] + "..."
 	}
 	return fmt.Sprintf("provider: HTTP %d: %s", e.Status, body)
+}
+
+// Tool is one capability the model can call. The agent advertises Name,
+// Description and Parameters, then runs Execute when the model asks for it.
+//
+// Execute returns the text the model will see. A returned error means the tool
+// could not run at all; the agent turns it into an error result rather than
+// stopping the conversation.
+type Tool interface {
+	Name() string
+	Description() string
+	Parameters() map[string]any
+	Execute(ctx context.Context, input json.RawMessage) (string, error)
+}
+
+// ToolResult is one tool's output, ready to append to the conversation.
+type ToolResult struct {
+	Content string
+	IsError bool
 }

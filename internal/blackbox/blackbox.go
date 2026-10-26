@@ -84,8 +84,21 @@ func Run(t *testing.T, env map[string]string, args ...string) Result {
 	return RunTimeout(t, DefaultTimeout, env, args...)
 }
 
+// RunIn is Run with a working directory. The workspace a tool sees is the
+// directory the program was started in, so this is what makes file tools
+// testable without touching your own checkout.
+func RunIn(t *testing.T, dir string, env map[string]string, args ...string) Result {
+	t.Helper()
+	return run(t, dir, DefaultTimeout, env, args...)
+}
+
 // RunTimeout is Run with an explicit wall-clock bound.
 func RunTimeout(t *testing.T, limit time.Duration, env map[string]string, args ...string) Result {
+	t.Helper()
+	return run(t, "", limit, env, args...)
+}
+
+func run(t *testing.T, dir string, limit time.Duration, env map[string]string, args ...string) Result {
 	t.Helper()
 	bin := Binary(t)
 
@@ -93,6 +106,7 @@ func RunTimeout(t *testing.T, limit time.Duration, env map[string]string, args .
 	defer cancel()
 
 	cmd := exec.CommandContext(ctx, bin, args...)
+	cmd.Dir = dir
 	cmd.Env = append(os.Environ(), flatten(env)...)
 
 	var stdout, stderr bytes.Buffer

@@ -50,7 +50,7 @@ func TestHintsMatchChecks(t *testing.T) {
 	}
 }
 
-var caseIDRe = regexp.MustCompile(`ID:\s*"([^"]+)"`)
+var caseIDRe = regexp.MustCompile(`(?m)^\t+ID:\s*"([^"]+)"`)
 
 // declaredCases scrapes chapter check files for `ID: "..."` literals. This is
 // deliberately crude: it is a consistency linter, not a parser.

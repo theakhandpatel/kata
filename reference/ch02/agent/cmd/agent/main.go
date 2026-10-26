@@ -1,18 +1,12 @@
-// Command harness is the coding agent you are building.
-//
-// It is the only executable in the course. Each chapter adds one behaviour to
-// this program, and each chapter's checks run the binary rather than calling
-// your package directly. A chapter is done when the program does something a
-// user can see from a terminal.
+// Command agent is the coding agent you are building.
 //
 // Contract, which later chapters keep:
 //
 //	agent -p "<prompt>"        the answer goes to stdout
-//	HARNESS_DEBUG=1              token usage goes to stderr
+//	HARNESS_DEBUG=1            token usage goes to stderr
 //	exit 0 on success, 1 on error
 //
-// stdout carries the answer and nothing else, so a caller can pipe it. Anything
-// you add for your own eyes belongs on stderr.
+// stdout carries the answer and nothing else, so a caller can pipe it.
 package main
 
 import (
@@ -47,8 +41,6 @@ func run() error {
 		return errors.New(`-p is required, for example: agent -p "list the files"`)
 	}
 
-	// Ctrl-C cancels the request, and so does the timeout. Both arrive through
-	// the same context, which is why the provider must accept one.
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	ctx, cancel := context.WithTimeout(ctx, *timeout)
@@ -60,11 +52,39 @@ func run() error {
 		firstNonEmpty(*model, os.Getenv("HARNESS_MODEL"), "gpt-4o-mini"),
 	)
 
+	// Tools are resolved against the directory the program was started in, so
+	// the workspace is whatever the user meant by running it here.
+	root, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	tools := agent.NewRegistry(&agent.ReadTool{Root: root})
+
+	history := []agent.Message{{Role: agent.RoleUser, Content: *prompt}}
+
 	msg, usage, err := provider.Chat(ctx, agent.Request{
-		Messages: []agent.Message{{Role: agent.RoleUser, Content: *prompt}},
+		Messages: history,
+		Tools:    tools.Defs(),
 	})
 	if err != nil {
 		return err
+	}
+	history = append(history, msg)
+
+	// One hop. If the model asked for tools, run them and give it one more
+	// chance to answer. Chapter 04 replaces this with a loop, which is why the
+	// limit is stated here rather than hidden.
+	if len(msg.ToolCalls) > 0 {
+		history = append(history, runTools(ctx, tools, msg.ToolCalls)...)
+
+		msg, usage, err = provider.Chat(ctx, agent.Request{
+			Messages: history,
+			Tools:    tools.Defs(),
+		})
+		if err != nil {
+			return err
+		}
+		history = append(history, msg)
 	}
 
 	fmt.Println(msg.Content)
@@ -72,8 +92,23 @@ func run() error {
 	return nil
 }
 
-// debugUsage keeps the token counters observable without putting them in the
-// answer. Chapters 04 and 07 rely on this channel to check accounting.
+// runTools executes every call in one assistant message and returns the results
+// in the same order. Order matters: the next request pairs each result with its
+// call by id, and providers reject a conversation where the pairing is broken.
+func runTools(ctx context.Context, tools *agent.Registry, calls []agent.ToolCall) []agent.Message {
+	out := make([]agent.Message, 0, len(calls))
+	for _, call := range calls {
+		res := tools.Run(ctx, call)
+		out = append(out, agent.Message{
+			Role:       agent.RoleTool,
+			Content:    res.Content,
+			ToolCallID: call.ID,
+			Name:       call.Name,
+		})
+	}
+	return out
+}
+
 func debugUsage(u agent.Usage) {
 	if os.Getenv("HARNESS_DEBUG") == "" {
 		return
