@@ -67,6 +67,43 @@ func Binary(t *testing.T) string {
 	return builtPath
 }
 
+var (
+	mcpOnce sync.Once
+	mcpPath string
+	mcpErr  error
+)
+
+// MCPServer builds the scripted MCP server fixture once and returns its path.
+func MCPServer(t *testing.T) string {
+	t.Helper()
+	mcpOnce.Do(func() {
+		root, err := repoRoot()
+		if err != nil {
+			mcpErr = err
+			return
+		}
+		dir := filepath.Join(root, ".kata", "bin")
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			mcpErr = err
+			return
+		}
+		out := filepath.Join(dir, "mcpserver")
+
+		cmd := exec.Command("go", "build", "-o", out, "./internal/fake/mcpserver")
+		cmd.Dir = root
+		combined, err := cmd.CombinedOutput()
+		if err != nil {
+			mcpErr = fmt.Errorf("build ./internal/fake/mcpserver: %w\n%s", err, combined)
+			return
+		}
+		mcpPath = out
+	})
+	if mcpErr != nil {
+		t.Fatalf("%v", mcpErr)
+	}
+	return mcpPath
+}
+
 // Result is what a program run produced.
 type Result struct {
 	Stdout   string

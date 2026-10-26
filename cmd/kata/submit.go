@@ -227,9 +227,14 @@ func runChapterKind(root string, ch chapter, kind string) (bool, string, error) 
 	cmd := exec.Command("go", "test", "-tags=kata_checks", "-count=1", "-v",
 		"./chapters/"+ch.Slug+"/checks/")
 	cmd.Dir = workDir
+	// Test temp dirs go beside the workspace for the same reason.
+	testTmp := filepath.Join(workDir, ".kata", "tmp")
+	_ = os.MkdirAll(testTmp, 0o755)
+
 	cmd.Env = append(os.Environ(),
 		"NO_COLOR="+os.Getenv("NO_COLOR"),
 		"CRAFT_REPORT="+repPath,
+		"TMPDIR="+testTmp,
 	)
 
 	out, _ := cmd.CombinedOutput() // exit status is not the signal; the report is
@@ -326,7 +331,14 @@ func summarize(output string) string {
 // The "before" state is derived, never stored. One artifact per chapter, and no
 // way for a starter directory to drift from the reference it was subtracted from.
 func workspaceFor(root, id, mode string) (string, func(), error) {
-	tmp, err := os.MkdirTemp("", "kata-*")
+	// Grade inside the project, not in the system temp dir. A copy plus a compiled
+	// binary is about 12 MB per run, and 22 runs of `kata verify` will fill a small
+	// tmpfs.
+	workRoot := filepath.Join(root, ".kata", "work")
+	if err := os.MkdirAll(workRoot, 0o755); err != nil {
+		return "", nil, err
+	}
+	tmp, err := os.MkdirTemp(workRoot, "grade-*")
 	if err != nil {
 		return "", nil, err
 	}

@@ -13,6 +13,48 @@ package hints
 
 // Table maps chapter number -> case id -> the three rungs.
 var Table = map[string]map[string][3]string{
+	"11": {
+		"mcp-tools-advertised": {
+			"A tool the model cannot see is a tool it will never call.",
+			"After initialize and tools/list, wrap each server tool and add it to the registry the loop sends.",
+			"Merge the server's tools with the built-in ones before NewRegistry, so the request advertises both.",
+		},
+		"mcp-initialize-handshake": {
+			"MCP requires a handshake before any other request.",
+			"Send initialize, then the notifications/initialized notification, then tools/list.",
+			"initialize is a request with an id and a response; notifications/initialized has no id and expects no reply. Send it anyway: strict servers wait for it.",
+		},
+		"mcp-tool-call": {
+			"The adapter is only worth having if calls cross the process boundary in both directions.",
+			"Send tools/call with the original tool name and the arguments as an object.",
+			"On the response, collect content blocks of type text and join them; return that string from Execute so the registry makes it a tool result.",
+		},
+		"mcp-content-blocks-joined": {
+			"Content comes back as a list of blocks.",
+			"Join the text blocks with a newline; ignore types you cannot use.",
+			"Taking only content[0] loses most answers; taking only type text avoids pasting base64 into the context.",
+		},
+		"mcp-name-collision": {
+			"A server may expose a tool with the same name as a built-in.",
+			"Namespace every server tool with the server's reported name.",
+			"Name() returns server + \".\" + tool, so demo.read and read are different entries. Sanitise the server name to lowercase and dashes.",
+		},
+		"mcp-error-is-a-result": {
+			"A refusal from the server is information, not a crash.",
+			"Turn a JSON-RPC error object into a Go error so the registry records an IsError result.",
+			"Return fmt.Errorf from Execute with the error message; the loop continues and the model can read the refusal.",
+		},
+		"mcp-unavailable-is-survivable": {
+			"An optional extension must not take the agent down with it.",
+			"Warn on stderr and continue with the built-in tools when the server cannot start.",
+			"Print the failure with fmt.Fprintf(os.Stderr, ...), skip the merge, and keep the exit code 0.",
+		},
+		"mcp-no-call-when-unused": {
+			"Discovery is not usage.",
+			"tools/list is the only request a plain run should make after the handshake.",
+			"If the model asked for no tool, no tools/call should appear in the server's log.",
+		},
+	},
 	"10": {
 		"task-tool-advertised": {
 			"Delegation has to be a tool the model can call.",
