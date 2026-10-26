@@ -13,6 +13,48 @@ package hints
 
 // Table maps chapter number -> case id -> the three rungs.
 var Table = map[string]map[string][3]string{
+	"03": {
+		"advertises-three-tools": {
+			"Registering a tool and advertising it are two steps, and only the second one is visible to the model.",
+			"Build the registry with all three tools and pass Registry.Defs() into every request.",
+			"NewRegistry(&ReadTool{...}, &WriteTool{...}, &BashTool{...}) and send the same Defs() on the first and the follow-up request.",
+		},
+		"writes-a-file": {
+			"The effect of write is a file, not a sentence.",
+			"Resolve the path, create the parent directories, then write the bytes.",
+			"os.MkdirAll(filepath.Dir(full), 0o755) then os.WriteFile(full, content, 0o644), and report the byte count in the result.",
+		},
+		"write-creates-parents": {
+			"The model names paths that do not exist yet.",
+			"Create the missing directories before opening the file.",
+			"MkdirAll on the parent path, not on the file path. It is a no-op when the directories already exist.",
+		},
+		"write-refuses-escape": {
+			"write shares the escape rule with read, and the consequence is worse.",
+			"Resolve the path against the root and refuse before creating anything.",
+			"Check filepath.Rel(root, resolved) for '..' or a leading '../' and return an error naming the escape.",
+		},
+		"bash-runs-a-command": {
+			"The command must see the workspace, not the source tree.",
+			"Run sh -c with cmd.Dir set to the workspace root, and return combined output.",
+			`exec.CommandContext(ctx, "sh", "-c", args.Command) with cmd.Dir = Root, then CombinedOutput().`,
+		},
+		"bash-reports-exit-code": {
+			"A non-zero exit is a normal outcome for a shell command.",
+			"Inspect the error; an *exec.ExitError carries the code.",
+			"On *exec.ExitError return a result containing 'exit code: N' and the output, with no Go error.",
+		},
+		"bash-truncates-output": {
+			"Output can be unbounded, so the result has a ceiling.",
+			"Cap the combined output after the command finishes, or stream with a limit.",
+			"If len(out) > limit, return out[:limit] plus a marker naming how much was shown.",
+		},
+		"bash-timeout-is-a-result": {
+			"A command that never returns must not wedge the agent.",
+			"Bound the run with a context, and treat that deadline as a result.",
+			"context.WithTimeout plus exec.CommandContext. When runCtx hits DeadlineExceeded, return 'command timed out after ...' as the result, while a cancelled parent ctx still returns an error. The bound comes from the -tool-timeout flag.",
+		},
+	},
 	"02": {
 		"advertises-read": {
 			"A tool the model cannot see is a tool it will never call.",
