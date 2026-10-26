@@ -7,7 +7,7 @@
 //
 // Contract, which later chapters keep:
 //
-//	harness -p "<prompt>"        the answer goes to stdout
+//	agent -p "<prompt>"        the answer goes to stdout
 //	HARNESS_DEBUG=1              token usage goes to stderr
 //	exit 0 on success, 1 on error
 //
@@ -25,12 +25,12 @@ import (
 	"syscall"
 	"time"
 
-	"assay/harness"
+	"kata/agent"
 )
 
 func main() {
 	if err := run(); err != nil {
-		fmt.Fprintf(os.Stderr, "harness: %v\n", err)
+		fmt.Fprintf(os.Stderr, "agent: %v\n", err)
 		os.Exit(1)
 	}
 }
@@ -44,7 +44,7 @@ func run() error {
 	flag.Parse()
 
 	if *prompt == "" {
-		return errors.New(`-p is required, for example: harness -p "list the files"`)
+		return errors.New(`-p is required, for example: agent -p "list the files"`)
 	}
 
 	// Ctrl-C cancels the request, and so does the timeout. Both arrive through
@@ -54,14 +54,14 @@ func run() error {
 	ctx, cancel := context.WithTimeout(ctx, *timeout)
 	defer cancel()
 
-	provider := harness.NewOpenAICompat(
+	provider := agent.NewOpenAICompat(
 		envOr("OPENAI_BASE_URL", "http://localhost:11434/v1"),
 		os.Getenv("OPENAI_API_KEY"),
 		firstNonEmpty(*model, os.Getenv("HARNESS_MODEL"), "gpt-4o-mini"),
 	)
 
-	msg, usage, err := provider.Chat(ctx, harness.Request{
-		Messages: []harness.Message{{Role: harness.RoleUser, Content: *prompt}},
+	msg, usage, err := provider.Chat(ctx, agent.Request{
+		Messages: []agent.Message{{Role: agent.RoleUser, Content: *prompt}},
 	})
 	if err != nil {
 		return err
@@ -74,7 +74,7 @@ func run() error {
 
 // debugUsage keeps the token counters observable without putting them in the
 // answer. Chapters 04 and 07 rely on this channel to check accounting.
-func debugUsage(u harness.Usage) {
+func debugUsage(u agent.Usage) {
 	if os.Getenv("HARNESS_DEBUG") == "" {
 		return
 	}

@@ -1,12 +1,12 @@
 # Architecture
 
-Assay has two halves. One is the application you build. The other is the tool that
+Kata has two halves. One is the application you build. The other is the tool that
 checks it. The checks build your binary and run it, so nothing reaches inside your
 code and your internal design is yours.
 
 ```mermaid
 flowchart LR
-    subgraph yours["harness/ (you edit this)"]
+    subgraph yours["agent/ (you edit this)"]
         P["provider<br/>speaks HTTP"]
         T["tools<br/>read, write, bash"]
         L["loop<br/>calls the model"]
@@ -20,8 +20,8 @@ flowchart LR
     end
 
     C["chapters/NN/checks<br/>what done means"]
-    CLI["assay<br/>the runner"]
-    BIN["your binary<br/>harness -p ..."]
+    CLI["kata<br/>the runner"]
+    BIN["your binary<br/>agent -p ..."]
 
     C -->|"go build"| BIN
     BIN --> P
@@ -45,14 +45,14 @@ model, keep the wire.
 
 | Path | Role |
 |---|---|
-| `harness/` | The harness. The only directory a learner edits. |
-| `starter/` | The initial state of `harness/`. Used to grade chapter 01 and by `assay reset`. |
-| `solutions/chNN/` | Overlay of the files as they must be after chapter NN. |
+| `agent/` | The agent you build. The only directory a learner edits. |
+| `starter/` | The initial state of `agent/`. Used to grade chapter 01 and by `kata reset`. |
+| `reference/chNN/` | Overlay of the files as they must be after chapter NN. |
 | `chapters/NN-slug/` | `README.md`, `overview.md`, `problem.md`, `example.md`, `checks/`. |
 | `internal/fake/` | Scripted OpenAI-compatible server. The far side of the seam. |
 | `internal/grader/` | Case DSL, bounded execution, report, diffs. |
 | `internal/hints/` | The three-rung hint ladder, keyed by chapter and case. |
-| `cmd/assay/` | The CLI: `submit`, `read`, `hint`, `list`, `progress`, `verify`, `reset`. |
+| `cmd/kata/` | The CLI: `submit`, `read`, `hint`, `list`, `progress`, `verify`, `reset`. |
 | `docs/` | Architecture, chapter format, writing style. |
 
 ## A submit run
@@ -60,13 +60,13 @@ model, keep the wire.
 ```mermaid
 sequenceDiagram
     actor You
-    participant CLI as assay submit
+    participant CLI as kata submit
     participant Go as go build
     participant Test as chapter checks
     participant Fake as fake server
     participant Rep as report JSON
 
-    You->>CLI: assay submit 03
+    You->>CLI: kata submit 03
     CLI->>Go: build ./...
     alt does not compile
         Go-->>CLI: errors
@@ -92,20 +92,20 @@ a hope.
 
 ```mermaid
 flowchart LR
-    S["starter/<br/>all stubs"] --> A1["solutions/ch01"]
-    A1 --> A2["solutions/ch02"]
-    A2 --> A3["solutions/ch03"]
-    A3 --> A4["solutions/ch04"]
+    S["starter/<br/>all stubs"] --> A1["reference/ch01"]
+    A1 --> A2["reference/ch02"]
+    A2 --> A3["reference/ch03"]
+    A3 --> A4["reference/ch04"]
     A4 --> D["..."]
 
     A1 -. "before state for ch02" .-> A2
     A2 -. "before state for ch03" .-> A3
 ```
 
-The state before chapter NN is derived by applying `solutions/ch01` through
-`solutions/chNN-1`. It is not stored, so it cannot drift.
+The state before chapter NN is derived by applying `reference/ch01` through
+`reference/chNN-1`. It is not stored, so it cannot drift.
 
-`assay verify` grades every chapter twice: once against its after state, which
+`kata verify` grades every chapter twice: once against its after state, which
 must pass, and once against its before state, which must fail at least one case.
 A chapter whose starter passes grades nothing. A chapter whose reference fails
 cannot be completed. Both are caught offline.
@@ -114,7 +114,7 @@ cannot be completed. Both are caught offline.
 
 ```mermaid
 flowchart TD
-    A["assay submit NN"] --> B{harness/ compiles?}
+    A["kata submit NN"] --> B{agent/ compiles?}
     B -- no --> C["not ready<br/>file:line, message, cause"]
     B -- yes --> D["run chapter checks"]
     D --> E["for each case:<br/>bounded, panic-proof"]
@@ -192,7 +192,7 @@ A chapter that mixes the two declares both, case by case:
 checks/ch07_test.go
   budget-ceiling      black box   run the program, inspect request 3
   budget-orphans      black box   inspect every request for unpaired calls
-  estimate-tokens     function    EstimateTokens, pinned in harness/contract.go
+  estimate-tokens     function    EstimateTokens, pinned in agent/contract.go
 ```
 
 Neither driver is allowed to weaken the other. A black-box case never asserts on
@@ -209,16 +209,16 @@ behaviour a user would notice.
 | Output | full request traces, per case | nothing drifted silently |
 
 There is no layer that proves the agent is good. Quality needs a real model,
-money, and judgement. Lathe grades correctness of the harness, and says so.
+money, and judgement. Kata grades correctness of the harness, and says so.
 
 ## Adding a chapter
 
 1. `chapters/NN-slug/checks/chNN_test.go` with cases in the `grader.Suite` DSL.
 2. `internal/hints/hints.go` entries, three rungs each. The completeness test
    fails if a case has no ladder or a ladder has no case.
-3. `solutions/chNN/` with only the files this chapter changes.
+3. `reference/chNN/` with only the files this chapter changes.
 4. `overview.md`, `problem.md`, `example.md`, `README.md`.
-5. `assay verify`. It must be clean before the chapter counts as written.
+5. `kata verify`. It must be clean before the chapter counts as written.
 
 ## Glossary
 

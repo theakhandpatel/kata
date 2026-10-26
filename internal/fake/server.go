@@ -150,7 +150,7 @@ func New(t *testing.T, replies ...Reply) *Server {
 	return s
 }
 
-// BaseURL is the value to hand to harness.NewOpenAICompat.
+// BaseURL is the value to hand to agent.NewOpenAICompat.
 func (s *Server) BaseURL() string { return s.URL + "/v1" }
 
 // Requests returns every captured request in arrival order.

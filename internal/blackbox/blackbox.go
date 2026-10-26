@@ -44,18 +44,18 @@ func Binary(t *testing.T) string {
 			buildErr = err
 			return
 		}
-		dir, err := os.MkdirTemp("", "assay-bin-*")
+		dir, err := os.MkdirTemp("", "kata-bin-*")
 		if err != nil {
 			buildErr = err
 			return
 		}
-		out := filepath.Join(dir, "harness")
+		out := filepath.Join(dir, "agent")
 
-		cmd := exec.Command("go", "build", "-o", out, "./harness/cmd/harness")
+		cmd := exec.Command("go", "build", "-o", out, "./agent/cmd/agent")
 		cmd.Dir = root
 		combined, err := cmd.CombinedOutput()
 		if err != nil {
-			buildErr = fmt.Errorf("build ./harness/cmd/harness: %w\n%s", err, combined)
+			buildErr = fmt.Errorf("build ./agent/cmd/agent: %w\n%s", err, combined)
 			return
 		}
 		builtPath = out

@@ -1,14 +1,14 @@
-// Command assay is the course runner.
+// Command kata is the course runner.
 //
 // The learner should never have to type `go test`. This binary owns the
 // vocabulary:
 //
-//	assay                where am I, what is next, one action
-//	assay submit 01      compile triage, then grade
-//	assay read 01        the contract, in a pager
-//	assay read 01 overview   how it works, in general
-//	assay read 01 example    a full annotated implementation
-//	assay hint 01 usage  three rungs, no answer
+//	kata                where am I, what is next, one action
+//	kata submit 01      compile triage, then grade
+//	kata read 01        the contract, in a pager
+//	kata read 01 overview   how it works, in general
+//	kata read 01 example    a full annotated implementation
+//	kata hint 01 usage  three rungs, no answer
 //
 // Grading is ordinary `go test` underneath, because the learner is building a
 // harness and should not be shielded from the tool that grades them. What is
@@ -28,7 +28,7 @@ import (
 
 func main() {
 	if err := run(os.Args[1:]); err != nil {
-		fmt.Fprintln(os.Stderr, "assay:", err)
+		fmt.Fprintln(os.Stderr, "kata:", err)
 		os.Exit(1)
 	}
 }
@@ -57,31 +57,31 @@ func run(args []string) error {
 		usage()
 		return nil
 	default:
-		return fmt.Errorf("unknown command %q (try `assay help`)", args[0])
+		return fmt.Errorf("unknown command %q (try `kata help`)", args[0])
 	}
 }
 
 func usage() {
-	fmt.Print(`assay -- build a coding-agent harness, one provable chapter at a time
+	fmt.Print(`kata -- build a coding-agent harness, one provable chapter at a time
 
-  assay                       where am I, what is next
-  assay submit [NN]           compile triage, then grade  (aliases: run, test)
-  assay submit NN --solution  grade the reference implementation instead
-  assay read [NN] [doc]       problem (default) | overview | example
-  assay hint NN <case-id>     the three-rung ladder for one case
-  assay verify                prove every chapter rejects its starter and accepts its reference
-  assay reset [NN]            restore harness/ to the start of a chapter
-  assay list                  the arc, with what is written and what is passed
-  assay progress              summary
+  kata                       where am I, what is next
+  kata submit [NN]           compile triage, then grade  (aliases: run, test)
+  kata submit NN --solution  grade the reference implementation instead
+  kata read [NN] [doc]       problem (default) | overview | example
+  kata hint NN <case-id>     the three-rung ladder for one case
+  kata verify                prove every chapter rejects its starter and accepts its reference
+  kata reset [NN]            restore agent/ to the start of a chapter
+  kata list                  the arc, with what is written and what is passed
+  kata progress              summary
 
-You edit harness/. Nothing else. No ` + "`go test`" + ` required.
+You edit agent/. Nothing else. No ` + "`go test`" + ` required.
 `)
 }
 
 // --- the arc ---
 
 // planned is the whole arc, including chapters not yet written, so that
-// `assay list` communicates the shape of the course rather than only what
+// `kata list` communicates the shape of the course rather than only what
 // happens to exist on disk. Keep in sync with README.md.
 var planned = []struct {
 	ID    string
@@ -189,7 +189,7 @@ type progressEntry struct {
 type progressMap map[string]progressEntry
 
 func progressPath(root string) string {
-	return filepath.Join(root, ".assay", "progress.json")
+	return filepath.Join(root, ".kata", "progress.json")
 }
 
 func loadProgress(root string) progressMap {
@@ -270,7 +270,7 @@ func plural(n int, one, many string) string {
 
 func mustWritten(c chapter) error {
 	if !c.written() {
-		return fmt.Errorf("%s is not written yet — the course is being built in order; try `assay list`", c.ID)
+		return fmt.Errorf("%s is not written yet — the course is being built in order; try `kata list`", c.ID)
 	}
 	return nil
 }

@@ -13,7 +13,7 @@ import (
 	"regexp"
 	"strings"
 
-	"assay/internal/grader"
+	"kata/internal/grader"
 )
 
 // cmdSubmit is the only command a learner actually needs.
@@ -108,7 +108,7 @@ func cmdSubmit(args []string) error {
 		return fmt.Errorf("%d %s not passing", failures, plural(failures, "chapter is", "chapters are"))
 	}
 	if !useSolution {
-		fmt.Printf("  next: assay read %s\n\n", nextChapterID(root, selected[len(selected)-1].ID))
+		fmt.Printf("  next: kata read %s\n\n", nextChapterID(root, selected[len(selected)-1].ID))
 	}
 	return nil
 }
@@ -204,7 +204,7 @@ func runChapter(root string, ch chapter, useSolution bool) (bool, string, error)
 }
 
 // runChapterKind grades a chapter in a temp overlay of `kind` ("" = the learner's
-// tree). Kinds are "solutions" and "stubs".
+// tree). Kinds are "reference" and "stubs".
 func runChapterKind(root string, ch chapter, kind string) (bool, string, error) {
 	workDir := root
 	if kind != "" {
@@ -221,10 +221,10 @@ func runChapterKind(root string, ch chapter, kind string) (bool, string, error) 
 		fmt.Printf("  grading chapter %s against %s\n\n", ch.ID, label)
 	}
 
-	repPath := filepath.Join(os.TempDir(), fmt.Sprintf("assay-report-%d.json", os.Getpid()))
+	repPath := filepath.Join(os.TempDir(), fmt.Sprintf("kata-report-%d.json", os.Getpid()))
 	defer os.Remove(repPath)
 
-	cmd := exec.Command("go", "test", "-tags=assay_checks", "-count=1", "-v",
+	cmd := exec.Command("go", "test", "-tags=kata_checks", "-count=1", "-v",
 		"./chapters/"+ch.Slug+"/checks/")
 	cmd.Dir = workDir
 	cmd.Env = append(os.Environ(),
@@ -326,7 +326,7 @@ func summarize(output string) string {
 // The "before" state is derived, never stored. One artifact per chapter, and no
 // way for a starter directory to drift from the reference it was subtracted from.
 func workspaceFor(root, id, mode string) (string, func(), error) {
-	tmp, err := os.MkdirTemp("", "assay-*")
+	tmp, err := os.MkdirTemp("", "kata-*")
 	if err != nil {
 		return "", nil, err
 	}
@@ -356,7 +356,7 @@ func workspaceFor(root, id, mode string) (string, func(), error) {
 		if mode == "before" && c.ID == id {
 			break
 		}
-		src := filepath.Join(root, "solutions", "ch"+c.ID)
+		src := filepath.Join(root, "reference", "ch"+c.ID)
 		if _, err := os.Stat(src); err != nil {
 			continue
 		}
@@ -382,7 +382,7 @@ func copyTree(src, dst string) error {
 		}
 		if d.IsDir() {
 			switch filepath.Base(path) {
-			case ".git", ".assay", "solutions", "stubs", "node_modules":
+			case ".git", ".kata", "reference", "stubs", "node_modules":
 				return fs.SkipDir
 			}
 			return os.MkdirAll(filepath.Join(dst, rel), 0o755)

@@ -1,14 +1,14 @@
 # 01 — Problem
 
-> **Your task:** make the program answer a prompt. `harness -p "hello"` should
+> **Your task:** make the program answer a prompt. `agent -p "hello"` should
 > print the model's reply on stdout.
 
 You are not writing a library for a test to call. You are writing the first
 version of an application: a program a person runs in a terminal. Later chapters
 add tools, loops and sessions to this same program.
 
-**You edit:** `harness/provider_openai.go`
-**Given:** `harness/cmd/harness/main.go` (the program), `harness/types.go`
+**You edit:** `agent/provider_openai.go`
+**Given:** `agent/cmd/agent/main.go` (the program), `agent/types.go`
 **Do not edit:** `internal/`, `chapters/`
 **Time:** 30 to 50 minutes
 
@@ -19,9 +19,9 @@ add tools, loops and sessions to this same program.
 The program is already written. It reads three inputs and prints one output:
 
 ```sh
-harness -p "say something"          # the answer goes to stdout
-harness -p "hi" -m gpt-4o-mini      # model override
-harness -p "hi" -timeout 5s         # request timeout
+agent -p "say something"          # the answer goes to stdout
+agent -p "hi" -m gpt-4o-mini      # model override
+agent -p "hi" -timeout 5s         # request timeout
 ```
 
 It reads configuration from the environment:
@@ -39,7 +39,7 @@ Then it needs one thing from you:
 func (p *OpenAICompat) Chat(ctx context.Context, req Request) (Message, Usage, error)
 ```
 
-`Request`, `Message`, `Usage` and `HTTPError` are in `harness/types.go`. Read that
+`Request`, `Message`, `Usage` and `HTTPError` are in `agent/types.go`. Read that
 file first. It is short and it is scaffolding.
 
 The request goes to `{BaseURL}/chat/completions` with `"stream": true`. The server
@@ -47,7 +47,7 @@ answers with `text/event-stream`.
 
 ## What the verifier does
 
-It builds `./harness/cmd/harness`, starts a scripted HTTP server that speaks the
+It builds `./agent/cmd/agent`, starts a scripted HTTP server that speaks the
 real protocol, points `OPENAI_BASE_URL` at it, and runs your binary. Then it
 checks three things:
 
@@ -113,18 +113,18 @@ and is not JSON.
 
 Build the body and POST it with the caller's ctx. Check the status before reading
 the body; on non-2xx, read at most a few KiB and return
-`&harness.HTTPError{Status, Body}`. Otherwise scan lines, keep those starting
+`&agent.HTTPError{Status, Body}`. Otherwise scan lines, keep those starting
 `data:`, skip `[DONE]`, decode each into a chunk struct, append `delta.content`,
 and take `usage` when it is non-nil. After the loop, check `scanner.Err()` and
 return it. Assemble the returned message outside the loop.
 
-`assay hint 01 <case-id>` prints the same rungs from the CLI.
+`kata hint 01 <case-id>` prints the same rungs from the CLI.
 </details>
 
 ## Done when
 
-`assay submit 01` reports 9/9, and:
+`kata submit 01` reports 9/9, and:
 
-- `./harness -p "hello"` works against Ollama or any OpenAI-compatible endpoint;
+- `./agent -p "hello"` works against Ollama or any OpenAI-compatible endpoint;
 - you can explain why `scanner.Err()` matters without looking;
 - you know which of the three traps bit you, and which case caught it.

@@ -77,7 +77,7 @@ func TestRunBoundsEachCase(t *testing.T) {
 func TestWantedErrRejectsNotImplemented(t *testing.T) {
 	// The historical bug: "expect an error" is satisfied by a stub's sentinel,
 	// so an unstarted chapter reports green.
-	if err := WantedErr(errors.New("harness: not implemented yet")); err == nil {
+	if err := WantedErr(errors.New("agent: not implemented yet")); err == nil {
 		t.Fatal("WantedErr accepted a not-implemented error")
 	}
 	if err := WantedErr(nil); err == nil {

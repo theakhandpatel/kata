@@ -1,4 +1,4 @@
-//go:build assay_checks
+//go:build kata_checks
 
 package checks
 
@@ -7,10 +7,10 @@ import (
 	"testing"
 	"time"
 
-	"assay/internal/blackbox"
-	"assay/internal/fake"
-	"assay/internal/grader"
-	"assay/internal/hints"
+	"kata/internal/blackbox"
+	"kata/internal/fake"
+	"kata/internal/grader"
+	"kata/internal/hints"
 )
 
 // Chapter 01 -- talk to the model.

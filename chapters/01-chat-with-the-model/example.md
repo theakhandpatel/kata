@@ -1,10 +1,10 @@
 # 01 — Example
 
 *Full, annotated implementation. Open this after a real attempt — ideally after
-`assay submit 01` passes, then compare. Reading it first turns the exercise into
+`kata submit 01` passes, then compare. Reading it first turns the exercise into
 copy-typing.*
 
-The complete compilable file is `solutions/ch01/harness/provider_openai.go`. This
+The complete compilable file is `reference/ch01/agent/provider_openai.go`. This
 document is that file taken apart, in the order the thinking happens.
 
 ---
@@ -238,7 +238,7 @@ to add while `Chat` is still small.
 
 ## Comparison checklist
 
-When you look at `solutions/ch01`, check whether yours differs in:
+When you look at `reference/ch01`, check whether yours differs in:
 
 - [ ] separate wire types vs `json` tags on domain types
 - [ ] `*int` for optionals

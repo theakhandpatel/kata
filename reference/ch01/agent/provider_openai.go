@@ -1,12 +1,12 @@
 // Reference implementation for chapter 01.
 //
 // Read this only after your own attempt fails. It replaces
-// harness/provider_openai.go wholesale when you run `assay test --solution 01`.
+// agent/provider_openai.go wholesale when you run `kata submit --solution 01`.
 //
 // The shape to notice: this file knows about the wire format and nothing else.
 // No loop, no tools, no session. Those come in later chapters, and they will
 // call Chat without caring how it works.
-package harness
+package agent
 
 import (
 	"bufio"

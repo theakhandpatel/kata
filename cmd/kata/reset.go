@@ -8,14 +8,14 @@ import (
 	"strings"
 )
 
-// cmdReset restores harness/ to the state at the start of a chapter.
+// cmdReset restores agent/ to the state at the start of a chapter.
 //
-// The state is derived, not stored: `assay reset 04` applies solutions/ch01
-// through ch03 and drops the result into harness/. That is the same before-state
-// `assay verify` grades, so what you reset to is exactly what the previous
+// The state is derived, not stored: `kata reset 04` applies solutions/ch01
+// through ch03 and drops the result into agent/. That is the same before-state
+// `kata verify` grades, so what you reset to is exactly what the previous
 // chapter proved.
 //
-// Only .go files are replaced. Notes and scratch files in harness/ survive.
+// Only .go files are replaced. Notes and scratch files in agent/ survive.
 func cmdReset(args []string) error {
 	root, err := findRoot()
 	if err != nil {
@@ -36,17 +36,17 @@ func cmdReset(args []string) error {
 	}
 	defer cleanup()
 
-	target := filepath.Join(root, "harness")
+	target := filepath.Join(root, "agent")
 	removed, err := removeGoFiles(target)
 	if err != nil {
 		return err
 	}
-	written, err := copyGoFiles(filepath.Join(tmp, "harness"), target)
+	written, err := copyGoFiles(filepath.Join(tmp, "agent"), target)
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("\n  harness/ reset to the start of chapter %s\n", ch.ID)
+	fmt.Printf("\n  agent/ reset to the start of chapter %s\n", ch.ID)
 	fmt.Printf("    removed %s, wrote %s\n\n",
 		plural(removed, "1 file", fmt.Sprintf("%d files", removed)),
 		plural(written, "1 file", fmt.Sprintf("%d files", written)))

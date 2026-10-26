@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"assay/internal/hints"
+	"kata/internal/hints"
 )
 
 func timeNow() time.Time { return time.Now().UTC() }
@@ -35,7 +35,7 @@ func cmdStatus() error {
 		}
 	}
 
-	fmt.Printf("\n  assay · %s %s written · %d passed · %d planned\n\n",
+	fmt.Printf("\n  kata · %s %s written · %d passed · %d planned\n\n",
 		itoa(written), plural(written, "chapter", "chapters"), passed, len(planned))
 
 	if prog.passed(cur.ID) {
@@ -45,11 +45,11 @@ func cmdStatus() error {
 	}
 
 	fmt.Printf("  you are on chapter %s — %s\n\n", cur.ID, cur.Title)
-	fmt.Printf("    1. read   assay read %s\n", cur.ID)
-	fmt.Printf("    2. build  edit harness/\n")
-	fmt.Printf("    3. submit assay submit %s\n\n", cur.ID)
-	fmt.Printf("  stuck?  assay hint %s <case-id>\n", cur.ID)
-	fmt.Printf("  lost?   assay list\n\n")
+	fmt.Printf("    1. read   kata read %s\n", cur.ID)
+	fmt.Printf("    2. build  edit agent/\n")
+	fmt.Printf("    3. submit kata submit %s\n\n", cur.ID)
+	fmt.Printf("  stuck?  kata hint %s <case-id>\n", cur.ID)
+	fmt.Printf("  lost?   kata list\n\n")
 	return nil
 }
 
@@ -170,7 +170,7 @@ func cmdList() error {
 		fmt.Printf("    [%s] %s  %-26s %s\n", mark, c.ID, c.Title, note)
 	}
 	fmt.Println()
-	fmt.Printf("  %d of %d chapters written. You edit harness/ only.\n\n", writtenCount(root), len(planned))
+	fmt.Printf("  %d of %d chapters written. You edit agent/ only.\n\n", writtenCount(root), len(planned))
 	return nil
 }
 
@@ -213,7 +213,7 @@ func cmdProgress() error {
 
 func cmdHint(args []string) error {
 	if len(args) < 2 {
-		return fmt.Errorf("usage: assay hint <chapter> <case-id>")
+		return fmt.Errorf("usage: kata hint <chapter> <case-id>")
 	}
 	ch := args[0]
 	if len(ch) == 1 {
@@ -223,7 +223,7 @@ func cmdHint(args []string) error {
 
 	tiers := hints.Get(ch, id)
 	if len(tiers) == 0 {
-		return fmt.Errorf("no hints for chapter %s case %q — `assay read %s` lists the case ids", ch, id, ch)
+		return fmt.Errorf("no hints for chapter %s case %q — `kata read %s` lists the case ids", ch, id, ch)
 	}
 
 	fmt.Printf("\n  %s\n\n", id)
