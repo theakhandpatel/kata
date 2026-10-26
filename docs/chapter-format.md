@@ -76,6 +76,17 @@ order:
 6. **Comparison checklist** — differences that are bugs vs differences that are
    style.
 
+## The build tag
+
+Chapter checks carry `//go:build lathe_checks`. That keeps `go test ./...` green
+in a fresh clone, where `harness/` is still the starter and every case is
+supposed to fail. `lathe submit` and `lathe verify` add the tag themselves, so
+you never pass it by hand.
+
+```sh
+go test -tags=lathe_checks ./chapters/01-chat-with-the-model/checks/
+```
+
 ## Indexing
 
 CodeCrafters indexes stages globally with sections as headers. We do not: **a
