@@ -162,6 +162,30 @@ flowchart TD
 A change that makes a later chapter edit `loop.go` is a design error, not a
 scheduling problem. The seams exist so the course stays additive.
 
+Two honest notes about these interfaces.
+
+**Production harnesses do not define most of them.** pi and PiG use concrete
+session types, not a session interface. crush exposes services
+(`session.Service`, `message.Service`) rather than a registry. The interfaces
+here are teaching seams, chosen so that chapters stay additive and so that a
+check can substitute a scripted implementation. They are good design, not
+doctrine.
+
+**The provider seam is deliberately lossy.** `Chat` returns one finished message,
+which hides the stream. That is the right compression for chapters 01 to 03.
+Chapter 04 refactors the same parser into a `Stream` call that reports deltas as
+they arrive, and keeps `Chat` as a thin collect-the-stream wrapper. Nothing about
+the wire changes; only what the caller can see while it arrives.
+
+Where to read the real thing, by concern:
+
+| Concern | Read | Not |
+|---|---|---|
+| the loop, event order, tool batching | PiG `agent/agent_loop.go` | crush, whose loop lives in `charm.land/fantasy` |
+| permission policy as a first-class service | crush `internal/permission/` | pi or PiG, which expose hooks only |
+| MCP over stdio, hand-rolled | PiG/pi MCP clients | crush, which uses the official Go SDK |
+| provider adapters | pi `packages/ai/src/api/` | — |
+
 ## Grading policy
 
 Two drivers, one rule. Grade the largest thing that can carry the claim.
