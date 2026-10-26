@@ -115,7 +115,19 @@ is an **adapter around a loop**, not the loop.
 #### Entry point → request journey (`crush run`)
 
 This is the non-interactive path; it is the shortest complete path and the one
-the course's CLI most resembles.
+the course's CLI most resembles. The short form is:
+
+```
+crush/main.go:25 → crush/internal/cmd/root.go:188
+  → crush/internal/cmd/run.go:111 → crush/internal/app/app.go:303
+  → crush/internal/agent/coordinator.go:311
+  → crush/internal/agent/agent.go:609
+  → fantasy@v0.45.1/agent.go:902
+  → fantasy@v0.45.1/providers/openai/language_model.go:454
+  → fantasy@v0.45.1/agent.go:1411
+  → crush/internal/agent/agent.go:973
+  → crush/internal/app/app.go:461
+```
 
 1. `main.main` (`crush/main.go:15`) calls `cmd.Execute()` (`crush/main.go:25`).
 2. `cmd.Execute` (`crush/internal/cmd/root.go:188`) is the cobra/fang root. The
@@ -361,6 +373,20 @@ plumbing.
 
 #### Entry point → request journey (`pig -p` print mode)
 
+The short form is:
+
+```
+PiG/cmd/pig/main.go:10 → PiG/coding/cli/main.go:579
+  → PiG/coding/cli/print_mode.go:125
+  → PiG/coding/cli/print_mode.go:571 → PiG/coding/session.go:955
+  → PiG/coding/session_preflight.go:141 → PiG/agent/agent.go:1225
+  → PiG/agent/agent_loop.go:152 → PiG/agent/agent_loop.go:291
+  → PiG/agent/agent_loop.go:458 → PiG/ai/openai.go:1878
+  → PiG/agent/agent_loop.go:317 → PiG/coding/session_boundaries.go:49
+  → PiG/coding/session.go:810
+  → PiG/internal/codingagent/session.go:497
+```
+
 1. `cmd/pig/main.go:10` calls `cli.Main(os.Args[1:], nil)`.
 2. `coding/cli/main.go:579` is `Main`. After flag parsing and command dispatch,
    print/JSON/RPC modes are routed at `:750`; print mode calls
@@ -574,6 +600,26 @@ Pi is the reference contract PiG ports. The relevant packages:
 - `packages/mcp` — hand-written MCP client and transports.
 
 #### Entry point → request journey (`pi -p` print mode)
+
+The short form is:
+
+```
+pi/packages/coding-agent/src/cli.ts:6
+  → pi/packages/coding-agent/src/main.ts:574
+  → pi/packages/coding-agent/src/modes/print-mode.ts:33
+  → pi/packages/coding-agent/src/core/agent-session.ts:2092
+  → pi/packages/coding-agent/src/core/agent-session.ts:1873
+  → pi/packages/agent/src/agent.ts:382
+  → pi/packages/agent/src/agent-loop.ts:111
+  → pi/packages/agent/src/agent-loop.ts:172
+  → pi/packages/agent/src/agent-loop.ts:390
+  → pi/packages/ai/src/api/openai-completions.ts:411
+  → pi/packages/agent/src/agent-loop.ts:518
+  → pi/packages/agent/src/agent.ts:575
+  → pi/packages/coding-agent/src/core/agent-session.ts:1103
+  → pi/packages/coding-agent/src/core/session-manager.ts:1204
+  → pi/packages/coding-agent/src/core/session-manager.ts:1172
+```
 
 1. `packages/coding-agent/src/cli.ts:6` calls `main(process.argv.slice(2))`.
 2. `main.ts:574` parses flags, builds services and the session manager, then
