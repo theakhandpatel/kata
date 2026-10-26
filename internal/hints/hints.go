@@ -13,6 +13,48 @@ package hints
 
 // Table maps chapter number -> case id -> the three rungs.
 var Table = map[string]map[string][3]string{
+	"09": {
+		"advertises-skills": {
+			"A model cannot invoke what it has not been told about.",
+			"Read skills/*/SKILL.md, and add a section to the system prompt naming each skill and its description.",
+			"Implement the Contributor interface: render '# Skills', a line on how to invoke, then '- name: description' per skill.",
+		},
+		"body-not-advertised": {
+			"The catalogue's value is that it is small.",
+			"Advertise name and description only; keep Body out of the system prompt.",
+			"If the system prompt contains the body of an uninvoked skill, chapter 07's budget pays for work nobody asked for.",
+		},
+		"loads-body-on-invoke": {
+			"Invocation is when the body enters the request.",
+			"Scan the prompt for /name and replace the token with that skill's body.",
+			"Expand before the prompt becomes history, so the request and the session agree.",
+		},
+		"substitutes-arguments": {
+			"Placeholders are how a skill takes input.",
+			"Replace $ARGUMENTS first, then positional $0, $1, ... from the whitespace-split arguments.",
+			`$ARGUMENTS is the whole argument string; $0 is the first word. Replace with a regex over \$(\d+) so a missing argument becomes empty rather than literal.`,
+		},
+		"stacks-skills": {
+			"One prompt can name several skills, and order is meaning.",
+			"Split the prompt at each slash command; each skill's arguments run to the next command.",
+			"Walk matches left to right, write the body for a known name, and advance past its arguments.",
+		},
+		"no-invocation-no-body": {
+			"Ordinary text is the common case, and expansion must be a no-op.",
+			"Return the prompt unchanged when no slash command matches.",
+			"Trim only what you inserted. Do not trim or reformat the user's own words.",
+		},
+		"unknown-skill-preserved": {
+			"A typo must not delete the person's words.",
+			"On an unknown name, copy the original text through and continue.",
+			`Write prompt[last:argsEnd] rather than expanding, and keep going with the next match.`,
+		},
+		"frontmatter-not-leaked": {
+			"The header is metadata for the agent, not instructions for the model.",
+			"Parse the frontmatter, keep the body, and substitute into the body only.",
+			"Split on the closing '---' fence and take what follows; the body must not start with '---' or contain 'description:'.",
+		},
+	},
 	"08": {
 		"steer-continues-after-done": {
 			"A steered message is a reason to keep going, not a new run.",
