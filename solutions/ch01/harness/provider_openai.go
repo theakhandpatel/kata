@@ -1,7 +1,7 @@
 // Reference implementation for chapter 01.
 //
 // Read this only after your own attempt fails. It replaces
-// harness/provider_openai.go wholesale when you run `craft test --solution 01`.
+// harness/provider_openai.go wholesale when you run `lathe test --solution 01`.
 //
 // The shape to notice: this file knows about the wire format and nothing else.
 // No loop, no tools, no session. Those come in later chapters, and they will

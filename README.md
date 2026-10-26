@@ -1,10 +1,10 @@
-# agentcraft
+# lathe
 
 Build a coding-agent harness in Go, one chapter at a time, where every chapter
 tells you exactly what is wrong.
 
 This is not a tutorial you read. It is a **graded build**: you edit `harness/`,
-run `craft test 01`, and get a report that names the mechanism you got wrong —
+run `lathe test 01`, and get a report that names the mechanism you got wrong —
 the way CodeCrafters does, but for something CodeCrafters cannot grade, because a
 model's output is random, slow, and paid for.
 
@@ -31,13 +31,13 @@ that is the one thing no chapter requires.
 ## Run it
 
 ```bash
-go build -o craft ./cmd/craft     # or: go run ./cmd/craft ...
+go build -o lathe ./cmd/lathe     # or: go run ./cmd/lathe ...
 
-./craft list              # chapters + status
-./craft test 01           # grade chapter 01
-./craft hint 01 usage     # three-tier hint ladder for one case
-./craft test 01 --solution   # grade the reference implementation
-./craft progress          # the whole arc
+./lathe list              # chapters + status
+./lathe test 01           # grade chapter 01
+./lathe hint 01 usage     # three-tier hint ladder for one case
+./lathe test 01 --solution   # grade the reference implementation
+./lathe progress          # the whole arc
 ```
 
 Requires Go. No API key, no network, no Docker, no account.
@@ -54,10 +54,11 @@ Ten chapters. Each one is a *falsifiable* claim about the harness you built.
 | 04 | The agent loop | event log matches a grammar; no orphan `tool_result` |
 | 05 | Prompt assembly | `AGENTS.md` discovery, injection, attribution |
 | 06 | Sessions | JSONL append, replay, resume, idempotence |
-| 07 | Context budget | never exceeds budget; tool pairs never split |
+| 07 | Context budget & pruning | never exceeds budget; tool pairs never split; pruned content is marked, not vanished |
 | 08 | Interrupt & steering | abort mid-stream; queued message enters at the seam |
 | 09 | Skills | frontmatter discovery, lazy body load, args, stacking |
 | 10 | Subagent | child loop, isolated context, result returned |
+| 11 | MCP (advanced) | stdio JSON-RPC handshake, `tools/list` → `ToolDef`s, `tools/call` |
 
 ## Deliberately out of scope
 
@@ -65,7 +66,7 @@ Feature parity with [pi](https://github.com/earendil-works/pi) is not the goal a
 never was. The course teaches the *machine*, not every attachment. Skipped on
 purpose, with pointers instead of chapters:
 
-TUI · MCP · extension/plugin runtime · LSP · multi-provider fan-out beyond two
+TUI · extension/plugin runtime · LSP · multi-provider fan-out beyond two
 wire formats · OAuth · images · RPC/SDK · packaging · telemetry.
 ([crush](https://github.com/charmbracelet/crush) is the Go reference for most of
 those; [PiG](https://github.com/MichaelKinsy/PiG) is pi ported to Go line by
@@ -80,7 +81,7 @@ internal/grader/    assertion engine: expected/actual, diff, Why, hints
 internal/hints/     the hint ladder for every case
 chapters/NN-*/      README.md (lesson) + checks/ (what "done" means)
 solutions/          reference implementations, cumulative, separate Go module
-cmd/craft/          the runner
+cmd/lathe/          the runner
 ```
 
 ## How grading works
@@ -97,7 +98,7 @@ whole picture. A failed case prints four things:
         expected: "*harness.HTTPError"
         actual:   provider: HTTP 429: {"error":"slow down"}
         hint: Check resp.StatusCode before you touch the body.
-        more: craft hint 01 http-error
+        more: lathe hint 01 http-error
 ```
 
 `why` is the mechanism, `expected`/`actual` is the evidence, `hint` is rung one
@@ -110,5 +111,5 @@ throwaway copy of the repo and is not recorded.
 2. `chapters/NN-slug/checks/chNN_test.go` — cases in the `grader.Suite` DSL.
 3. `internal/hints/hints.go` — three rungs per case.
 4. `solutions/chNN/` — only the files this chapter changes.
-5. `craft test NN` fails; `craft test NN --solution` passes. That pair is the
+5. `lathe test NN` fails; `lathe test NN --solution` passes. That pair is the
    contract.

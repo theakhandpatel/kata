@@ -1,3 +1,4 @@
-# local progress is per-learner, not part of the course
-.agentcraft/
-/craft
+# learner progress and build output
+.lathe/
+/lathe
+/site/dist/

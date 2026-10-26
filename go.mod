@@ -1,3 +1,3 @@
-module agentcraft
+module lathe
 
 go 1.26
