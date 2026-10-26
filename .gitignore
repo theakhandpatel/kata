@@ -17,3 +17,7 @@ BUILD-STATE.md
 
 # local tool lockfile
 skills-lock.json
+
+# internal research notes
+docs/research/
+.agentcraft/
