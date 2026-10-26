@@ -13,6 +13,48 @@ package hints
 
 // Table maps chapter number -> case id -> the three rungs.
 var Table = map[string]map[string][3]string{
+	"05": {
+		"system-message-first": {
+			"The system message is assembled before the loop starts, and it comes first.",
+			"Build the string, then prepend a message with role system to the history you pass to the loop.",
+			"history := []Message{{Role: RoleSystem, Content: system}, {Role: RoleUser, Content: prompt}} and keep the base instruction containing 'coding agent'.",
+		},
+		"agents-md-included": {
+			"Project instructions are a file the agent reads before it starts.",
+			"Find AGENTS.md from the working directory upward, read it, and add it to the system message with its path.",
+			"Emit a section headed by '# Project instructions' and a '## <absolute path>' line, then the file body.",
+		},
+		"agents-md-from-parent": {
+			"Rules often live above the directory you run in.",
+			"Walk upward from the working directory, collecting AGENTS.md at each level.",
+			"Loop on filepath.Dir until it stops changing, bounded by a depth limit, and stat AGENTS.md at each level.",
+		},
+		"agents-md-order": {
+			"Two files can disagree, so order is the resolution rule.",
+			"The nearest file must come last, which means discovery collects outward first and then reverses.",
+			"Collect from the working directory upward, then reverse the slice before rendering.",
+		},
+		"no-agents-md": {
+			"Discovery must succeed when there is nothing to find.",
+			"Return an empty section rather than an error or an empty heading.",
+			"Track how many files were included and emit the heading only for the first one.",
+		},
+		"empty-agents-md": {
+			"A file that exists and contains nothing is not instructions.",
+			"Trim the body and skip it when there is nothing left.",
+			`If strings.TrimSpace(body) == "" then continue, before writing any heading.`,
+		},
+		"system-prompt-stable": {
+			"Anything that varies between runs defeats the provider's prefix cache.",
+			"Keep the base prompt constant and render files in a deterministic order.",
+			"No timestamps, no random ids, no map iteration. Sort or preserve discovery order, and test two runs byte for byte.",
+		},
+		"user-message-preserved": {
+			"Assembly adds a system message; it does not edit the user's text.",
+			"The user message is appended unchanged after the system message.",
+			"Messages: {system, prompt}. Do not trim, prefix, or wrap the prompt.",
+		},
+	},
 	"04": {
 		"loops-until-done": {
 			"A one-hop program handles one tool. A loop handles a task.",
