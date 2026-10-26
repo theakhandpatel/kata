@@ -13,6 +13,48 @@ package hints
 
 // Table maps chapter number -> case id -> the three rungs.
 var Table = map[string]map[string][3]string{
+	"06": {
+		"creates-session-file": {
+			"A session path is a promise that the conversation outlives the process.",
+			"Open the file for append, creating it and its parent directory when absent.",
+			"os.MkdirAll(filepath.Dir(path)) then os.OpenFile(path, O_CREATE|O_WRONLY|O_APPEND, 0o644).",
+		},
+		"session-is-jsonl": {
+			"One JSON object per line, header first.",
+			"Write a header with a type and a version, then one record per message.",
+			"Marshal each record and append a newline; the header lets a reader reject an incompatible file instead of misreading it.",
+		},
+		"resumes-history": {
+			"The second run has to see what the first one said.",
+			"Load the recorded messages, then place them between the system message and the new user message.",
+			"history = [system] + prior + [user]. Order matters: the provider pairs calls and results in sequence.",
+		},
+		"appends-not-overwrites": {
+			"Rewriting the file loses everything before the last crash.",
+			"Open for append and never truncate.",
+			"Use O_APPEND and keep the header only for a new file. Check that the first run's question appears exactly once after two runs.",
+		},
+		"no-duplicate-turns": {
+			"The classic resume bug is loading the history and then recording it again.",
+			"Record only what this run added, not the history it loaded.",
+			"Slice the run's history from len(prior)+1: that skips the system message and the loaded messages.",
+		},
+		"system-not-duplicated": {
+			"Conversation is data; the system prompt is policy for the current run.",
+			"Never store the system message, and rebuild it on every start.",
+			"The session holds user, assistant and tool messages only. Prepend one fresh system message at index 0.",
+		},
+		"tool-history-persisted": {
+			"A tool result without its call is rejected by the provider.",
+			"Record assistant messages with their tool calls as well as the tool results.",
+			"Persist every message the loop appended, including assistant messages whose ToolCalls slice is non-empty.",
+		},
+		"missing-session-is-created": {
+			"The first run has no file yet.",
+			"Treat a missing file as a new session rather than an error, and create parent directories.",
+			"Check errors.Is(err, os.ErrNotExist) before opening, write the header only when the file is new.",
+		},
+	},
 	"05": {
 		"system-message-first": {
 			"The system message is assembled before the loop starts, and it comes first.",

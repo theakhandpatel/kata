@@ -35,26 +35,26 @@ const (
 //	assistant     Content and/or ToolCalls
 //	tool          Content and ToolCallID (the call this result answers)
 type Message struct {
-	Role    string
-	Content string
+	Role    string `json:"role"`
+	Content string `json:"content"`
 
 	// ToolCalls is non-empty only on assistant messages that requested tools.
-	ToolCalls []ToolCall
+	ToolCalls []ToolCall `json:"toolCalls,omitempty"`
 
 	// ToolCallID is set only on tool messages.
-	ToolCallID string
+	ToolCallID string `json:"toolCallId,omitempty"`
 
 	// Name is optional on tool messages; some providers echo the tool name.
-	Name string
+	Name string `json:"name,omitempty"`
 }
 
 // ToolCall is a model's request to invoke a tool. Arguments is the raw JSON
 // string exactly as the model produced it -- do not unmarshal it here. The
 // tool decides how to decode its own arguments.
 type ToolCall struct {
-	ID        string
-	Name      string
-	Arguments string
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	Arguments string `json:"arguments"`
 }
 
 // ToolDef advertises a tool to the model. Parameters is a JSON Schema object.
@@ -66,9 +66,9 @@ type ToolDef struct {
 
 // Usage is token accounting as reported by the provider.
 type Usage struct {
-	PromptTokens     int
-	CompletionTokens int
-	TotalTokens      int
+	PromptTokens     int `json:"promptTokens"`
+	CompletionTokens int `json:"completionTokens"`
+	TotalTokens      int `json:"totalTokens"`
 }
 
 // Request is one model call.
