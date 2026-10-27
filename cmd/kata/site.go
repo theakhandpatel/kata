@@ -141,7 +141,7 @@ func prepareContent(root, srcDir string) (int, error) {
 
 	for _, doc := range []string{
 		"docs/architecture.md", "docs/chapter-format.md",
-		"docs/writing-style.md", "docs/designs.md",
+		"docs/writing-style.md", "docs/designs.md", "docs/design-audit.md",
 		"docs/adr/0001-vitepress-for-the-site.md",
 		"chapters/where-next.md",
 	} {
