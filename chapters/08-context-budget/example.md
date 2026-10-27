@@ -1,4 +1,4 @@
-# 07 Example
+# 08 Example
 
 *Full, annotated implementation. Read it after `kata submit 08` passes.*
 

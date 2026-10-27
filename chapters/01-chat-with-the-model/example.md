@@ -49,7 +49,8 @@ program will look broken for no visible reason. A pointer is nil when it was not
 so `omitempty` drops it from the JSON.
 
 **Let the model name fall back.** Use the one on the request if it is set, otherwise the
-one on the client. Chapter 06 reuses a provider across runs and does not always pass a
+one on the client. The Sessions chapter reuses a provider across runs and does not always
+pass a
 model name.
 
 ## Job 2: send it
@@ -103,7 +104,7 @@ through.
 **Read at most 4 KiB of an error page.** Error responses are sometimes megabytes of
 HTML. You want a line you can read, not a memory spike.
 
-**Return your own `*HTTPError`, not a formatted string.** Chapter 04 needs to tell "the
+**Return your own `*HTTPError`, not a formatted string.** The agent loop needs to tell "the
 server is busy, try again" apart from "the model gave a bad answer". A typed error makes
 that a type assertion. A string makes it a regex.
 

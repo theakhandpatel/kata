@@ -1,4 +1,4 @@
-# 04 Example
+# 05 Example
 
 *Full, annotated implementation. Read it after `kata submit 05` passes.*
 
@@ -73,7 +73,7 @@ seconds looks like a program that has hung, and a call that crashes leaves no
 trace of what it was.
 
 `Bytes` rather than the content in the event is deliberate: the event stream is a
-log, not a second copy of the conversation. Chapter 07 uses those byte counts.
+log, not a second copy of the conversation. The context budget chapter uses those byte counts.
 
 ## Step 3: the cap is a distinct failure
 

@@ -17,7 +17,7 @@ resolveInside(root, p)   the workspace rule. the next chapter reuses it
 ReadTool                 resolve, stat, read, cap
 ```
 
-The helper earns its place later. Chapter 04 adds `write`, and a write that escapes
+The helper earns its place later. The next chapter adds `write`, and a write that escapes
 the workspace creates files on your machine, so both tools must share one rule rather
 than each having its own.
 

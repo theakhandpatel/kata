@@ -1,4 +1,4 @@
-# 08 Example
+# 09 Example
 
 *Full, annotated implementation. Read it after `kata submit 09` passes.*
 
@@ -159,7 +159,7 @@ report. Reversed, an interrupted run loses its turn.
 
 ## Why the loop is edited here
 
-Chapter 07 could wrap the provider, because a budget only rewrites a request on its
+The context budget chapter could wrap the provider, because a budget only rewrites a request on its
 way out. Steering does something a wrapper cannot: it changes the history the loop
 owns, and it changes when the loop stops.
 

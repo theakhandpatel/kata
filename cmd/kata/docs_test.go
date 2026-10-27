@@ -335,3 +335,20 @@ func TestChapterPagesHaveTheSameShape(t *testing.T) {
 		}
 	}
 }
+
+// The example page's heading must carry its own chapter number. Ten of them drifted after
+// the chapter splits, including one that claimed to be chapter 10 twice.
+func TestExampleHeadingsMatchTheirChapter(t *testing.T) {
+	root := repoRootForTests(t)
+	for _, slug := range writtenChapters(t) {
+		body, err := os.ReadFile(filepath.Join(root, "chapters", slug, "example.md"))
+		if err != nil {
+			continue
+		}
+		first := strings.SplitN(string(body), "\n", 2)[0]
+		want := "# " + slug[:2] + " Example"
+		if first != want {
+			t.Errorf("%s/example.md starts with %q; want %q", slug, first, want)
+		}
+	}
+}
