@@ -208,7 +208,7 @@ func buildConfig(title, root string) string {
 	b.WriteString("    sidebar: [\n")
 	b.WriteString("      { text: 'Start', items: [{ text: 'What Kata is', link: '/' }] },\n")
 
-	for _, part := range []string{"I. Wire", "II. Act", "III. Remember", "IV. Extend", "V. Compose"} {
+	for _, part := range partTitles() {
 		var items []string
 		for _, ch := range allChapters(root) {
 			if !ch.written() || partOf(ch.ID) != part {
@@ -250,6 +250,16 @@ func buildConfig(title, root string) string {
 }
 
 // firstChapterLink points the top navigation at whichever chapter is first on disk.
+// partTitles returns the part headings in order, from the same table the chapter list
+// uses, so a new part appears on the site without editing this file.
+func partTitles() []string {
+	out := make([]string, 0, len(parts))
+	for _, p := range parts {
+		out = append(out, p.Title)
+	}
+	return out
+}
+
 func firstChapterLink(root string) string {
 	all := allChapters(root)
 	if len(all) == 0 {

@@ -15,6 +15,43 @@ import "sort"
 
 // Table maps chapter number -> case id -> the three rungs.
 var Table = map[string]map[string][3]string{
+	"15": {
+		"small-result-passes-through": {
+			"A limit is a ceiling, not a rule for everything.",
+			"Return the content unchanged when it is under the limit.",
+			"If len(content) <= limit, return it with no notice and no file. Moving a short result costs a round trip for nothing.",
+		},
+		"large-result-moved": {
+			"Cutting a result keeps the budget and loses the information.",
+			"Write the whole thing to disk and send a summary with a handle.",
+			`The notice needs three facts: how many bytes and lines exist, a handle, and the exact call that fetches more. Keep the first slice inline so the model can start working.`,
+		},
+		"result-written-to-disk": {
+			"A summary that cannot be followed up is a deletion.",
+			"Store the content under a name derived from it, so the same content reuses the same file.",
+			"Hash the content with sha256, take the first 8 bytes as hex, and write it to <dir>/<handle>.txt.",
+		},
+		"read-result-fetches-a-slice": {
+			"The handle is only useful if a second call returns bytes.",
+			"Add a read_result tool that takes a handle, an offset and a length.",
+			"Read with f.ReadAt(buf, int64(offset)), return the slice with a note naming the byte range, and include the next offset when there is more.",
+		},
+		"unknown-handle-is-a-result": {
+			"The handle is model input, and models mistype.",
+			"Return a message naming the missing handle rather than an error that stops the run.",
+			`os.IsNotExist becomes a result like 'no result stored under handle "<x>"', so the model can try another.`,
+		},
+		"offset-past-end-is-a-result": {
+			"A model that guesses an offset will overshoot.",
+			"Compare the offset with the file size and say what the size is.",
+			"If offset >= total, return a result naming both numbers, so the model learns the real length.",
+		},
+		"handle-is-not-a-path": {
+			"The handle arrives as a model argument, so it is untrusted.",
+			"Accept only plain hex and build the path yourself.",
+			"Reject any rune outside 0-9a-f, then join with the directory. A handle of ../../etc/passwd never reaches the filesystem.",
+		},
+	},
 	"14": {
 		"retries-a-429": {
 			"A 429 means busy, not wrong.",
