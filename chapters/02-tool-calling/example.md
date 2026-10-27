@@ -1,36 +1,28 @@
 # 02 Example
 
-*Full, annotated implementation. Read it after `kata submit 02` passes, then
-compare.*
+*The finished implementation, taken apart. Open this after a real attempt, or after
+`kata submit 02` passes.*
 
-The compilable files are `reference/ch02/agent/`. This page follows the order you would
-think it through.
+The files it describes are `reference/ch02/agent/tool.go` and
+`reference/ch02/agent/provider_openai.go`.
 
 ---
 
-## The shape
-
-Three new pieces and one change:
-
-```
-agent/tool.go     Registry: name -> Tool, and Tool -> ToolDef
-agent/tools.go    ReadTool: resolve, check, read, truncate
-agent/provider_openai.go   learn tool_calls on the way out and in
-agent/cmd/agent/main.go    one hop: call, run tools, call again
-```
-
-The registry is the only place that knows the set of tools. The provider knows
-the wire format. `main` knows the sequence. Keeping those three apart is what
-makes the Running a tool chapter a two-file change.
-
-## Step 1: the registry is a lookup, not a switch
+## The registry
 
 ```go
 type Registry struct {
 	byName map[string]Tool
-	order  []string // declaration order
+	order  []string
 }
+```
 
+Two fields, and the second one is not decoration. `byName` answers "is this tool
+registered". `order` preserves declaration order so `Defs` returns the same list on
+every request. A map iterated directly would reorder the schemas between calls, which
+costs the model provider its prefix cache and makes request diffs unreadable.
+
+```go
 func (r *Registry) Defs() []ToolDef {
 	out := make([]ToolDef, 0, len(r.order))
 	for _, name := range r.order {
@@ -45,11 +37,7 @@ func (r *Registry) Defs() []ToolDef {
 }
 ```
 
-`order` is not decoration. The schema list sits at the start of every request, and
-a stable prefix is what lets a provider cache it. A map iteration order would
-change the bytes on every call.
-
-## Step 2: a call can fail in four ways, and all four are results
+## Four ways a call fails, and all four are results
 
 ```go
 func (r *Registry) Run(ctx context.Context, call ToolCall) ToolResult {
@@ -58,7 +46,10 @@ func (r *Registry) Run(ctx context.Context, call ToolCall) ToolResult {
 		return ToolResult{Content: "no such tool: " + call.Name, IsError: true}
 	}
 	if !json.Valid([]byte(call.Arguments)) {
-		return ToolResult{Content: "arguments are not valid JSON: " + call.Arguments, IsError: true}
+		return ToolResult{
+			Content: "arguments are not valid JSON: " + call.Arguments,
+			IsError: true,
+		}
 	}
 	out, err := t.Execute(ctx, json.RawMessage(call.Arguments))
 	if err != nil {
@@ -68,88 +59,19 @@ func (r *Registry) Run(ctx context.Context, call ToolCall) ToolResult {
 }
 ```
 
-The `json.Valid` check is not defensive padding. The arguments are text the model
-wrote. Without it, `json.Unmarshal` inside the tool fails, the error propagates,
-and the program exits on a model mistake. The model never learns what went wrong,
-which is the one thing it can fix.
+The order of those checks matters. The name is looked up first, because a tool that
+does not exist has no schema to validate against. The JSON check comes second, so a
+malformed call is reported as malformed rather than as a crash inside the tool. Only
+then does the tool run.
 
-Note what is **not** here: no logging, no retry, no permission prompt. Those are
-policy, and a later chapter gives that policy an interface of its own.
+`json.Valid` before `json.Unmarshal` is not padding. The arguments are text the model
+wrote. Without the check, the decode fails inside `Execute`, the error propagates, and
+the program exits on a mistake the model could have fixed if it had been told.
 
-## Step 3: the workspace check is on the resolved path
+Every branch returns a `ToolResult`, never a Go error, because none of these are fatal.
+The model reads the message and tries something else.
 
-```go
-func (t *ReadTool) resolve(p string) (string, error) {
-	if filepath.IsAbs(p) {
-		return "", fmt.Errorf("absolute paths are not allowed: %s", p)
-	}
-	full, _ := filepath.Abs(filepath.Join(t.Root, p))
-	rel, _ := filepath.Rel(t.Root, full)
-	if rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-		return "", fmt.Errorf("path escapes the workspace: %s", p)
-	}
-	return full, nil
-}
-```
-
-Checking the string for `..` is not enough: `a/../../etc/passwd` contains `..` but
-so do legitimate names, and a symlink defeats a string check entirely. Resolve
-first, then ask whether the result is still inside the root.
-
-## Step 4: truncation must be visible
-
-```go
-buf := make([]byte, limit+1)
-n, err := f.Read(buf)
-if err != nil && n == 0 {
-	return "", err
-}
-if n > limit {
-	return string(buf[:limit]) + fmt.Sprintf(
-		"\n... [truncated: %d of %d bytes shown]", limit, info.Size()), nil
-}
-```
-
-Reading `limit+1` bytes is how you learn there was more. Two consequences:
-
-- the model is told it did not see everything, so it can ask for a specific
-  range instead of guessing;
-- the result has a hard ceiling, so one large file cannot consume the context
-  budget that the Context budget chapter will enforce.
-
-## Step 5: the one hop, stated plainly
-
-```go
-msg, usage, err := provider.Chat(ctx, agent.Request{Messages: history, Tools: tools.Defs()})
-history = append(history, msg)
-
-if len(msg.ToolCalls) > 0 {
-	history = append(history, runTools(ctx, tools, msg.ToolCalls)...)
-	msg, usage, err = provider.Chat(ctx, agent.Request{Messages: history, Tools: tools.Defs()})
-	history = append(history, msg)
-}
-
-fmt.Println(msg.Content)
-```
-
-`runTools` returns one message per call, in order:
-
-```go
-out = append(out, agent.Message{
-	Role:       agent.RoleTool,
-	Content:    res.Content,
-	ToolCallID: call.ID,
-	Name:       call.Name,
-})
-```
-
-`ToolCallID` is the field that makes the conversation valid. Lose it and the next
-request is rejected with a message about orphaned tool calls.
-
-The hop is visible on purpose. Chapter 04 turns the `if` into a `for` and adds a
-step cap.
-
-## Step 6: grouping by index
+## Grouping the pieces
 
 ```go
 acc := calls[tc.Index]
@@ -157,73 +79,105 @@ if acc == nil {
 	acc = &callAccumulator{}
 	calls[tc.Index] = acc
 }
-if tc.ID != "" { acc.id = tc.ID }        // only the first fragment has it
-if tc.Function.Name != "" { acc.name = tc.Function.Name }
-acc.args.WriteString(tc.Function.Arguments)  // always append
+if tc.ID != "" {
+	acc.id = tc.ID
+}
+if tc.Function.Name != "" {
+	acc.name = tc.Function.Name
+}
+acc.args.WriteString(tc.Function.Arguments)
 ```
 
-Three rules, each with a failing case:
+Three rules, each with a failure behind it:
 
-| Rule | Wrong version | Case |
+| Rule | Wrong version | What breaks |
 |---|---|---|
-| key by index | key by id | `folds-arguments` |
-| set id only when present | overwrite with the empty id | `folds-arguments` |
-| append arguments | assign the last fragment | `folds-arguments` |
+| key by index | key by id | everything after the first piece is lost |
+| set the id only when present | overwrite with the empty id | the call has no id to pair with |
+| append the arguments | assign them | only the last few characters survive |
 
-Then emit in index order, because the assistant message's tool call order is what
-the results must match.
+Then emit in index order, because the assistant message's call order is what the
+results must match.
 
-## The diffs
+```go
+indexes := make([]int, 0, len(calls))
+for i := range calls {
+	indexes = append(indexes, i)
+}
+sort.Ints(indexes)
+```
 
-**1. Group by id instead of index** (`folds-arguments`)
+## Two directions of wire format
+
+The provider already sends `messages`. It gains two shapes:
+
+```go
+type wireMessage struct {
+	Role       string         `json:"role"`
+	Content    string         `json:"content"`
+	ToolCalls  []wireToolCall `json:"tool_calls,omitempty"`
+	ToolCallID string         `json:"tool_call_id,omitempty"`
+	Name       string         `json:"name,omitempty"`
+}
+```
+
+An assistant message carries `tool_calls`. A tool message carries `tool_call_id` and
+the content. A conversation with one and not the other is rejected, which is why the
+next chapter's state machine has to append both halves.
+
+## The stub
+
+The chapter's checks need a registered tool to call, so this reference includes one:
+
+```go
+type StubTool struct{}
+func (t *StubTool) Name() string { return "read" }
+func (t *StubTool) Execute(ctx context.Context, input json.RawMessage) (string, error) {
+	return "stub", nil
+}
+```
+
+It answers `"stub"` and nothing else. It exists to make the protocol testable: a name
+the registry knows, so a call can be dispatched and a result observed. The next chapter
+replaces it with something that opens a file.
+
+## The fixes that matter
+
+**1. Keying by id** (`folds-arguments`)
 
 ```diff
-- acc := calls[tc.ID]           // "" on continuation fragments
+- acc := calls[tc.ID]
 + acc := calls[tc.Index]
 ```
 
-**2. Return the error instead of a result** (`missing-file`)
+**2. Dropping the id on later pieces** (`result-carries-call-id`)
 
 ```diff
-- if err != nil { return "", err }        // becomes a fatal error upstream
-+ return ToolResult{Content: "no such file: " + args.Path, IsError: true}
+- acc.id = tc.ID
++ if tc.ID != "" { acc.id = tc.ID }
 ```
 
-**3. String check for path escape** (`refuses-escape`)
+**3. Returning an error instead of a result** (`unknown-tool-is-a-result`)
 
 ```diff
-- if strings.Contains(p, "..") { reject }
-+ full, _ := filepath.Abs(filepath.Join(root, p))
-+ rel, _ := filepath.Rel(root, full)
-+ if rel == ".." || strings.HasPrefix(rel, "../") { reject }
+- if !ok { return nil, fmt.Errorf("no such tool: %s", call.Name) }
++ if !ok { return ToolResult{Content: "no such tool: " + call.Name, IsError: true} }
 ```
 
-**4. Unbounded read** (`truncates-large-file`)
+**4. Trusting the arguments** (`invalid-arguments`)
 
 ```diff
-- data, _ := os.ReadFile(full)
-+ buf := make([]byte, limit+1)
-+ n, _ := f.Read(buf)
-+ if n > limit { return string(buf[:limit]) + marker }
+- json.Unmarshal([]byte(call.Arguments), &args)
++ if !json.Valid([]byte(call.Arguments)) { return errorResult }
 ```
 
-## Complete files
+## What to compare against your own
 
-| File | Lines | What to read it for |
-|---|---|---|
-| `reference/ch02/agent/tool.go` | 95 | registry, result conversion |
-| `reference/ch02/agent/tools.go` | 140 | path resolution, truncation |
-| `reference/ch02/agent/provider_openai.go` | 284 | tool_calls in both directions |
-| `reference/ch02/agent/cmd/agent/main.go` | 150 | the hop |
+- [ ] the registry keeps declaration order
+- [ ] unknown name, bad JSON and tool errors are all results
+- [ ] pieces are grouped by index
+- [ ] the id is set only when present
+- [ ] calls are emitted in index order
+- [ ] tool messages carry `tool_call_id`
 
-## Comparison checklist
-
-- [ ] registry preserves declaration order
-- [ ] unknown tool, bad JSON and tool errors all become `IsError` results
-- [ ] path check on the resolved path, absolute paths refused
-- [ ] read is bounded, and the cut is marked
-- [ ] tool results carry `tool_call_id` and keep call order
-- [ ] arguments grouped by index, appended not assigned
-- [ ] one request when there are no tool calls
-
-Differences outside this list are style.
+Everything outside that list is style.

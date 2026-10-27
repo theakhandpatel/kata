@@ -1,9 +1,9 @@
 # 05 Example
 
-*Full, annotated implementation. Read it after `kata submit 05` passes.*
+*Full, annotated implementation. Read it after `kata submit 06` passes.*
 
-The compilable files are `reference/ch05/agent/prompt.go` and
-`reference/ch05/agent/cmd/agent/main.go`. The loop and the provider are unchanged
+The compilable files are `reference/ch06/agent/prompt.go` and
+`reference/ch06/agent/cmd/agent/main.go`. The loop and the provider are unchanged
 from the previous chapter, which is the point of that interface.
 
 ---
@@ -179,8 +179,8 @@ sends a conversation.
 
 | File | Lines | What to read it for |
 |---|---|---|
-| `reference/ch05/agent/prompt.go` | 165 | the builder, discovery, empty handling |
-| `reference/ch05/agent/cmd/agent/main.go` | 115 | prepending instead of threading a field |
+| `reference/ch06/agent/prompt.go` | 165 | the builder, discovery, empty handling |
+| `reference/ch06/agent/cmd/agent/main.go` | 115 | prepending instead of threading a field |
 
 ## Comparison checklist
 

@@ -1,9 +1,9 @@
 # 09 Example
 
-*Full, annotated implementation. Read it after `kata submit 09` passes.*
+*Full, annotated implementation. Read it after `kata submit 10` passes.*
 
-The compilable file is `reference/ch09/agent/skill.go`, plus three lines of wiring in
-`reference/ch09/agent/cmd/agent/main.go`.
+The compilable file is `reference/ch10/agent/skill.go`, plus three lines of wiring in
+`reference/ch10/agent/cmd/agent/main.go`.
 
 ---
 
@@ -104,8 +104,8 @@ system, err := agent.BuildSystemPrompt(ctx, agent.BasePrompt,
 
 | File | Lines | What to read it for |
 |---|---|---|
-| `reference/ch09/agent/skill.go` | 175 | parsing, discovery, the catalogue |
-| `reference/ch09/agent/cmd/agent/main.go` | 175 | three lines of wiring |
+| `reference/ch10/agent/skill.go` | 175 | parsing, discovery, the catalogue |
+| `reference/ch10/agent/cmd/agent/main.go` | 175 | three lines of wiring |
 
 ## Comparison checklist
 

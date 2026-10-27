@@ -1,9 +1,9 @@
 # 10 Example
 
-*Full, annotated implementation. Read it after `kata submit 10` passes.*
+*Full, annotated implementation. Read it after `kata submit 12` passes.*
 
-The compilable files are `reference/ch10/agent/subagent.go` and
-`reference/ch10/agent/cmd/agent/main.go`.
+The compilable files are `reference/ch12/agent/subagent.go` and
+`reference/ch12/agent/cmd/agent/main.go`.
 
 ---
 
@@ -169,8 +169,8 @@ which is why the tools could not be built first as in earlier chapters.
 
 | File | Lines | What to read it for |
 |---|---|---|
-| `reference/ch10/agent/subagent.go` | 130 | the tool, the child loop, the single return |
-| `reference/ch10/agent/cmd/agent/main.go` | 190 | the dependency order |
+| `reference/ch12/agent/subagent.go` | 130 | the tool, the child loop, the single return |
+| `reference/ch12/agent/cmd/agent/main.go` | 190 | the dependency order |
 
 ## Comparison checklist
 

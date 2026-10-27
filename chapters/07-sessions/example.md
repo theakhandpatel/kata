@@ -1,9 +1,9 @@
 # 06 Example
 
-*Full, annotated implementation. Read it after `kata submit 06` passes.*
+*Full, annotated implementation. Read it after `kata submit 07` passes.*
 
-The compilable files are `reference/ch06/agent/session.go` and
-`reference/ch06/agent/cmd/agent/main.go`. The loop and the provider are unchanged.
+The compilable files are `reference/ch07/agent/session.go` and
+`reference/ch07/agent/cmd/agent/main.go`. The loop and the provider are unchanged.
 
 ---
 
@@ -161,8 +161,8 @@ failed *and* the disk is full, the loop's error is the one a user needs.
 
 | File | Lines | What to read it for |
 |---|---|---|
-| `reference/ch06/agent/session.go` | 185 | format, versioning, the two-pass decode |
-| `reference/ch06/agent/cmd/agent/main.go` | 150 | load, prepend, save the suffix |
+| `reference/ch07/agent/session.go` | 185 | format, versioning, the two-pass decode |
+| `reference/ch07/agent/cmd/agent/main.go` | 150 | load, prepend, save the suffix |
 
 ## Comparison checklist
 

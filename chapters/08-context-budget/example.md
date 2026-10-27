@@ -1,9 +1,9 @@
 # 07 Example
 
-*Full, annotated implementation. Read it after `kata submit 07` passes.*
+*Full, annotated implementation. Read it after `kata submit 08` passes.*
 
-The compilable files are `reference/ch07/agent/budget.go`,
-`reference/ch07/agent/events.go` and `reference/ch07/agent/cmd/agent/main.go`.
+The compilable files are `reference/ch08/agent/budget.go`,
+`reference/ch08/agent/events.go` and `reference/ch08/agent/cmd/agent/main.go`.
 The loop and the provider are unchanged.
 
 ---
@@ -181,9 +181,9 @@ the only structural change in `main`.
 
 | File | Lines | What to read it for |
 |---|---|---|
-| `reference/ch07/agent/budget.go` | 170 | estimate, fit, the decorator |
-| `reference/ch07/agent/events.go` | 75 | the extra fields, and why they are optional |
-| `reference/ch07/agent/cmd/agent/main.go` | 165 | wiring order |
+| `reference/ch08/agent/budget.go` | 170 | estimate, fit, the decorator |
+| `reference/ch08/agent/events.go` | 75 | the extra fields, and why they are optional |
+| `reference/ch08/agent/cmd/agent/main.go` | 165 | wiring order |
 
 ## Comparison checklist
 

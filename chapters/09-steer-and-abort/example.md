@@ -1,8 +1,8 @@
 # 08 Example
 
-*Full, annotated implementation. Read it after `kata submit 08` passes.*
+*Full, annotated implementation. Read it after `kata submit 09` passes.*
 
-The compilable files are `reference/ch08/agent/`. This is the first chapter that
+The compilable files are `reference/ch09/agent/`. This is the first chapter that
 edits the loop, and the reasoning for that is below.
 
 ---
@@ -205,10 +205,10 @@ only chapter where the rule is exercised.
 
 | File | Lines | What to read it for |
 |---|---|---|
-| `reference/ch08/agent/loop.go` | 165 | the new done condition, the abort path |
-| `reference/ch08/agent/steering.go` | 80 | the goroutine, the lock, the clear |
-| `reference/ch08/agent/provider_openai.go` | 300 | partial message beside the error |
-| `reference/ch08/agent/cmd/agent/main.go` | 175 | exit codes and persist-before-report |
+| `reference/ch09/agent/loop.go` | 165 | the new done condition, the abort path |
+| `reference/ch09/agent/steering.go` | 80 | the goroutine, the lock, the clear |
+| `reference/ch09/agent/provider_openai.go` | 300 | partial message beside the error |
+| `reference/ch09/agent/cmd/agent/main.go` | 175 | exit codes and persist-before-report |
 
 ## Comparison checklist
 

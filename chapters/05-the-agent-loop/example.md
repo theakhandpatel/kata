@@ -1,8 +1,8 @@
 # 04 Example
 
-*Full, annotated implementation. Read it after `kata submit 04` passes.*
+*Full, annotated implementation. Read it after `kata submit 05` passes.*
 
-The compilable files are `reference/ch04/agent/`. This document takes them apart
+The compilable files are `reference/ch05/agent/`. This document takes them apart
 in the order the thinking happens.
 
 ---
@@ -186,10 +186,10 @@ program that also logs to stderr.
 
 | File | Lines | What to read it for |
 |---|---|---|
-| `reference/ch04/agent/loop.go` | 130 | state machine, cap, accounting |
-| `reference/ch04/agent/events.go` | 60 | the event shape and the grammar |
-| `reference/ch04/agent/provider_openai.go` | 290 | adding `Stream` without breaking `Chat` |
-| `reference/ch04/agent/cmd/agent/main.go` | 100 | wiring flags to options |
+| `reference/ch05/agent/loop.go` | 130 | state machine, cap, accounting |
+| `reference/ch05/agent/events.go` | 60 | the event shape and the grammar |
+| `reference/ch05/agent/provider_openai.go` | 290 | adding `Stream` without breaking `Chat` |
+| `reference/ch05/agent/cmd/agent/main.go` | 100 | wiring flags to options |
 
 ## Comparison checklist
 

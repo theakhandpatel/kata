@@ -1,9 +1,9 @@
 # 10 Example
 
-*Full, annotated implementation. Read it after `kata submit 10` passes.*
+*Full, annotated implementation. Read it after `kata submit 11` passes.*
 
-The compilable file is `reference/ch10/agent/skill.go` (the catalogue plus expansion),
-with one changed line in `reference/ch10/agent/cmd/agent/main.go`.
+The compilable file is `reference/ch11/agent/skill.go` (the catalogue plus expansion),
+with one changed line in `reference/ch11/agent/cmd/agent/main.go`.
 
 ---
 
@@ -109,8 +109,8 @@ expanded text. The session stores what was sent, not the shorthand.
 
 | File | Lines | What to read it for |
 |---|---|---|
-| `reference/ch10/agent/skill.go` | 290 | the walk, argument delimiting, substitution |
-| `reference/ch10/agent/cmd/agent/main.go` | 180 | one changed line |
+| `reference/ch11/agent/skill.go` | 290 | the walk, argument delimiting, substitution |
+| `reference/ch11/agent/cmd/agent/main.go` | 180 | one changed line |
 
 ## Comparison checklist
 

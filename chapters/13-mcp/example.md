@@ -1,9 +1,9 @@
 # 11 Example
 
-*Full, annotated implementation. Read it after `kata submit 11` passes.*
+*Full, annotated implementation. Read it after `kata submit 13` passes.*
 
-The compilable files are `reference/ch11/agent/mcp.go` and
-`reference/ch11/agent/cmd/agent/main.go`. The loop, the prompt and the registry are
+The compilable files are `reference/ch13/agent/mcp.go` and
+`reference/ch13/agent/cmd/agent/main.go`. The loop, the prompt and the registry are
 unchanged.
 
 ---
@@ -178,8 +178,8 @@ tools. That keeps the child's schema list small and keeps the dependency order s
 
 | File | Lines | What to read it for |
 |---|---|---|
-| `reference/ch11/agent/mcp.go` | 300 | framing, handshake, adapter, namespacing |
-| `reference/ch11/agent/cmd/agent/main.go` | 215 | degrade instead of failing |
+| `reference/ch13/agent/mcp.go` | 300 | framing, handshake, adapter, namespacing |
+| `reference/ch13/agent/cmd/agent/main.go` | 215 | degrade instead of failing |
 | `internal/fake/mcpserver/main.go` | 150 | the other side of the protocol |
 
 ## Comparison checklist
