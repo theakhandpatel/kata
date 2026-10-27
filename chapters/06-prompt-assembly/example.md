@@ -4,7 +4,7 @@
 
 The compilable files are `reference/ch05/agent/prompt.go` and
 `reference/ch05/agent/cmd/agent/main.go`. The loop and the provider are unchanged
-from chapter 04, which is the point of that interface.
+from the previous chapter, which is the point of that interface.
 
 ---
 
@@ -56,7 +56,7 @@ Two details carry weight:
 
 A contributor returns a *section*, not a line. It decides its own heading. That
 keeps the builder ignorant of what kinds of things contribute, which is what lets
-chapter 09 reuse it unchanged.
+the Skills: advertise chapter reuses it unchanged.
 
 ## Step 2: discovery walks up, rendering runs down
 

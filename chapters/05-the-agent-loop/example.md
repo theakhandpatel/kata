@@ -17,7 +17,7 @@ main.go      -max-steps and -events, one call to RunLoop
 ```
 
 `RunLoop` is the only function that knows the order. Everything it calls knows
-only its own job, which is why chapter 08 can add cancellation without touching
+only its own job, which is why the Steer and abort chapter can add cancellation without touching
 the registry or the parser.
 
 ## Step 1: the loop is a state machine with one exit

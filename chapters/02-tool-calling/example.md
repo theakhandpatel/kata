@@ -21,7 +21,7 @@ agent/cmd/agent/main.go    one hop: call, run tools, call again
 
 The registry is the only place that knows the set of tools. The provider knows
 the wire format. `main` knows the sequence. Keeping those three apart is what
-makes chapter 03 a two-file change.
+makes the Running a tool chapter a two-file change.
 
 ## Step 1: the registry is a lookup, not a switch
 
@@ -74,7 +74,7 @@ and the program exits on a model mistake. The model never learns what went wrong
 which is the one thing it can fix.
 
 Note what is **not** here: no logging, no retry, no permission prompt. Those are
-policy, and chapter 08 is where that policy gets an interface of its own.
+policy, and a later chapter gives that policy an interface of its own.
 
 ## Step 3: the workspace check is on the resolved path
 
@@ -115,7 +115,7 @@ Reading `limit+1` bytes is how you learn there was more. Two consequences:
 - the model is told it did not see everything, so it can ask for a specific
   range instead of guessing;
 - the result has a hard ceiling, so one large file cannot consume the context
-  budget that chapter 07 will enforce.
+  budget that the Context budget chapter will enforce.
 
 ## Step 5: the one hop, stated plainly
 

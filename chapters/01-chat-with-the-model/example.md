@@ -11,7 +11,7 @@ the order you would think it through, not the order the lines appear.
 
 ## Split it into three jobs
 
-One 90-line function will pass. You will regret it in chapter 02, when the same parser
+One 90-line function will pass. You will regret it in the Tool calling chapter, when the same parser
 also has to handle tool calls. Three small functions cost nothing now and save a rewrite:
 
 ```
@@ -27,7 +27,7 @@ Chat
 
 Your own `Message` type and the JSON message are similar, but not the same. Keep them
 separate. Do not put `json:` tags on the types you use everywhere else, because in
-chapter 02 the JSON shape grows an object that your type does not have, and you would
+the Tool calling chapter the JSON shape grows an object that your type does not have, and you would
 have to change every file that touches it.
 
 ```go
@@ -73,7 +73,7 @@ takes an hour to find.
 
 **`NewRequestWithContext`, not `NewRequest`.** This is the only place the caller's
 context enters your code. It is what makes the timeout check pass, and what makes
-Ctrl-C work in chapter 08.
+Ctrl-C work in the Steer and abort chapter.
 
 **`"stream": true`.** The checks require it, and the next job depends on it. Without
 it the server sends one large reply and your line reader waits forever.
@@ -252,11 +252,11 @@ first run says so immediately.
 
 | Feature | Where | Why it is not here |
 |---|---|---|
-| retry with backoff and `Retry-After` | `api/openai-completions.ts` | chapter 04 gives you one retry; a full policy is its own chapter |
+| retry with backoff and `Retry-After` | `api/openai-completions.ts` | retries are their own chapter, later in the course |
 | prompt caching headers | `api/openai-prompt-cache.ts` | provider-specific, nothing to learn |
 | about thirty providers | `providers/*.ts` | one teaches the idea; thirty teach maintenance |
-| abort in the middle of a tool call | `agent/agent-loop.ts` | chapter 08 |
-| counting tokens before sending | `agent/context_tokens.go` in PiG | chapter 07 |
+| abort in the middle of a tool call | `agent/agent-loop.ts` | the Steer and abort chapter |
+| counting tokens before sending | `agent/context_tokens.go` in PiG | the Context budget chapter |
 
 The one idea worth remembering for later: `pi` counts tokens *before* it sends, so it
 can refuse a request instead of learning about the overflow from a 400. That is a design

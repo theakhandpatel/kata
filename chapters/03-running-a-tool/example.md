@@ -13,7 +13,7 @@ The file it describes is `reference/ch03/agent/tools.go`, plus two lines in
 One small helper, and one tool that uses it.
 
 ```
-resolveInside(root, p)   the workspace rule. chapter 04 reuses it
+resolveInside(root, p)   the workspace rule. the next chapter reuses it
 ReadTool                 resolve, stat, read, cap
 ```
 
@@ -102,7 +102,7 @@ the model it is blind past a point, so it can ask for a specific range instead o
 guessing. A silent cut is worse than no cut at all.
 
 **Return errors, not error strings.** `Execute` returns `(string, error)`. The registry
-from chapter 02 turns an error into an `IsError` result. Keeping those separate is what
+from the Tool calling chapter turns an error into an `IsError` result. Keeping those separate is what
 lets a later chapter distinguish "the tool failed" from "the tool returned text that
 looks like a failure".
 

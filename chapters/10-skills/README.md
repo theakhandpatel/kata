@@ -4,7 +4,7 @@
 
 The agent learns to read instructions you wrote for it. A skill is a markdown file
 with a one-line description. This chapter finds those files and puts their names in
-the system message; **chapter 10 makes them runnable**.
+the system message; **the Skills: advertise chapter makes them runnable**.
 
 | | |
 |---|---|

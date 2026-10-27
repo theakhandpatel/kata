@@ -20,7 +20,7 @@ to `read`. You run the tool, send the result back, and the second request gets t
 answer in words.
 
 You may edit `agent/tool.go`, `agent/tools.go`, and `agent/cmd/agent/main.go`. The
-registry and the wire format already exist from chapter 02. You are adding the part
+registry and the wire format already exist from the Tool calling chapter. You are adding the part
 that touches the disk.
 
 ## How it works

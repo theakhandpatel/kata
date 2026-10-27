@@ -1,9 +1,9 @@
 # 03 Example
 
-*Full, annotated implementation. Read it after `kata submit 03` passes.*
+*Full, annotated implementation. Read it after `kata submit 04` passes.*
 
-The compilable files are `reference/ch03/agent/tools.go` and
-`reference/ch03/agent/cmd/agent/main.go`. This document takes them apart in the
+The compilable files are `reference/ch04/agent/tools.go` and
+`reference/ch04/agent/cmd/agent/main.go`. This document takes them apart in the
 order the thinking happens.
 
 ---
@@ -176,8 +176,8 @@ test.
 
 | File | What to read it for |
 |---|---|
-| `reference/ch03/agent/tools.go` | the shared boundary helper, the four-way classification |
-| `reference/ch03/agent/cmd/agent/main.go` | the `-tool-timeout` flag and the three-tool registry |
+| `reference/ch04/agent/tools.go` | the shared boundary helper, the four-way classification |
+| `reference/ch04/agent/cmd/agent/main.go` | the `-tool-timeout` flag and the three-tool registry |
 
 ## Comparison checklist
 
