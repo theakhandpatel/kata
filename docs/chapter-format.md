@@ -110,9 +110,14 @@ which it means:
 - **Revision**: an existing file is changed in place. `provider_openai.go` in 02, 05, 09 and 14;
   `loop.go` in 09.
 
-The folder never changes. There is no migration step in this course: no moving files, no
-splitting packages, no new modules. That constraint is deliberate, and it is what makes a later
-chapter able to assume an earlier one: the shapes are stable even when the bodies change.
+No chapter *requires* a move: the reference overlays are files at fixed paths, so asking a
+learner to relocate one would mean maintaining it at two paths for every later chapter. That is a
+constraint on the course author, not on the learner.
+
+A learner may split `agent/` into packages. The checks are black box: they build
+`./agent/cmd/agent` (or `$KATA_ENTRY`) and run it, and never import the learner's package. If the
+entry point moves, `KATA_ENTRY` says where it went, and `kata submit` explains that in one
+sentence rather than blaming the code for an import error.
 
 A revision is not a failure of the earlier design. It is the lesson of the later chapter. When
 chapter 09 asks you to add a `Steering` field to `LoopOptions`, the point is that a loop written

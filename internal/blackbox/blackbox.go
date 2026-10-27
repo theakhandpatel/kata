@@ -38,6 +38,17 @@ var (
 	buildErr  error
 )
 
+// EntryPoint is where the learner's program lives. It is a variable so that a learner who
+// restructures the tree can say where the entry point went, instead of being told their code
+// does not compile.
+//
+//	KATA_ENTRY=./internal/agentcore/cmd/agent kata submit 01
+var EntryPoint = "./agent/cmd/agent"
+
+// packagePath is the importable package the harness lives in. Used only to give a better error
+// when the entry point moved but the imports were not updated.
+const packagePath = "kata/agent"
+
 // Binary builds the harness once per test process and returns the path.
 func Binary(t *testing.T) string {
 	t.Helper()
@@ -54,11 +65,16 @@ func Binary(t *testing.T) string {
 		}
 		out := filepath.Join(dir, "agent")
 
-		cmd := exec.Command("go", "build", "-o", out, "./agent/cmd/agent")
+		entry := EntryPoint
+		if v := os.Getenv("KATA_ENTRY"); v != "" {
+			entry = v
+		}
+
+		cmd := exec.Command("go", "build", "-o", out, entry)
 		cmd.Dir = root
 		combined, err := cmd.CombinedOutput()
 		if err != nil {
-			buildErr = fmt.Errorf("build ./agent/cmd/agent: %w\n%s", err, combined)
+			buildErr = explainBuildFailure(root, entry, string(combined), err)
 			return
 		}
 		builtPath = out
@@ -67,6 +83,32 @@ func Binary(t *testing.T) string {
 		t.Fatalf("%v", buildErr)
 	}
 	return builtPath
+}
+
+// explainBuildFailure turns the two confusing consequences of a restructure into sentences.
+//
+// Moving the entry point is allowed. Moving it and forgetting the import, or moving it without
+// telling the grader, both produce compiler output that blames the wrong thing.
+func explainBuildFailure(root, entry, output string, cause error) error {
+	switch {
+	case strings.Contains(output, "package "+packagePath+" is not in std"):
+		return fmt.Errorf(
+			"the program moved but its imports still say %q.\n"+
+				"  Either keep the package at that path, or update the import to wherever you moved it,\n"+
+				"  for example: import \"kata/internal/agentcore\" (the checks do not care).\n\n%s",
+			packagePath, output)
+
+	case strings.Contains(output, "no Go files"),
+		strings.Contains(output, "cannot find main module"),
+		strings.Contains(output, "no such directory"):
+		return fmt.Errorf(
+			"nothing to build at %q.\n"+
+				"  If you restructured the tree, tell the grader where the entry point is:\n"+
+				"      KATA_ENTRY=<path> kata submit NN\n"+
+				"  The checks build and run your binary; they do not look inside the package.\n\n%s",
+			entry, output)
+	}
+	return fmt.Errorf("build %s: %w\n%s", entry, cause, output)
 }
 
 var (

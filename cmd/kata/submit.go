@@ -179,6 +179,26 @@ var goErrRe = regexp.MustCompile(`^(?:\./)?([^\s:]+\.go):(\d+):(?:(\d+):)? (.*)$
 // build. The report is returned rather than printed so the caller can put the
 // headline above it.
 func triage(root string) (bool, string, error) {
+	// The tree can compile while the entry point the checks build is somewhere else. That
+	// happens whenever a learner restructures, and it produces nine failures that all blame
+	// the wrong thing, so it is caught here first.
+	entry := os.Getenv("KATA_ENTRY")
+	if entry == "" {
+		entry = "./agent/cmd/agent"
+	}
+	probe := exec.Command("go", "build", "-o", os.DevNull, entry)
+	probe.Dir = root
+	if out, err := probe.CombinedOutput(); err != nil {
+		msg := strings.TrimSpace(string(out))
+		return false, fmt.Sprintf(
+			"    nothing to build at %s\n"+
+				"      %s\n"+
+				"      → if you restructured the tree, tell the grader where the entry point is:\n"+
+				"          KATA_ENTRY=<path> kata submit NN\n"+
+				"        the checks build and run your binary; they never look inside the package.\n\n",
+			entry, firstLine(msg)), nil
+	}
+
 	cmd := exec.Command("go", "build", "./...")
 	cmd.Dir = root
 	out, err := cmd.CombinedOutput()
@@ -212,6 +232,16 @@ func triage(root string) (bool, string, error) {
 		b.WriteString("\n")
 	}
 	return false, b.String(), nil
+}
+
+// firstLine returns the first non-empty line of compiler output, for a one-line summary.
+func firstLine(s string) string {
+	for _, line := range strings.Split(s, "\n") {
+		if strings.TrimSpace(line) != "" {
+			return strings.TrimSpace(line)
+		}
+	}
+	return s
 }
 
 // hintForBuildError translates the half-dozen Go compiler messages that

@@ -102,8 +102,16 @@ callback in 05, and retries in 14. `loop.go` gains a steering hook in 09. Code i
 rewritten in place.
 
 That is normal, and it is the point. The chapter that forces a revision is teaching you
-something the earlier chapter could not: that the first design was too small. What never happens
-is a migration: no file moves, no package splits, no new repository.
+something the earlier chapter could not: that the first design was too small.
+
+**You may restructure.** No chapter *requires* a move, because the reference overlays are files at
+fixed paths. But nothing stops you from splitting `agent/` into packages, and the checks do not
+care: they build your binary and run it, and never look inside your code. If you move the entry
+point, tell the grader where it is:
+
+```sh
+KATA_ENTRY=./internal/agentcore/cmd/agent kata submit 01
+```
 
 Verified from the reference implementations: between chapter 05 and chapter 09, `loop.go` grows
 from 93 to 114 lines of code and 39 lines change. Most of that difference is comments; the
