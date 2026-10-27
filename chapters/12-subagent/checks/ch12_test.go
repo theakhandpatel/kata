@@ -4,12 +4,11 @@ package checks
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
 	"kata/internal/blackbox"
+	support "kata/internal/checksupport"
 	"kata/internal/fake"
 	"kata/internal/grader"
 	"kata/internal/hints"
@@ -30,15 +29,15 @@ func TestChapter12(t *testing.T) {
 				"because that changes how a prompt is written.",
 			Hints: hints.Get("12", "task-tool-advertised"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, nil)
+				dir := support.Dir(t)
 				srv := fake.New(t, fake.Reply{Text: "ok"})
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "hi").ExitCode); err != nil {
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "hi").ExitCode); err != nil {
 					return err
 				}
-				if !hasTool(srv.Last().Tools, "task") {
-					return &grader.Mismatch{Label: "tools", Want: "a task tool", Got: toolNames(srv.Last().Tools)}
+				if !support.HasTool(srv.Last().Tools, "task") {
+					return &grader.Mismatch{Label: "tools", Want: "a task tool", Got: support.ToolNames(srv.Last().Tools)}
 				}
 				srv.AssertConsumed(t)
 				return nil
@@ -52,7 +51,7 @@ func TestChapter12(t *testing.T) {
 				"reason to delegate.",
 			Hints: hints.Get("12", "child-gets-fresh-context"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, nil)
+				dir := support.Dir(t)
 				srv := fake.New(t,
 					callTask("call_1", "count the TODO markers in this repo"),
 					fake.Reply{Text: "there are 3"},
@@ -61,11 +60,11 @@ func TestChapter12(t *testing.T) {
 
 				const parentPrompt = "PARENT-SECRET keep this out of the child"
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", parentPrompt).ExitCode); err != nil {
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", parentPrompt).ExitCode); err != nil {
 					return err
 				}
 
-				child, err := requestN(srv, 1)
+				child, err := support.Request(srv, 1)
 				if err != nil {
 					return err
 				}
@@ -98,7 +97,7 @@ func TestChapter12(t *testing.T) {
 				"registry makes it impossible rather than discouraged.",
 			Hints: hints.Get("12", "child-cannot-recurse"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, nil)
+				dir := support.Dir(t)
 				srv := fake.New(t,
 					callTask("call_1", "do a thing"),
 					fake.Reply{Text: "done"},
@@ -106,10 +105,10 @@ func TestChapter12(t *testing.T) {
 				)
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "delegate").ExitCode); err != nil {
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "delegate").ExitCode); err != nil {
 					return err
 				}
-				child, err := requestN(srv, 1)
+				child, err := support.Request(srv, 1)
 				if err != nil {
 					return err
 				}
@@ -121,8 +120,8 @@ func TestChapter12(t *testing.T) {
 				if !strings.Contains(child.Messages[1].Content, "do a thing") {
 					return &grader.Mismatch{Label: "child prompt", Want: "the task text", Got: child.Messages[1].Content}
 				}
-				if hasTool(child.Tools, "task") {
-					return &grader.Mismatch{Label: "child tools", Want: "no task tool", Got: toolNames(child.Tools)}
+				if support.HasTool(child.Tools, "task") {
+					return &grader.Mismatch{Label: "child tools", Want: "no task tool", Got: support.ToolNames(child.Tools)}
 				}
 				// The child still needs tools, or it cannot do the work.
 				if len(child.Tools) == 0 {
@@ -140,25 +139,25 @@ func TestChapter12(t *testing.T) {
 				"asked for it.",
 			Hints: hints.Get("12", "result-returned-to-parent"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, nil)
+				dir := support.Dir(t)
 				srv := fake.New(t,
 					callTask("call_1", "summarise the readme"),
 					fake.Reply{Text: "CHILD-ANSWER: the readme explains the build"},
 					fake.Reply{Text: "The summary is ready."},
 				)
 
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "summarise it")
+				res := blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "summarise it")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
 				}
 				if err := grader.Eqf("stdout", "The summary is ready.\n", res.Stdout); err != nil {
 					return err
 				}
-				back, err := requestN(srv, 2)
+				back, err := support.Request(srv, 2)
 				if err != nil {
 					return err
 				}
-				toolMsg, err := toolByID(back, "call_1")
+				toolMsg, err := support.ToolResult(back, "call_1")
 				if err != nil {
 					return err
 				}
@@ -177,7 +176,7 @@ func TestChapter12(t *testing.T) {
 				"call, whatever the child did.",
 			Hints: hints.Get("12", "exactly-one-result"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, nil)
+				dir := support.Dir(t)
 				srv := fake.New(t,
 					callTask("call_1", "do the thing"),
 					fake.Reply{Text: "done"},
@@ -185,17 +184,17 @@ func TestChapter12(t *testing.T) {
 				)
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "delegate").ExitCode); err != nil {
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "delegate").ExitCode); err != nil {
 					return err
 				}
-				back, err := requestN(srv, 2)
+				back, err := support.Request(srv, 2)
 				if err != nil {
 					return err
 				}
 				// A harness with no task tool also produces exactly one result: an
 				// error saying the tool is unknown. Require the tool first.
-				if !hasTool(back.Tools, "task") {
-					return &grader.Mismatch{Label: "tools", Want: "a task tool", Got: toolNames(back.Tools)}
+				if !support.HasTool(back.Tools, "task") {
+					return &grader.Mismatch{Label: "tools", Want: "a task tool", Got: support.ToolNames(back.Tools)}
 				}
 				n := 0
 				for _, m := range back.Messages {
@@ -207,7 +206,7 @@ func TestChapter12(t *testing.T) {
 					}
 				}
 				if n != 1 {
-					return &grader.Mismatch{Label: "results for call_1", Want: "1", Got: itoa(n)}
+					return &grader.Mismatch{Label: "results for call_1", Want: "1", Got: support.Itoa(n)}
 				}
 				srv.AssertConsumed(t)
 				return nil
@@ -220,7 +219,7 @@ func TestChapter12(t *testing.T) {
 				"restriction is on delegation, not on the ability to do work.",
 			Hints: hints.Get("12", "child-uses-tools"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, map[string]string{"notes.txt": "alpha"})
+				dir := support.DirWith(t, map[string]string{"notes.txt": "alpha"})
 				srv := fake.New(t,
 					callTask("call_1", "read notes.txt and report"),
 					fake.Reply{Frames: []fake.Frame{
@@ -233,10 +232,10 @@ func TestChapter12(t *testing.T) {
 				)
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "delegate").ExitCode); err != nil {
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "delegate").ExitCode); err != nil {
 					return err
 				}
-				childSecond, err := requestN(srv, 2)
+				childSecond, err := support.Request(srv, 2)
 				if err != nil {
 					return err
 				}
@@ -249,11 +248,11 @@ func TestChapter12(t *testing.T) {
 				if !found {
 					return &grader.Mismatch{Label: "child conversation", Want: "the tool result", Got: "missing"}
 				}
-				parent, err := requestN(srv, 3)
+				parent, err := support.Request(srv, 3)
 				if err != nil {
 					return err
 				}
-				toolMsg, err := toolByID(parent, "call_1")
+				toolMsg, err := support.ToolResult(parent, "call_1")
 				if err != nil {
 					return err
 				}
@@ -271,7 +270,7 @@ func TestChapter12(t *testing.T) {
 				"one way or another, or the conversation is invalid and the loop stalls.",
 			Hints: hints.Get("12", "child-failure-is-a-result"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, map[string]string{"a.txt": "alpha"})
+				dir := support.DirWith(t, map[string]string{"a.txt": "alpha"})
 				replies := []fake.Reply{callTask("call_1", "loop forever")}
 				// The child keeps calling tools until its own step cap fires.
 				for i := 0; i < 12; i++ {
@@ -284,12 +283,12 @@ func TestChapter12(t *testing.T) {
 				replies = append(replies, fake.Reply{Text: "the child could not finish"})
 				srv := fake.New(t, replies...)
 
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "delegate")
+				res := blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "delegate")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
 				}
 				back := srv.Last()
-				toolMsg, err := toolByID(back, "call_1")
+				toolMsg, err := support.ToolResult(back, "call_1")
 				if err != nil {
 					return err
 				}
@@ -306,7 +305,7 @@ func TestChapter12(t *testing.T) {
 				"answers has thrown away the rest of the task.",
 			Hints: hints.Get("12", "parent-continues-after-task"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, nil)
+				dir := support.Dir(t)
 				srv := fake.New(t,
 					callTask("call_1", "do a small job"),
 					fake.Reply{Text: "small job done"},
@@ -315,7 +314,7 @@ func TestChapter12(t *testing.T) {
 					fake.Reply{Text: "both jobs are done"},
 				)
 
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "two jobs")
+				res := blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "two jobs")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
 				}
@@ -334,13 +333,6 @@ func TestChapter12(t *testing.T) {
 
 // --- helpers ---
 
-func env(baseURL string) map[string]string {
-	return map[string]string{
-		"OPENAI_BASE_URL": baseURL,
-		"OPENAI_API_KEY":  "test-key",
-	}
-}
-
 // callTask scripts one parent turn that delegates a job.
 func callTask(id, prompt string) fake.Reply {
 	args := fmt.Sprintf(`{"description":"job","prompt":%q}`, prompt)
@@ -349,69 +341,4 @@ func callTask(id, prompt string) fake.Reply {
 		{ToolCall: &fake.CallFrame{Index: 0, Args: args}},
 		{Finish: "tool_calls"},
 	}}
-}
-
-func workspace(t *testing.T, files map[string]string) string {
-	t.Helper()
-	dir := t.TempDir()
-	for name, body := range files {
-		full := filepath.Join(dir, name)
-		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
-			t.Fatalf("mkdir: %v", err)
-		}
-		if err := os.WriteFile(full, []byte(body), 0o644); err != nil {
-			t.Fatalf("write %s: %v", name, err)
-		}
-	}
-	return dir
-}
-
-func requestN(srv *fake.Server, n int) (fake.Recorded, error) {
-	reqs := srv.Requests()
-	if len(reqs) <= n {
-		return fake.Recorded{}, &grader.Mismatch{Label: "requests", Want: "at least " + itoa(n+1), Got: itoa(len(reqs))}
-	}
-	return reqs[n], nil
-}
-
-func toolByID(req fake.Recorded, id string) (fake.RecordedMessage, error) {
-	for _, m := range req.Messages {
-		if m.Role == "tool" && m.ToolCallID == id {
-			return m, nil
-		}
-	}
-	return fake.RecordedMessage{}, &grader.Mismatch{Label: "tool result " + id, Want: "present", Got: "missing"}
-}
-
-func hasTool(tools []map[string]any, name string) bool {
-	for _, t := range tools {
-		if fn, ok := t["function"].(map[string]any); ok && fn["name"] == name {
-			return true
-		}
-	}
-	return false
-}
-
-func toolNames(tools []map[string]any) []string {
-	out := make([]string, 0, len(tools))
-	for _, t := range tools {
-		if fn, ok := t["function"].(map[string]any); ok {
-			if name, ok := fn["name"].(string); ok {
-				out = append(out, name)
-			}
-		}
-	}
-	return out
-}
-
-func itoa(n int) string {
-	if n == 0 {
-		return "0"
-	}
-	var digits []byte
-	for n > 0 {
-		digits = append([]byte{byte('0' + n%10)}, digits...)
-		n /= 10
-	}
-	return string(digits)
 }

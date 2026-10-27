@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"kata/internal/blackbox"
+	support "kata/internal/checksupport"
 	"kata/internal/fake"
 	"kata/internal/grader"
 	"kata/internal/hints"
@@ -26,7 +27,7 @@ func TestChapter19(t *testing.T) {
 			Why:   "A conversation needs an identity before it can be listed or resumed.",
 			Hints: hints.Get("19", "creates-a-session"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				srv := fake.New(t, fake.Reply{Text: "first answer"})
 
 				if err := grader.Eqf("exit code", 0,
@@ -47,7 +48,7 @@ func TestChapter19(t *testing.T) {
 				"time is how a person finds the conversation they want.",
 			Hints: hints.Get("19", "lists-sessions"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 
 				first := fake.New(t, fake.Reply{Text: "one"})
 				if err := grader.Eqf("exit code", 0,
@@ -77,7 +78,7 @@ func TestChapter19(t *testing.T) {
 				"recognises their own conversation by.",
 			Hints: hints.Get("19", "title-from-first-prompt"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				srv := fake.New(t, fake.Reply{Text: "ok"})
 				const prompt = "why does the deploy fail on fridays"
 
@@ -98,14 +99,14 @@ func TestChapter19(t *testing.T) {
 				"it, not starting again.",
 			Hints: hints.Get("19", "resumes-by-id"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 
 				first := fake.New(t, fake.Reply{Text: "stored answer"})
 				if err := grader.Eqf("exit code", 0,
 					runAgent(t, dir, first, "-p", "remember the marker word").ExitCode); err != nil {
 					return err
 				}
-				id := sessionIDFrom(t, dir)
+				id := support.SessionIDFromStore(t, dir)
 				if id == "" {
 					return &grader.Mismatch{Label: "session id", Want: "one session in the store", Got: "none"}
 				}
@@ -136,7 +137,7 @@ func TestChapter19(t *testing.T) {
 				"a chore. Continue is the flag that makes it useful.",
 			Hints: hints.Get("19", "continue-uses-latest"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 
 				older := fake.New(t, fake.Reply{Text: "older answer"})
 				if err := grader.Eqf("exit code", 0,
@@ -180,17 +181,17 @@ func TestChapter19(t *testing.T) {
 				"rejected by the provider, so both halves have to survive the database.",
 			Hints: hints.Get("19", "tool-calls-round-trip"),
 			Run: func(t *testing.T) error {
-				dir := workspaceFiles(t, map[string]string{"a.txt": "alpha"})
+				dir := support.DirWith(t, map[string]string{"a.txt": "alpha"})
 
 				first := fake.New(t,
-					callTool("call_1", "read", `{"path":"a.txt"}`),
+					support.Call("call_1", "read", `{"path":"a.txt"}`),
 					fake.Reply{Text: "the file says alpha"},
 				)
 				if err := grader.Eqf("exit code", 0,
 					runAgent(t, dir, first, "-p", "read a.txt").ExitCode); err != nil {
 					return err
 				}
-				id := sessionIDFrom(t, dir)
+				id := support.SessionIDFromStore(t, dir)
 				if id == "" {
 					return &grader.Mismatch{Label: "session id", Want: "present", Got: "none"}
 				}
@@ -227,14 +228,14 @@ func TestChapter19(t *testing.T) {
 				"conversation is one long thread and resuming either brings back both.",
 			Hints: hints.Get("19", "two-sessions-do-not-mix"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 
 				a := fake.New(t, fake.Reply{Text: "a"})
 				if err := grader.Eqf("exit code", 0,
 					runAgent(t, dir, a, "-p", "topic alpha").ExitCode); err != nil {
 					return err
 				}
-				firstID := sessionIDFrom(t, dir)
+				firstID := support.SessionIDFromStore(t, dir)
 
 				b := fake.New(t, fake.Reply{Text: "b"})
 				if err := grader.Eqf("exit code", 0,
@@ -262,7 +263,7 @@ func TestChapter19(t *testing.T) {
 				"the person thought they were rejoining.",
 			Hints: hints.Get("19", "unknown-id-is-reported"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				srv := fake.New(t, fake.Reply{Text: "should not be reached"})
 
 				res := runAgent(t, dir, srv, "-p", "hi", "-resume", "no-such-session")
@@ -280,56 +281,9 @@ func TestChapter19(t *testing.T) {
 
 // --- helpers ---
 
-func env(baseURL string) map[string]string {
-	return map[string]string{
-		"OPENAI_BASE_URL": baseURL,
-		"OPENAI_API_KEY":  "test-key",
-	}
-}
-
 func runAgent(t *testing.T, dir string, srv *fake.Server, args ...string) blackbox.Result {
 	t.Helper()
-	return blackbox.RunIn(t, dir, env(srv.BaseURL()), args...)
-}
-
-func workspace(t *testing.T) string { return t.TempDir() }
-
-func workspaceFiles(t *testing.T, files map[string]string) string {
-	t.Helper()
-	dir := t.TempDir()
-	for name, body := range files {
-		full := filepath.Join(dir, name)
-		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
-			t.Fatalf("mkdir: %v", err)
-		}
-		if err := os.WriteFile(full, []byte(body), 0o644); err != nil {
-			t.Fatalf("write: %v", err)
-		}
-	}
-	return dir
-}
-
-func callTool(id, name, args string) fake.Reply {
-	return fake.Reply{Frames: []fake.Frame{
-		{ToolCall: &fake.CallFrame{Index: 0, ID: id, Name: name}},
-		{ToolCall: &fake.CallFrame{Index: 0, Args: args}},
-		{Finish: "tool_calls"},
-	}}
-}
-
-// sessionIDFrom reads the single session id out of the store's list output.
-func sessionIDFrom(t *testing.T, dir string) string {
-	t.Helper()
-	res := blackbox.RunIn(t, dir, map[string]string{"OPENAI_BASE_URL": "http://127.0.0.1:1/v1"}, "-sessions")
-	lines := strings.Split(res.Stdout, "\n")
-	if len(lines) < 2 {
-		return ""
-	}
-	fields := strings.Fields(lines[1])
-	if len(fields) == 0 {
-		return ""
-	}
-	return fields[0]
+	return blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), args...)
 }
 
 func boolStr(b bool) string {

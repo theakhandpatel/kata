@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"kata/internal/blackbox"
+	support "kata/internal/checksupport"
 	"kata/internal/fake"
 	"kata/internal/grader"
 	"kata/internal/hints"
@@ -32,7 +33,7 @@ func TestChapter01(t *testing.T) {
 				const want = "The quick brown fox jumps over the lazy dog."
 				srv := fake.New(t, fake.Reply{Text: want})
 
-				res := blackbox.Run(t, env(srv.BaseURL()), "-p", "say something")
+				res := blackbox.Run(t, support.Env(srv.BaseURL()), "-p", "say something")
 
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
@@ -54,7 +55,7 @@ func TestChapter01(t *testing.T) {
 			Run: func(t *testing.T) error {
 				srv := fake.New(t, fake.Reply{Text: "ok"})
 
-				res := blackbox.Run(t, env(srv.BaseURL()), "-p", "hi", "-m", "test-model")
+				res := blackbox.Run(t, support.Env(srv.BaseURL()), "-p", "hi", "-m", "test-model")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
 				}
@@ -88,7 +89,7 @@ func TestChapter01(t *testing.T) {
 			Hints: hints.Get("01", "request-envelope"),
 			Run: func(t *testing.T) error {
 				srv := fake.New(t, fake.Reply{Text: "ok"})
-				if err := grader.Eqf("exit code", 0, blackbox.Run(t, env(srv.BaseURL()), "-p", "x").ExitCode); err != nil {
+				if err := grader.Eqf("exit code", 0, blackbox.Run(t, support.Env(srv.BaseURL()), "-p", "x").ExitCode); err != nil {
 					return err
 				}
 
@@ -118,7 +119,7 @@ func TestChapter01(t *testing.T) {
 			Hints: hints.Get("01", "optional-zero-values"),
 			Run: func(t *testing.T) error {
 				srv := fake.New(t, fake.Reply{Text: "ok"})
-				if err := grader.Eqf("exit code", 0, blackbox.Run(t, env(srv.BaseURL()), "-p", "x").ExitCode); err != nil {
+				if err := grader.Eqf("exit code", 0, blackbox.Run(t, support.Env(srv.BaseURL()), "-p", "x").ExitCode); err != nil {
 					return err
 				}
 
@@ -150,7 +151,7 @@ func TestChapter01(t *testing.T) {
 					{Finish: "stop"},
 				}})
 
-				res := blackbox.Run(t, env(srv.BaseURL()), "-p", "x")
+				res := blackbox.Run(t, support.Env(srv.BaseURL()), "-p", "x")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
 				}
@@ -174,7 +175,7 @@ func TestChapter01(t *testing.T) {
 					Usage: &fake.Usage{PromptTokens: 42, CompletionTokens: 7, TotalTokens: 49},
 				})
 
-				e := env(srv.BaseURL())
+				e := support.Env(srv.BaseURL())
 				e["HARNESS_DEBUG"] = "1"
 				res := blackbox.Run(t, e, "-p", "x")
 
@@ -202,7 +203,7 @@ func TestChapter01(t *testing.T) {
 			Run: func(t *testing.T) error {
 				srv := fake.New(t, fake.Reply{Status: 429, Body: `{"error":"slow down"}`})
 
-				res := blackbox.Run(t, env(srv.BaseURL()), "-p", "x")
+				res := blackbox.Run(t, support.Env(srv.BaseURL()), "-p", "x")
 				if err := grader.Eqf("exit code", 1, res.ExitCode); err != nil {
 					return err
 				}
@@ -226,7 +227,7 @@ func TestChapter01(t *testing.T) {
 			Run: func(t *testing.T) error {
 				srv := fake.New(t, fake.Reply{FailMidStream: true})
 
-				res := blackbox.Run(t, env(srv.BaseURL()), "-p", "x")
+				res := blackbox.Run(t, support.Env(srv.BaseURL()), "-p", "x")
 				if err := grader.Eqf("requests made", 1, len(srv.Requests())); err != nil {
 					return err
 				}
@@ -249,7 +250,7 @@ func TestChapter01(t *testing.T) {
 			Run: func(t *testing.T) error {
 				srv := fake.New(t, fake.Reply{Text: "too late", Delay: 2 * time.Second})
 
-				res := blackbox.Run(t, env(srv.BaseURL()), "-p", "x", "-timeout", "50ms")
+				res := blackbox.Run(t, support.Env(srv.BaseURL()), "-p", "x", "-timeout", "50ms")
 				if err := grader.Eqf("requests made", 1, len(srv.Requests())); err != nil {
 					return err
 				}
@@ -267,11 +268,4 @@ func TestChapter01(t *testing.T) {
 			},
 		},
 	})
-}
-
-func env(baseURL string) map[string]string {
-	return map[string]string{
-		"OPENAI_BASE_URL": baseURL,
-		"OPENAI_API_KEY":  "test-key",
-	}
 }

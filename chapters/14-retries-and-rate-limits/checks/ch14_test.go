@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"kata/internal/blackbox"
+	support "kata/internal/checksupport"
 	"kata/internal/fake"
 	"kata/internal/grader"
 	"kata/internal/hints"
@@ -27,13 +28,13 @@ func TestChapter14(t *testing.T) {
 				"by hand.",
 			Hints: hints.Get("14", "retries-a-429"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				srv := fake.New(t,
 					fake.Reply{Status: 429, Body: `{"error":"slow down"}`},
 					fake.Reply{Text: "second time worked"},
 				)
 
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()),
+				res := blackbox.RunIn(t, dir, support.Env(srv.BaseURL()),
 					"-p", "x", "-retry-delay", "10ms")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
@@ -55,13 +56,13 @@ func TestChapter14(t *testing.T) {
 				"request has a reasonable chance the second time.",
 			Hints: hints.Get("14", "retries-a-500"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				srv := fake.New(t,
 					fake.Reply{Status: 503, Body: `unavailable`},
 					fake.Reply{Text: "recovered"},
 				)
 
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()),
+				res := blackbox.RunIn(t, dir, support.Env(srv.BaseURL()),
 					"-p", "x", "-retry-delay", "10ms")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
@@ -80,13 +81,13 @@ func TestChapter14(t *testing.T) {
 				"wastes the person's money and hides the real problem behind a pause.",
 			Hints: hints.Get("14", "does-not-retry-a-400"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				srv := fake.New(t,
 					fake.Reply{Status: 400, Body: `{"error":"bad model"}`},
 					fake.Reply{Text: "should never arrive"},
 				)
 
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()),
+				res := blackbox.RunIn(t, dir, support.Env(srv.BaseURL()),
 					"-p", "x", "-retry-delay", "10ms")
 				if err := grader.Eqf("exit code", 1, res.ExitCode); err != nil {
 					return err
@@ -108,7 +109,7 @@ func TestChapter14(t *testing.T) {
 				"useless.",
 			Hints: hints.Get("14", "honours-retry-after"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				srv := fake.New(t,
 					fake.Reply{
 						Status:  429,
@@ -119,7 +120,7 @@ func TestChapter14(t *testing.T) {
 				)
 
 				started := time.Now()
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()),
+				res := blackbox.RunIn(t, dir, support.Env(srv.BaseURL()),
 					"-p", "x", "-retry-delay", "10ms")
 				elapsed := time.Since(started)
 
@@ -145,7 +146,7 @@ func TestChapter14(t *testing.T) {
 				"a program that never returns.",
 			Hints: hints.Get("14", "stops-after-the-limit"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				srv := fake.New(t,
 					fake.Reply{Status: 500, Body: "down"},
 					fake.Reply{Status: 500, Body: "down"},
@@ -153,7 +154,7 @@ func TestChapter14(t *testing.T) {
 					fake.Reply{Status: 500, Body: "down"},
 				)
 
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()),
+				res := blackbox.RunIn(t, dir, support.Env(srv.BaseURL()),
 					"-p", "x", "-retries", "3", "-retry-delay", "10ms")
 				if err := grader.Eqf("exit code", 1, res.ExitCode); err != nil {
 					return err
@@ -174,10 +175,10 @@ func TestChapter14(t *testing.T) {
 				"prints the answer twice.",
 			Hints: hints.Get("14", "no-retry-on-success"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				srv := fake.New(t, fake.Reply{Text: "first time"})
 
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "x")
+				res := blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "x")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
 				}
@@ -195,13 +196,13 @@ func TestChapter14(t *testing.T) {
 				"interrupt into a program that keeps trying for another minute.",
 			Hints: hints.Get("14", "does-not-retry-a-cancellation"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				srv := fake.New(t,
 					fake.Reply{Status: 500, Body: "down", Delay: 2 * time.Second},
 					fake.Reply{Status: 500, Body: "down"},
 				)
 
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()),
+				res := blackbox.RunIn(t, dir, support.Env(srv.BaseURL()),
 					"-p", "x", "-timeout", "100ms", "-retries", "5", "-retry-delay", "10ms")
 				if err := grader.Eqf("exit code", 1, res.ExitCode); err != nil {
 					return err
@@ -220,12 +221,3 @@ func TestChapter14(t *testing.T) {
 }
 
 // --- helpers ---
-
-func env(baseURL string) map[string]string {
-	return map[string]string{
-		"OPENAI_BASE_URL": baseURL,
-		"OPENAI_API_KEY":  "test-key",
-	}
-}
-
-func workspace(t *testing.T) string { return t.TempDir() }

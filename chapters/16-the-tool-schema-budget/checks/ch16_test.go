@@ -4,12 +4,11 @@ package checks
 
 import (
 	"encoding/json"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
 	"kata/internal/blackbox"
+	support "kata/internal/checksupport"
 	"kata/internal/fake"
 	"kata/internal/grader"
 	"kata/internal/hints"
@@ -28,15 +27,15 @@ func TestChapter16(t *testing.T) {
 				"pays twenty times whether or not any is called.",
 			Hints: hints.Get("16", "ceiling-respected"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				srv := fake.New(t, fake.Reply{Text: "ok"})
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "hi", "-max-tools", "3").ExitCode); err != nil {
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "hi", "-max-tools", "3").ExitCode); err != nil {
 					return err
 				}
 				if n := len(srv.Last().Tools); n > 3 {
-					return &grader.Mismatch{Label: "advertised tools", Want: "at most 3", Got: itoa(n)}
+					return &grader.Mismatch{Label: "advertised tools", Want: "at most 3", Got: support.Itoa(n)}
 				}
 				srv.AssertConsumed(t)
 				return nil
@@ -49,14 +48,14 @@ func TestChapter16(t *testing.T) {
 				"model needs the list of what exists, even when it is not callable yet.",
 			Hints: hints.Get("16", "hidden-tools-are-named"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				srv := fake.New(t, fake.Reply{Text: "ok"})
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "hi", "-max-tools", "2").ExitCode); err != nil {
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "hi", "-max-tools", "2").ExitCode); err != nil {
 					return err
 				}
-				system := systemContent(srv.Last())
+				system := support.SystemContent(srv.Last())
 				if !strings.Contains(system, "load_tool") {
 					return &grader.Mismatch{Label: "system content", Want: "a mention of load_tool", Got: system}
 				}
@@ -81,15 +80,15 @@ func TestChapter16(t *testing.T) {
 				"back to anything. It has to be exempt from its own limit.",
 			Hints: hints.Get("16", "load-tool-is-always-advertised"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				srv := fake.New(t, fake.Reply{Text: "ok"})
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "hi", "-max-tools", "1").ExitCode); err != nil {
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "hi", "-max-tools", "1").ExitCode); err != nil {
 					return err
 				}
-				if !hasTool(srv.Last().Tools, "load_tool") {
-					return &grader.Mismatch{Label: "tools", Want: "load_tool advertised even at a ceiling of 1", Got: toolNames(srv.Last().Tools)}
+				if !support.HasTool(srv.Last().Tools, "load_tool") {
+					return &grader.Mismatch{Label: "tools", Want: "load_tool advertised even at a ceiling of 1", Got: support.ToolNames(srv.Last().Tools)}
 				}
 				srv.AssertConsumed(t)
 				return nil
@@ -102,17 +101,17 @@ func TestChapter16(t *testing.T) {
 				"has to carry its schema.",
 			Hints: hints.Get("16", "loading-a-tool-makes-it-callable"),
 			Run: func(t *testing.T) error {
-				dir := workspaceFiles(t, map[string]string{"a.txt": "alpha"})
+				dir := support.DirWith(t, map[string]string{"a.txt": "alpha"})
 				srv := fake.New(t,
-					callTool("call_1", "load_tool", `{"name":"read"}`),
+					support.Call("call_1", "load_tool", `{"name":"read"}`),
 					fake.Reply{Text: "loaded"},
 				)
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "load read", "-max-tools", "2").ExitCode); err != nil {
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "load read", "-max-tools", "2").ExitCode); err != nil {
 					return err
 				}
-				second, err := requestN(srv, 1)
+				second, err := support.Request(srv, 1)
 				if err != nil {
 					return err
 				}
@@ -143,21 +142,21 @@ func TestChapter16(t *testing.T) {
 			Why:   "The name comes from the model. A wrong name is information, not a crash.",
 			Hints: hints.Get("16", "unknown-tool-load-is-a-result"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				srv := fake.New(t,
-					callTool("call_1", "load_tool", `{"name":"nonexistent"}`),
+					support.Call("call_1", "load_tool", `{"name":"nonexistent"}`),
 					fake.Reply{Text: "there is no such tool"},
 				)
 
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "load it")
+				res := blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "load it")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
 				}
-				second, err := requestN(srv, 1)
+				second, err := support.Request(srv, 1)
 				if err != nil {
 					return err
 				}
-				msg, err := toolByID(second, "call_1")
+				msg, err := support.ToolResult(second, "call_1")
 				if err != nil {
 					return err
 				}
@@ -175,16 +174,16 @@ func TestChapter16(t *testing.T) {
 				"small enough to afford them.",
 			Hints: hints.Get("16", "no-ceiling-advertises-everything"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				srv := fake.New(t, fake.Reply{Text: "ok"})
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "hi", "-max-tools", "50").ExitCode); err != nil {
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "hi", "-max-tools", "50").ExitCode); err != nil {
 					return err
 				}
 				for _, want := range []string{"read", "write", "bash", "load_tool"} {
-					if !hasTool(srv.Last().Tools, want) {
-						return &grader.Mismatch{Label: "tools", Want: want, Got: toolNames(srv.Last().Tools)}
+					if !support.HasTool(srv.Last().Tools, want) {
+						return &grader.Mismatch{Label: "tools", Want: want, Got: support.ToolNames(srv.Last().Tools)}
 					}
 				}
 				srv.AssertConsumed(t)
@@ -198,17 +197,17 @@ func TestChapter16(t *testing.T) {
 				"estimate notices the request got smaller.",
 			Hints: hints.Get("16", "schemas-still-count-against-budget"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 
 				wide := fake.New(t, fake.Reply{Text: "ok"})
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(wide.BaseURL()),
+					blackbox.RunIn(t, dir, support.Env(wide.BaseURL()),
 						"-p", "hi", "-max-tools", "9", "-events", "-max-context", "100000").ExitCode); err != nil {
 					return err
 				}
 				narrow := fake.New(t, fake.Reply{Text: "ok"})
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(narrow.BaseURL()),
+					blackbox.RunIn(t, dir, support.Env(narrow.BaseURL()),
 						"-p", "hi", "-max-tools", "2", "-events", "-max-context", "100000").ExitCode); err != nil {
 					return err
 				}
@@ -219,7 +218,7 @@ func TestChapter16(t *testing.T) {
 					return &grader.Mismatch{
 						Label: "estimate",
 						Want:  "fewer tokens with fewer schemas",
-						Got:   itoa(wideTokens) + " wide, " + itoa(narrowTokens) + " narrow",
+						Got:   support.Itoa(wideTokens) + " wide, " + support.Itoa(narrowTokens) + " narrow",
 					}
 				}
 				return nil
@@ -229,89 +228,6 @@ func TestChapter16(t *testing.T) {
 }
 
 // --- helpers ---
-
-func env(baseURL string) map[string]string {
-	return map[string]string{
-		"OPENAI_BASE_URL": baseURL,
-		"OPENAI_API_KEY":  "test-key",
-	}
-}
-
-func callTool(id, name, args string) fake.Reply {
-	return fake.Reply{Frames: []fake.Frame{
-		{ToolCall: &fake.CallFrame{Index: 0, ID: id, Name: name}},
-		{ToolCall: &fake.CallFrame{Index: 0, Args: args}},
-		{Finish: "tool_calls"},
-	}}
-}
-
-func workspace(t *testing.T) string { return t.TempDir() }
-
-func workspaceFiles(t *testing.T, files map[string]string) string {
-	t.Helper()
-	dir := t.TempDir()
-	for name, body := range files {
-		writeFile(t, dir+"/"+name, body)
-	}
-	return dir
-}
-
-func writeFile(t *testing.T, path, body string) {
-	t.Helper()
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		t.Fatalf("mkdir: %v", err)
-	}
-	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
-		t.Fatalf("write: %v", err)
-	}
-}
-
-func requestN(srv *fake.Server, n int) (fake.Recorded, error) {
-	reqs := srv.Requests()
-	if len(reqs) <= n {
-		return fake.Recorded{}, &grader.Mismatch{Label: "requests", Want: "at least one more", Got: itoa(len(reqs))}
-	}
-	return reqs[n], nil
-}
-
-func toolByID(req fake.Recorded, id string) (fake.RecordedMessage, error) {
-	for _, m := range req.Messages {
-		if m.Role == "tool" && m.ToolCallID == id {
-			return m, nil
-		}
-	}
-	return fake.RecordedMessage{}, &grader.Mismatch{Label: "tool result " + id, Want: "present", Got: "missing"}
-}
-
-func hasTool(tools []map[string]any, name string) bool {
-	for _, t := range tools {
-		if fn, ok := t["function"].(map[string]any); ok && fn["name"] == name {
-			return true
-		}
-	}
-	return false
-}
-
-func toolNames(tools []map[string]any) []string {
-	out := make([]string, 0, len(tools))
-	for _, t := range tools {
-		if fn, ok := t["function"].(map[string]any); ok {
-			if name, ok := fn["name"].(string); ok {
-				out = append(out, name)
-			}
-		}
-	}
-	return out
-}
-
-func systemContent(req fake.Recorded) string {
-	for _, m := range req.Messages {
-		if m.Role == "system" {
-			return m.Content
-		}
-	}
-	return ""
-}
 
 func firstBudgetTokens(t *testing.T, srv *fake.Server) int {
 	t.Helper()
@@ -328,16 +244,4 @@ func firstBudgetTokens(t *testing.T, srv *fake.Server) int {
 		tokens += len(b) / 4
 	}
 	return tokens
-}
-
-func itoa(n int) string {
-	if n == 0 {
-		return "0"
-	}
-	var digits []byte
-	for n > 0 {
-		digits = append([]byte{byte('0' + n%10)}, digits...)
-		n /= 10
-	}
-	return string(digits)
 }

@@ -3,7 +3,6 @@
 package checks
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,6 +10,7 @@ import (
 	"time"
 
 	"kata/internal/blackbox"
+	support "kata/internal/checksupport"
 	"kata/internal/fake"
 	"kata/internal/grader"
 	"kata/internal/hints"
@@ -31,13 +31,13 @@ func TestChapter09(t *testing.T) {
 				"belongs in the same run, after the turn that just finished.",
 			Hints: hints.Get("09", "steer-continues-after-done"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, nil)
+				dir := support.Dir(t)
 				srv := fake.New(t,
 					fake.Reply{Text: "first pass"},
 					fake.Reply{Text: "second pass, with tests"},
 				)
 
-				res := blackbox.RunWithInput(t, dir, env(srv.BaseURL()), "also run the tests\n",
+				res := blackbox.RunWithInput(t, dir, support.Env(srv.BaseURL()), "also run the tests\n",
 					"-p", "do the thing", "-steer-stdin")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
@@ -60,19 +60,19 @@ func TestChapter09(t *testing.T) {
 				"puts the person's words in the wrong mouth.",
 			Hints: hints.Get("09", "steer-enters-after-turn"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, nil)
+				dir := support.Dir(t)
 				srv := fake.New(t,
 					fake.Reply{Text: "first pass"},
 					fake.Reply{Text: "done"},
 				)
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunWithInput(t, dir, env(srv.BaseURL()), "remember the branch is release\n",
+					blackbox.RunWithInput(t, dir, support.Env(srv.BaseURL()), "remember the branch is release\n",
 						"-p", "do the thing", "-steer-stdin").ExitCode); err != nil {
 					return err
 				}
 
-				first, err := requestN(srv, 0)
+				first, err := support.Request(srv, 0)
 				if err != nil {
 					return err
 				}
@@ -82,7 +82,7 @@ func TestChapter09(t *testing.T) {
 					}
 				}
 
-				second, err := requestN(srv, 1)
+				second, err := support.Request(srv, 1)
 				if err != nil {
 					return err
 				}
@@ -98,7 +98,7 @@ func TestChapter09(t *testing.T) {
 				}
 				for i := range want {
 					if got[i] != want[i] {
-						return &grader.Mismatch{Label: "message " + itoa(i), Want: want[i], Got: got[i]}
+						return &grader.Mismatch{Label: "message " + support.Itoa(i), Want: want[i], Got: got[i]}
 					}
 				}
 				srv.AssertConsumed(t)
@@ -113,7 +113,7 @@ func TestChapter09(t *testing.T) {
 				"forever.",
 			Hints: hints.Get("09", "steer-not-duplicated"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, nil)
+				dir := support.Dir(t)
 				srv := fake.New(t,
 					fake.Reply{Text: "one"},
 					fake.Reply{Text: "two"},
@@ -121,7 +121,7 @@ func TestChapter09(t *testing.T) {
 				)
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunWithInput(t, dir, env(srv.BaseURL()), "keep going\n",
+					blackbox.RunWithInput(t, dir, support.Env(srv.BaseURL()), "keep going\n",
 						"-p", "start", "-steer-stdin").ExitCode); err != nil {
 					return err
 				}
@@ -133,7 +133,7 @@ func TestChapter09(t *testing.T) {
 					}
 				}
 				if n != 1 {
-					return &grader.Mismatch{Label: "occurrences of the steered line", Want: "1", Got: itoa(n)}
+					return &grader.Mismatch{Label: "occurrences of the steered line", Want: "1", Got: support.Itoa(n)}
 				}
 				return nil
 			},
@@ -146,10 +146,10 @@ func TestChapter09(t *testing.T) {
 				"watched.",
 			Hints: hints.Get("09", "no-steer-single-request"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, nil)
+				dir := support.Dir(t)
 				srv := fake.New(t, fake.Reply{Text: "just an answer"})
 
-				res := blackbox.RunWithInput(t, dir, env(srv.BaseURL()), "",
+				res := blackbox.RunWithInput(t, dir, support.Env(srv.BaseURL()), "",
 					"-p", "hello", "-steer-stdin")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
@@ -171,20 +171,20 @@ func TestChapter09(t *testing.T) {
 				"and when. Without the event the input looks swallowed.",
 			Hints: hints.Get("09", "steer-event-reported"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, nil)
+				dir := support.Dir(t)
 				srv := fake.New(t,
 					fake.Reply{Text: "one"},
 					fake.Reply{Text: "two"},
 				)
 
-				res := blackbox.RunWithInput(t, dir, env(srv.BaseURL()), "check the tests\n",
+				res := blackbox.RunWithInput(t, dir, support.Env(srv.BaseURL()), "check the tests\n",
 					"-p", "start", "-steer-stdin", "-events")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
 				}
-				steers := eventsOfType(parseEvents(t, res.Stderr), "steer")
+				steers := support.EventsOfType(support.Events(t, res.Stderr), "steer")
 				if len(steers) != 1 {
-					return &grader.Mismatch{Label: "steer events", Want: "1", Got: itoa(len(steers))}
+					return &grader.Mismatch{Label: "steer events", Want: "1", Got: support.Itoa(len(steers))}
 				}
 				if txt, _ := steers[0]["text"].(string); !strings.Contains(txt, "check the tests") {
 					return &grader.Mismatch{Label: "steer event text", Want: "the steered line", Got: txt}
@@ -200,14 +200,14 @@ func TestChapter09(t *testing.T) {
 				"Throwing it away makes an interrupted run look like a failed one.",
 			Hints: hints.Get("09", "abort-keeps-partial"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, nil)
+				dir := support.Dir(t)
 				// Eight slow frames give the test a wide window to interrupt inside.
 				srv := fake.New(t, fake.Reply{
 					Text:       "the first part of a long answer that keeps going",
 					FrameDelay: 250 * time.Millisecond,
 				})
 
-				res := blackbox.RunInterrupt(t, dir, env(srv.BaseURL()), 800*time.Millisecond,
+				res := blackbox.RunInterrupt(t, dir, support.Env(srv.BaseURL()), 800*time.Millisecond,
 					"-p", "write a lot")
 				if res.ExitCode != 130 {
 					return &grader.Mismatch{Label: "exit code", Want: 130, Got: res.ExitCode}
@@ -230,16 +230,16 @@ func TestChapter09(t *testing.T) {
 				"one the person stopped. Both end with agent_end; only the reason differs.",
 			Hints: hints.Get("09", "abort-emits-event"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, nil)
+				dir := support.Dir(t)
 				srv := fake.New(t, fake.Reply{
 					Text:       "a long answer that will be cut short by the interrupt",
 					FrameDelay: 250 * time.Millisecond,
 				})
 
-				res := blackbox.RunInterrupt(t, dir, env(srv.BaseURL()), 800*time.Millisecond,
+				res := blackbox.RunInterrupt(t, dir, support.Env(srv.BaseURL()), 800*time.Millisecond,
 					"-p", "write a lot", "-events")
-				events := parseEvents(t, res.Stderr)
-				end := lastOfType(events, "agent_end")
+				events := support.Events(t, res.Stderr)
+				end := support.LastEventOfType(events, "agent_end")
 				if end == nil {
 					return &grader.Mismatch{Label: "events", Want: "an agent_end", Got: "none"}
 				}
@@ -257,14 +257,14 @@ func TestChapter09(t *testing.T) {
 				"matches what happened.",
 			Hints: hints.Get("09", "abort-persists-session"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, nil)
+				dir := support.Dir(t)
 				path := filepath.Join(dir, "s.jsonl")
 				srv := fake.New(t, fake.Reply{
 					Text:       "a partial answer that should be recorded somewhere",
 					FrameDelay: 250 * time.Millisecond,
 				})
 
-				blackbox.RunInterrupt(t, dir, env(srv.BaseURL()), 800*time.Millisecond,
+				blackbox.RunInterrupt(t, dir, support.Env(srv.BaseURL()), 800*time.Millisecond,
 					"-p", "say something", "-session", path)
 
 				body, err := os.ReadFile(path)
@@ -291,36 +291,6 @@ func TestChapter09(t *testing.T) {
 
 // --- helpers ---
 
-func env(baseURL string) map[string]string {
-	return map[string]string{
-		"OPENAI_BASE_URL": baseURL,
-		"OPENAI_API_KEY":  "test-key",
-	}
-}
-
-func workspace(t *testing.T, files map[string]string) string {
-	t.Helper()
-	dir := t.TempDir()
-	for name, body := range files {
-		full := filepath.Join(dir, name)
-		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
-			t.Fatalf("mkdir: %v", err)
-		}
-		if err := os.WriteFile(full, []byte(body), 0o644); err != nil {
-			t.Fatalf("write %s: %v", name, err)
-		}
-	}
-	return dir
-}
-
-func requestN(srv *fake.Server, n int) (fake.Recorded, error) {
-	reqs := srv.Requests()
-	if len(reqs) <= n {
-		return fake.Recorded{}, &grader.Mismatch{Label: "requests", Want: "at least " + itoa(n+1), Got: itoa(len(reqs))}
-	}
-	return reqs[n], nil
-}
-
 // roleContents renders messages as "role" or "role|content" for stable comparison.
 func roleContents(msgs []fake.RecordedMessage) []string {
 	out := make([]string, len(msgs))
@@ -332,52 +302,4 @@ func roleContents(msgs []fake.RecordedMessage) []string {
 		out[i] = m.Role + "|" + m.Content
 	}
 	return out
-}
-
-func parseEvents(t *testing.T, stderr string) []map[string]any {
-	t.Helper()
-	var out []map[string]any
-	for _, line := range strings.Split(stderr, "\n") {
-		line = strings.TrimSpace(line)
-		if !strings.HasPrefix(line, "{") {
-			continue
-		}
-		var m map[string]any
-		if err := json.Unmarshal([]byte(line), &m); err != nil {
-			t.Fatalf("event line is not JSON: %q: %v", line, err)
-		}
-		out = append(out, m)
-	}
-	return out
-}
-
-func eventsOfType(events []map[string]any, typ string) []map[string]any {
-	var out []map[string]any
-	for _, e := range events {
-		if e["type"] == typ {
-			out = append(out, e)
-		}
-	}
-	return out
-}
-
-func lastOfType(events []map[string]any, typ string) map[string]any {
-	for i := len(events) - 1; i >= 0; i-- {
-		if events[i]["type"] == typ {
-			return events[i]
-		}
-	}
-	return nil
-}
-
-func itoa(n int) string {
-	if n == 0 {
-		return "0"
-	}
-	var digits []byte
-	for n > 0 {
-		digits = append([]byte{byte('0' + n%10)}, digits...)
-		n /= 10
-	}
-	return string(digits)
 }

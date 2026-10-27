@@ -3,13 +3,13 @@
 package checks
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"kata/internal/blackbox"
+	support "kata/internal/checksupport"
 	"kata/internal/fake"
 	"kata/internal/grader"
 	"kata/internal/hints"
@@ -39,10 +39,10 @@ func TestChapter11(t *testing.T) {
 				srv := fake.New(t, fake.Reply{Text: "ok"})
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "/deploy staging eu-west").ExitCode); err != nil {
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "/deploy staging eu-west").ExitCode); err != nil {
 					return err
 				}
-				user := lastUserContent(srv.Last())
+				user := support.LastUser(srv.Last())
 				if !strings.Contains(user, "BODY-DEPLOY") {
 					return &grader.Mismatch{Label: "user message", Want: "the skill body", Got: user}
 				}
@@ -63,10 +63,10 @@ func TestChapter11(t *testing.T) {
 				srv := fake.New(t, fake.Reply{Text: "ok"})
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "/deploy staging eu-west").ExitCode); err != nil {
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "/deploy staging eu-west").ExitCode); err != nil {
 					return err
 				}
-				user := lastUserContent(srv.Last())
+				user := support.LastUser(srv.Last())
 				for _, want := range []string{
 					"Deploy to staging in eu-west.",
 					"Full request was: staging eu-west",
@@ -96,10 +96,10 @@ func TestChapter11(t *testing.T) {
 				srv := fake.New(t, fake.Reply{Text: "ok"})
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "/review /deploy production eu-west").ExitCode); err != nil {
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "/review /deploy production eu-west").ExitCode); err != nil {
 					return err
 				}
-				user := lastUserContent(srv.Last())
+				user := support.LastUser(srv.Last())
 				reviewAt := strings.Index(user, "BODY-REVIEW")
 				deployAt := strings.Index(user, "BODY-DEPLOY")
 				if reviewAt < 0 || deployAt < 0 {
@@ -129,16 +129,16 @@ func TestChapter11(t *testing.T) {
 				const prompt = `find the "todo" marker and fix it`
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", prompt).ExitCode); err != nil {
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", prompt).ExitCode); err != nil {
 					return err
 				}
-				if !strings.Contains(systemContent(srv.Last()), "Deploy the app to a region.") {
-					return &grader.Mismatch{Label: "system content", Want: "the skill description", Got: systemContent(srv.Last())}
+				if !strings.Contains(support.SystemContent(srv.Last()), "Deploy the app to a region.") {
+					return &grader.Mismatch{Label: "system content", Want: "the skill description", Got: support.SystemContent(srv.Last())}
 				}
-				if err := grader.Eqf("user message", prompt, lastUserContent(srv.Last())); err != nil {
+				if err := grader.Eqf("user message", prompt, support.LastUser(srv.Last())); err != nil {
 					return err
 				}
-				if strings.Contains(allContent(srv.Last()), "BODY-DEPLOY") {
+				if strings.Contains(support.AllContent(srv.Last()), "BODY-DEPLOY") {
 					return &grader.Mismatch{Label: "request content", Want: "no body", Got: "body present"}
 				}
 				srv.AssertConsumed(t)
@@ -157,17 +157,17 @@ func TestChapter11(t *testing.T) {
 				)
 				srv := fake.New(t, fake.Reply{Text: "I do not have that skill."})
 
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "/nosuch please help")
+				res := blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "/nosuch please help")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
 				}
 				if err := grader.Eqf("stdout", "I do not have that skill.\n", res.Stdout); err != nil {
 					return err
 				}
-				if !strings.Contains(systemContent(srv.Last()), "deploy") {
-					return &grader.Mismatch{Label: "system content", Want: "the known skill advertised", Got: systemContent(srv.Last())}
+				if !strings.Contains(support.SystemContent(srv.Last()), "deploy") {
+					return &grader.Mismatch{Label: "system content", Want: "the known skill advertised", Got: support.SystemContent(srv.Last())}
 				}
-				user := lastUserContent(srv.Last())
+				user := support.LastUser(srv.Last())
 				if !strings.Contains(user, "/nosuch please help") {
 					return &grader.Mismatch{Label: "user message", Want: "the original text", Got: user}
 				}
@@ -188,10 +188,10 @@ func TestChapter11(t *testing.T) {
 				srv := fake.New(t, fake.Reply{Text: "ok"})
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "/deploy staging eu").ExitCode); err != nil {
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "/deploy staging eu").ExitCode); err != nil {
 					return err
 				}
-				user := lastUserContent(srv.Last())
+				user := support.LastUser(srv.Last())
 				if !strings.Contains(user, "BODY-DEPLOY") {
 					return &grader.Mismatch{Label: "user message", Want: "the expanded body", Got: user}
 				}
@@ -206,13 +206,6 @@ func TestChapter11(t *testing.T) {
 }
 
 // --- helpers ---
-
-func env(baseURL string) map[string]string {
-	return map[string]string{
-		"OPENAI_BASE_URL": baseURL,
-		"OPENAI_API_KEY":  "test-key",
-	}
-}
 
 // skill renders a SKILL.md with frontmatter.
 func skill(name, description, body string) struct {
@@ -235,48 +228,4 @@ func skillsWorkspace(t *testing.T, skills ...struct{ Name, Description, Body str
 		}
 	}
 	return dir
-}
-
-func systemContent(req fake.Recorded) string {
-	for _, m := range req.Messages {
-		if m.Role == "system" {
-			return m.Content
-		}
-	}
-	return ""
-}
-
-func lastUserContent(req fake.Recorded) string {
-	for i := len(req.Messages) - 1; i >= 0; i-- {
-		if req.Messages[i].Role == "user" {
-			return req.Messages[i].Content
-		}
-	}
-	return ""
-}
-
-func allContent(req fake.Recorded) string {
-	var b strings.Builder
-	for _, m := range req.Messages {
-		b.WriteString(m.Content)
-		b.WriteString("\n")
-	}
-	return b.String()
-}
-
-func parseEvents(t *testing.T, stderr string) []map[string]any {
-	t.Helper()
-	var out []map[string]any
-	for _, line := range strings.Split(stderr, "\n") {
-		line = strings.TrimSpace(line)
-		if !strings.HasPrefix(line, "{") {
-			continue
-		}
-		var m map[string]any
-		if err := json.Unmarshal([]byte(line), &m); err != nil {
-			t.Fatalf("event line is not JSON: %q: %v", line, err)
-		}
-		out = append(out, m)
-	}
-	return out
 }

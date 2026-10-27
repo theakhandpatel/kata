@@ -331,13 +331,3 @@ func repoRoot() (string, error) {
 		dir = parent
 	}
 }
-
-// StdoutLines is a convenience for asserting on the answer without worrying
-// about a single trailing newline.
-func StdoutLines(r Result) []string {
-	trimmed := strings.TrimRight(r.Stdout, "\n")
-	if trimmed == "" {
-		return nil
-	}
-	return strings.Split(trimmed, "\n")
-}

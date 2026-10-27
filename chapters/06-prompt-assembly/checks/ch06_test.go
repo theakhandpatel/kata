@@ -3,12 +3,12 @@
 package checks
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"kata/internal/blackbox"
+	support "kata/internal/checksupport"
 	"kata/internal/fake"
 	"kata/internal/grader"
 	"kata/internal/hints"
@@ -29,10 +29,10 @@ func TestChapter06(t *testing.T) {
 				"it has to say what the agent is.",
 			Hints: hints.Get("06", "system-message-first"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, nil)
+				dir := support.Dir(t)
 				srv := fake.New(t, fake.Reply{Text: "ok"})
 
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "hi")
+				res := blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "hi")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
 				}
@@ -65,17 +65,17 @@ func TestChapter06(t *testing.T) {
 				"files disagree.",
 			Hints: hints.Get("06", "agents-md-included"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, map[string]string{
+				dir := support.DirWith(t, map[string]string{
 					"AGENTS.md": "# Rules\n\nUse tabs, not spaces.\n",
 				})
 				srv := fake.New(t, fake.Reply{Text: "ok"})
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "hi").ExitCode); err != nil {
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "hi").ExitCode); err != nil {
 					return err
 				}
 
-				system := systemContent(srv.Last())
+				system := support.SystemContent(srv.Last())
 				if !strings.Contains(system, "Use tabs, not spaces.") {
 					return &grader.Mismatch{Label: "system content", Want: "the AGENTS.md body", Got: system}
 				}
@@ -94,7 +94,7 @@ func TestChapter06(t *testing.T) {
 				"directory.",
 			Hints: hints.Get("06", "agents-md-from-parent"),
 			Run: func(t *testing.T) error {
-				root := workspace(t, map[string]string{
+				root := support.DirWith(t, map[string]string{
 					"AGENTS.md":    "root rule: run the tests\n",
 					"pkg/keep.txt": "keep",
 				})
@@ -102,10 +102,10 @@ func TestChapter06(t *testing.T) {
 				srv := fake.New(t, fake.Reply{Text: "ok"})
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "hi").ExitCode); err != nil {
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "hi").ExitCode); err != nil {
 					return err
 				}
-				system := systemContent(srv.Last())
+				system := support.SystemContent(srv.Last())
 				if !strings.Contains(system, "root rule: run the tests") {
 					return &grader.Mismatch{Label: "system content", Want: "the parent AGENTS.md", Got: system}
 				}
@@ -120,7 +120,7 @@ func TestChapter06(t *testing.T) {
 				"is how you express that without a merge algorithm.",
 			Hints: hints.Get("06", "agents-md-order"),
 			Run: func(t *testing.T) error {
-				root := workspace(t, map[string]string{
+				root := support.DirWith(t, map[string]string{
 					"AGENTS.md":     "outer rule\n",
 					"pkg/AGENTS.md": "inner rule\n",
 				})
@@ -128,10 +128,10 @@ func TestChapter06(t *testing.T) {
 				srv := fake.New(t, fake.Reply{Text: "ok"})
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "hi").ExitCode); err != nil {
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "hi").ExitCode); err != nil {
 					return err
 				}
-				system := systemContent(srv.Last())
+				system := support.SystemContent(srv.Last())
 				outer := strings.Index(system, "outer rule")
 				inner := strings.Index(system, "inner rule")
 				if outer < 0 || inner < 0 {
@@ -151,14 +151,14 @@ func TestChapter06(t *testing.T) {
 				"The agent has to work in a project with no instructions at all.",
 			Hints: hints.Get("06", "no-agents-md"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, nil)
+				dir := support.Dir(t)
 				srv := fake.New(t, fake.Reply{Text: "ok"})
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "hi").ExitCode); err != nil {
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "hi").ExitCode); err != nil {
 					return err
 				}
-				system := systemContent(srv.Last())
+				system := support.SystemContent(srv.Last())
 				if !strings.Contains(system, "coding agent") {
 					return &grader.Mismatch{Label: "system content", Want: "the base instruction", Got: system}
 				}
@@ -176,14 +176,14 @@ func TestChapter06(t *testing.T) {
 				"file keeps the prompt honest and the prefix short.",
 			Hints: hints.Get("06", "empty-agents-md"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, map[string]string{"AGENTS.md": "\n\n   \n"})
+				dir := support.DirWith(t, map[string]string{"AGENTS.md": "\n\n   \n"})
 				srv := fake.New(t, fake.Reply{Text: "ok"})
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "hi").ExitCode); err != nil {
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "hi").ExitCode); err != nil {
 					return err
 				}
-				system := systemContent(srv.Last())
+				system := support.SystemContent(srv.Last())
 				// A negative assertion alone is satisfied by a program that sends no
 				// system message at all. Require the positive signal first.
 				if !strings.Contains(system, "coding agent") {
@@ -204,7 +204,7 @@ func TestChapter06(t *testing.T) {
 				"every call and costs real money.",
 			Hints: hints.Get("06", "system-prompt-stable"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, map[string]string{
+				dir := support.DirWith(t, map[string]string{
 					"AGENTS.md": "rule one\nrule two\n",
 					"b.txt":     "b",
 					"a.txt":     "a",
@@ -212,17 +212,17 @@ func TestChapter06(t *testing.T) {
 
 				first := fake.New(t, fake.Reply{Text: "ok"})
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(first.BaseURL()), "-p", "hi").ExitCode); err != nil {
+					blackbox.RunIn(t, dir, support.Env(first.BaseURL()), "-p", "hi").ExitCode); err != nil {
 					return err
 				}
 
 				second := fake.New(t, fake.Reply{Text: "ok"})
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(second.BaseURL()), "-p", "hi").ExitCode); err != nil {
+					blackbox.RunIn(t, dir, support.Env(second.BaseURL()), "-p", "hi").ExitCode); err != nil {
 					return err
 				}
 
-				a, b := systemContent(first.Last()), systemContent(second.Last())
+				a, b := support.SystemContent(first.Last()), support.SystemContent(second.Last())
 				if !strings.Contains(a, "rule one") {
 					return &grader.Mismatch{Label: "system content", Want: "the AGENTS.md body", Got: a}
 				}
@@ -239,12 +239,12 @@ func TestChapter06(t *testing.T) {
 				"at the model with extra wrapping is a prompt the user cannot debug.",
 			Hints: hints.Get("06", "user-message-preserved"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, map[string]string{"AGENTS.md": "be brief\n"})
+				dir := support.DirWith(t, map[string]string{"AGENTS.md": "be brief\n"})
 				srv := fake.New(t, fake.Reply{Text: "ok"})
 				const prompt = `find the "todo" marker in this repo`
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", prompt).ExitCode); err != nil {
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", prompt).ExitCode); err != nil {
 					return err
 				}
 
@@ -263,37 +263,6 @@ func TestChapter06(t *testing.T) {
 }
 
 // --- helpers ---
-
-func env(baseURL string) map[string]string {
-	return map[string]string{
-		"OPENAI_BASE_URL": baseURL,
-		"OPENAI_API_KEY":  "test-key",
-	}
-}
-
-func workspace(t *testing.T, files map[string]string) string {
-	t.Helper()
-	dir := t.TempDir()
-	for name, body := range files {
-		full := filepath.Join(dir, name)
-		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
-			t.Fatalf("mkdir: %v", err)
-		}
-		if err := os.WriteFile(full, []byte(body), 0o644); err != nil {
-			t.Fatalf("write %s: %v", name, err)
-		}
-	}
-	return dir
-}
-
-func systemContent(req fake.Recorded) string {
-	for _, m := range req.Messages {
-		if m.Role == "system" {
-			return m.Content
-		}
-	}
-	return ""
-}
 
 func roles(msgs []fake.RecordedMessage) []string {
 	out := make([]string, len(msgs))

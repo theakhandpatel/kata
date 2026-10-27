@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"kata/internal/blackbox"
+	support "kata/internal/checksupport"
 	"kata/internal/fake"
 	"kata/internal/grader"
 	"kata/internal/hints"
@@ -28,10 +29,10 @@ func TestChapter02(t *testing.T) {
 				"wrong means the model never sees any tool at all.",
 			Hints: hints.Get("02", "advertises-tools"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				srv := fake.New(t, fake.Reply{Text: "ok"})
 
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "hi")
+				res := blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "hi")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
 				}
@@ -54,24 +55,24 @@ func TestChapter02(t *testing.T) {
 				"went wrong. The answer has to be a result it can read.",
 			Hints: hints.Get("02", "unknown-tool-is-a-result"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				srv := fake.New(t,
-					callTool("call_1", "no_such_tool", `{"path":"a.txt"}`),
+					support.Call("call_1", "no_such_tool", `{"path":"a.txt"}`),
 					fake.Reply{Text: "I could not do that."},
 				)
 
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "do it")
+				res := blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "do it")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
 				}
 				if err := grader.Eqf("stdout", "I could not do that.\n", res.Stdout); err != nil {
 					return err
 				}
-				second, err := requestN(srv, 1)
+				second, err := support.Request(srv, 1)
 				if err != nil {
 					return err
 				}
-				toolMsg, err := toolByID(second, "call_1")
+				toolMsg, err := support.ToolResult(second, "call_1")
 				if err != nil {
 					return err
 				}
@@ -90,7 +91,7 @@ func TestChapter02(t *testing.T) {
 				"model can fix if you tell it.",
 			Hints: hints.Get("02", "invalid-arguments"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				srv := fake.New(t,
 					fake.Reply{Frames: []fake.Frame{
 						{ToolCall: &fake.CallFrame{Index: 0, ID: "call_1", Name: "read", Args: `{"path":`}},
@@ -99,15 +100,15 @@ func TestChapter02(t *testing.T) {
 					fake.Reply{Text: "That call was malformed."},
 				)
 
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "do it")
+				res := blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "do it")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
 				}
-				second, err := requestN(srv, 1)
+				second, err := support.Request(srv, 1)
 				if err != nil {
 					return err
 				}
-				toolMsg, err := toolByID(second, "call_1")
+				toolMsg, err := support.ToolResult(second, "call_1")
 				if err != nil {
 					return err
 				}
@@ -126,7 +127,7 @@ func TestChapter02(t *testing.T) {
 				"everything after the first piece.",
 			Hints: hints.Get("02", "folds-arguments"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				srv := fake.New(t,
 					fake.Reply{Frames: []fake.Frame{
 						{ToolCall: &fake.CallFrame{Index: 0, ID: "call_9", Name: "no_such_tool", Args: ""}},
@@ -138,15 +139,15 @@ func TestChapter02(t *testing.T) {
 					fake.Reply{Text: "done"},
 				)
 
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "read notes")
+				res := blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "read notes")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
 				}
-				second, err := requestN(srv, 1)
+				second, err := support.Request(srv, 1)
 				if err != nil {
 					return err
 				}
-				toolMsg, err := toolByID(second, "call_9")
+				toolMsg, err := support.ToolResult(second, "call_9")
 				if err != nil {
 					return err
 				}
@@ -164,17 +165,17 @@ func TestChapter02(t *testing.T) {
 				"id is the only thing tying the two halves together.",
 			Hints: hints.Get("02", "result-carries-call-id"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				srv := fake.New(t,
-					callTool("call_abc", "no_such_tool", `{}`),
+					support.Call("call_abc", "no_such_tool", `{}`),
 					fake.Reply{Text: "done"},
 				)
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "x").ExitCode); err != nil {
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "x").ExitCode); err != nil {
 					return err
 				}
-				second, err := requestN(srv, 1)
+				second, err := support.Request(srv, 1)
 				if err != nil {
 					return err
 				}
@@ -199,28 +200,28 @@ func TestChapter02(t *testing.T) {
 				"matches what exists.",
 			Hints: hints.Get("02", "tool-list-comes-from-the-registry"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				srv := fake.New(t, fake.Reply{Text: "ok"})
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "x").ExitCode); err != nil {
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "x").ExitCode); err != nil {
 					return err
 				}
 				// Whatever is advertised, a call to it must resolve.
-				for _, name := range toolNames(srv.Last().Tools) {
+				for _, name := range support.ToolNames(srv.Last().Tools) {
 					reply := fake.New(t,
-						callTool("call_x", name, `{}`),
+						support.Call("call_x", name, `{}`),
 						fake.Reply{Text: "done"},
 					)
 					if err := grader.Eqf("exit code", 0,
-						blackbox.RunIn(t, dir, env(reply.BaseURL()), "-p", "x").ExitCode); err != nil {
+						blackbox.RunIn(t, dir, support.Env(reply.BaseURL()), "-p", "x").ExitCode); err != nil {
 						return err
 					}
-					second, err := requestN(reply, 1)
+					second, err := support.Request(reply, 1)
 					if err != nil {
 						return err
 					}
-					toolMsg, err := toolByID(second, "call_x")
+					toolMsg, err := support.ToolResult(second, "call_x")
 					if err != nil {
 						return err
 					}
@@ -239,61 +240,3 @@ func TestChapter02(t *testing.T) {
 }
 
 // --- helpers ---
-
-func env(baseURL string) map[string]string {
-	return map[string]string{
-		"OPENAI_BASE_URL": baseURL,
-		"OPENAI_API_KEY":  "test-key",
-	}
-}
-
-func callTool(id, name, args string) fake.Reply {
-	return fake.Reply{Frames: []fake.Frame{
-		{ToolCall: &fake.CallFrame{Index: 0, ID: id, Name: name}},
-		{ToolCall: &fake.CallFrame{Index: 0, Args: args}},
-		{Finish: "tool_calls"},
-	}}
-}
-
-func workspace(t *testing.T) string { return t.TempDir() }
-
-func requestN(srv *fake.Server, n int) (fake.Recorded, error) {
-	reqs := srv.Requests()
-	if len(reqs) <= n {
-		return fake.Recorded{}, &grader.Mismatch{Label: "requests", Want: "at least " + itoa(n+1), Got: itoa(len(reqs))}
-	}
-	return reqs[n], nil
-}
-
-func toolByID(req fake.Recorded, id string) (fake.RecordedMessage, error) {
-	for _, m := range req.Messages {
-		if m.Role == "tool" && m.ToolCallID == id {
-			return m, nil
-		}
-	}
-	return fake.RecordedMessage{}, &grader.Mismatch{Label: "tool result " + id, Want: "present", Got: "missing"}
-}
-
-func toolNames(tools []map[string]any) []string {
-	out := make([]string, 0, len(tools))
-	for _, t := range tools {
-		if fn, ok := t["function"].(map[string]any); ok {
-			if name, ok := fn["name"].(string); ok {
-				out = append(out, name)
-			}
-		}
-	}
-	return out
-}
-
-func itoa(n int) string {
-	if n == 0 {
-		return "0"
-	}
-	var digits []byte
-	for n > 0 {
-		digits = append([]byte{byte('0' + n%10)}, digits...)
-		n /= 10
-	}
-	return string(digits)
-}

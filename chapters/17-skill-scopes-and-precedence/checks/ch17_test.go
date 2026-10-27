@@ -3,12 +3,12 @@
 package checks
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"kata/internal/blackbox"
+	support "kata/internal/checksupport"
 	"kata/internal/fake"
 	"kata/internal/grader"
 	"kata/internal/hints"
@@ -37,7 +37,7 @@ func TestChapter17(t *testing.T) {
 					runScoped(t, dir, home, srv, "-p", "hello").ExitCode); err != nil {
 					return err
 				}
-				system := systemContent(srv.Last())
+				system := support.SystemContent(srv.Last())
 				if !strings.Contains(system, "deploy") {
 					return &grader.Mismatch{Label: "system content", Want: "the deploy skill", Got: system}
 				}
@@ -65,7 +65,7 @@ func TestChapter17(t *testing.T) {
 					runScoped(t, dir, home, srv, "-p", "/deploy staging").ExitCode); err != nil {
 					return err
 				}
-				user := lastUserContent(srv.Last())
+				user := support.LastUser(srv.Last())
 				if strings.Contains(user, "USER-BODY") {
 					return &grader.Mismatch{Label: "user message", Want: "the project body", Got: user}
 				}
@@ -93,7 +93,7 @@ func TestChapter17(t *testing.T) {
 					runScoped(t, dir, home, srv, "-p", "hello").ExitCode); err != nil {
 					return err
 				}
-				system := systemContent(srv.Last())
+				system := support.SystemContent(srv.Last())
 				for _, want := range []string{"deploy", "review"} {
 					if !strings.Contains(system, want) {
 						return &grader.Mismatch{Label: "system content", Want: want, Got: system}
@@ -126,8 +126,8 @@ func TestChapter17(t *testing.T) {
 				if err := grader.Eqf("stdout", "still works\n", res.Stdout); err != nil {
 					return err
 				}
-				if !strings.Contains(systemContent(srv.Last()), "deploy") {
-					return &grader.Mismatch{Label: "system content", Want: "the project skill", Got: systemContent(srv.Last())}
+				if !strings.Contains(support.SystemContent(srv.Last()), "deploy") {
+					return &grader.Mismatch{Label: "system content", Want: "the project skill", Got: support.SystemContent(srv.Last())}
 				}
 				srv.AssertConsumed(t)
 				return nil
@@ -148,7 +148,7 @@ func TestChapter17(t *testing.T) {
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
 				}
-				system := systemContent(srv.Last())
+				system := support.SystemContent(srv.Last())
 				if strings.Contains(system, "# Skills") {
 					return &grader.Mismatch{Label: "system content", Want: "no skills section", Got: system}
 				}
@@ -167,14 +167,14 @@ func TestChapter17(t *testing.T) {
 					map[string]string{"review": "USER-BODY"},
 				)
 				// A file with no frontmatter in the project scope.
-				writeFile(t, filepath.Join(dir, "skills", "broken", "SKILL.md"), "no header here\n")
+				support.WriteFile(t, filepath.Join(dir, "skills", "broken", "SKILL.md"), "no header here\n")
 
 				srv := fake.New(t, fake.Reply{Text: "ok"})
 				if err := grader.Eqf("exit code", 0,
 					runScoped(t, dir, home, srv, "-p", "hello").ExitCode); err != nil {
 					return err
 				}
-				system := systemContent(srv.Last())
+				system := support.SystemContent(srv.Last())
 				for _, want := range []string{"deploy", "review"} {
 					if !strings.Contains(system, want) {
 						return &grader.Mismatch{Label: "system content", Want: want, Got: system}
@@ -191,13 +191,6 @@ func TestChapter17(t *testing.T) {
 }
 
 // --- helpers ---
-
-func env(baseURL string) map[string]string {
-	return map[string]string{
-		"OPENAI_BASE_URL": baseURL,
-		"OPENAI_API_KEY":  "test-key",
-	}
-}
 
 // scopedWorkspace builds a project directory and a fake home directory with skills.
 func scopedWorkspace(t *testing.T, project, user map[string]string) (dir, home string) {
@@ -217,43 +210,15 @@ func writeSkill(t *testing.T, dir, body string) {
 	t.Helper()
 	name := filepath.Base(dir)
 	content := "---\nname: " + name + "\ndescription: The " + name + " skill from this scope.\n---\n" + body + "\n"
-	writeFile(t, filepath.Join(dir, "SKILL.md"), content)
-}
-
-func writeFile(t *testing.T, path, body string) {
-	t.Helper()
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		t.Fatalf("mkdir: %v", err)
-	}
-	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
-		t.Fatalf("write: %v", err)
-	}
+	support.WriteFile(t, filepath.Join(dir, "SKILL.md"), content)
 }
 
 // runScoped runs the agent with HOME pointed at the fake home, so the user scope is
 // deterministic and never reads the machine's real skills.
 func runScoped(t *testing.T, dir, home string, srv *fake.Server, args ...string) blackbox.Result {
 	t.Helper()
-	e := env(srv.BaseURL())
+	e := support.Env(srv.BaseURL())
 	e["HOME"] = home
 	e["XDG_CONFIG_HOME"] = filepath.Join(home, ".config")
 	return blackbox.RunIn(t, dir, e, args...)
-}
-
-func systemContent(req fake.Recorded) string {
-	for _, m := range req.Messages {
-		if m.Role == "system" {
-			return m.Content
-		}
-	}
-	return ""
-}
-
-func lastUserContent(req fake.Recorded) string {
-	for i := len(req.Messages) - 1; i >= 0; i-- {
-		if req.Messages[i].Role == "user" {
-			return req.Messages[i].Content
-		}
-	}
-	return ""
 }

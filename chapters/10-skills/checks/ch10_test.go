@@ -3,12 +3,12 @@
 package checks
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"kata/internal/blackbox"
+	support "kata/internal/checksupport"
 	"kata/internal/fake"
 	"kata/internal/grader"
 	"kata/internal/hints"
@@ -35,10 +35,10 @@ func TestChapter10(t *testing.T) {
 				srv := fake.New(t, fake.Reply{Text: "ok"})
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "hello").ExitCode); err != nil {
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "hello").ExitCode); err != nil {
 					return err
 				}
-				system := systemContent(srv.Last())
+				system := support.SystemContent(srv.Last())
 				for _, want := range []string{"deploy", "Deploy the app to a region.", "review", "Review the current diff."} {
 					if !strings.Contains(system, want) {
 						return &grader.Mismatch{Label: "system content", Want: want, Got: system}
@@ -62,15 +62,15 @@ func TestChapter10(t *testing.T) {
 				srv := fake.New(t, fake.Reply{Text: "ok"})
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "hello").ExitCode); err != nil {
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "hello").ExitCode); err != nil {
 					return err
 				}
 				// A program with no skills satisfies the negative half for free, so
 				// require the advertisement before asserting the absence.
-				if !strings.Contains(systemContent(srv.Last()), "Deploy the app to a region.") {
-					return &grader.Mismatch{Label: "system content", Want: "the skill description", Got: systemContent(srv.Last())}
+				if !strings.Contains(support.SystemContent(srv.Last()), "Deploy the app to a region.") {
+					return &grader.Mismatch{Label: "system content", Want: "the skill description", Got: support.SystemContent(srv.Last())}
 				}
-				if strings.Contains(allContent(srv.Last()), "BODY-DEPLOY") {
+				if strings.Contains(support.AllContent(srv.Last()), "BODY-DEPLOY") {
 					return &grader.Mismatch{Label: "request content", Want: "no skill body", Got: "body present"}
 				}
 				srv.AssertConsumed(t)
@@ -89,18 +89,18 @@ func TestChapter10(t *testing.T) {
 					skill("deploy", "Deploy the app to a region.", deployBody),
 				)
 				// No frontmatter: this file must be ignored, not fatal.
-				writeFile(t, filepath.Join(dir, "skills", "broken", "SKILL.md"),
+				support.WriteFile(t, filepath.Join(dir, "skills", "broken", "SKILL.md"),
 					"BODY-BROKEN just markdown with no header\n")
 
 				srv := fake.New(t, fake.Reply{Text: "still works"})
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "hello")
+				res := blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "hello")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
 				}
 				if err := grader.Eqf("stdout", "still works\n", res.Stdout); err != nil {
 					return err
 				}
-				system := systemContent(srv.Last())
+				system := support.SystemContent(srv.Last())
 				if !strings.Contains(system, "deploy") {
 					return &grader.Mismatch{Label: "system content", Want: "the valid skill", Got: system}
 				}
@@ -118,17 +118,17 @@ func TestChapter10(t *testing.T) {
 				"directory as an error makes the agent refuse to work in an empty folder.",
 			Hints: hints.Get("10", "missing-skills-dir"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				srv := fake.New(t, fake.Reply{Text: "no skills here"})
 
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "hello")
+				res := blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "hello")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
 				}
 				if err := grader.Eqf("stdout", "no skills here\n", res.Stdout); err != nil {
 					return err
 				}
-				system := systemContent(srv.Last())
+				system := support.SystemContent(srv.Last())
 				if !strings.Contains(system, "coding agent") {
 					return &grader.Mismatch{Label: "system content", Want: "the base instruction", Got: system}
 				}
@@ -143,13 +143,6 @@ func TestChapter10(t *testing.T) {
 }
 
 // --- helpers ---
-
-func env(baseURL string) map[string]string {
-	return map[string]string{
-		"OPENAI_BASE_URL": baseURL,
-		"OPENAI_API_KEY":  "test-key",
-	}
-}
 
 const (
 	deployBody = "BODY-DEPLOY: Deploy to $0 in $1. Full request was: $ARGUMENTS"
@@ -166,37 +159,7 @@ func skillsWorkspace(t *testing.T, skills ...struct{ Name, Description, Body str
 	for _, s := range skills {
 		full := filepath.Join(dir, "skills", s.Name, "SKILL.md")
 		content := "---\nname: " + s.Name + "\ndescription: " + s.Description + "\n---\n" + s.Body + "\n"
-		writeFile(t, full, content)
+		support.WriteFile(t, full, content)
 	}
 	return dir
-}
-
-func workspace(t *testing.T) string { return t.TempDir() }
-
-func writeFile(t *testing.T, path, body string) {
-	t.Helper()
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		t.Fatalf("mkdir: %v", err)
-	}
-	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
-		t.Fatalf("write: %v", err)
-	}
-}
-
-func systemContent(req fake.Recorded) string {
-	for _, m := range req.Messages {
-		if m.Role == "system" {
-			return m.Content
-		}
-	}
-	return ""
-}
-
-func allContent(req fake.Recorded) string {
-	var b strings.Builder
-	for _, m := range req.Messages {
-		b.WriteString(m.Content)
-		b.WriteString("\n")
-	}
-	return b.String()
 }

@@ -3,7 +3,6 @@
 package checks
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,6 +10,7 @@ import (
 	"time"
 
 	"kata/internal/blackbox"
+	support "kata/internal/checksupport"
 	"kata/internal/fake"
 	"kata/internal/grader"
 	"kata/internal/hints"
@@ -30,14 +30,14 @@ func TestChapter04(t *testing.T) {
 				"but not advertised is dead code that looks alive.",
 			Hints: hints.Get("04", "advertises-three-tools"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, nil)
+				dir := support.Dir(t)
 				srv := fake.New(t, fake.Reply{Text: "nothing to do"})
 
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "hi")
+				res := blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "hi")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
 				}
-				names := toolNames(srv.Last().Tools)
+				names := support.ToolNames(srv.Last().Tools)
 				for _, want := range []string{"read", "write", "bash"} {
 					if !contains(names, want) {
 						return &grader.Mismatch{Label: "tools", Want: want, Got: names}
@@ -54,13 +54,13 @@ func TestChapter04(t *testing.T) {
 				"says the write happened is not evidence that it did.",
 			Hints: hints.Get("04", "writes-a-file"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, nil)
+				dir := support.Dir(t)
 				srv := fake.New(t,
-					callTool("call_1", "write", `{"path":"out.txt","content":"written by the agent"}`),
+					support.Call("call_1", "write", `{"path":"out.txt","content":"written by the agent"}`),
 					fake.Reply{Text: "Done."},
 				)
 
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "write out.txt")
+				res := blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "write out.txt")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
 				}
@@ -83,14 +83,14 @@ func TestChapter04(t *testing.T) {
 				"perform.",
 			Hints: hints.Get("04", "write-creates-parents"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, nil)
+				dir := support.Dir(t)
 				srv := fake.New(t,
-					callTool("call_2", "write", `{"path":"a/b/c/deep.txt","content":"deep"}`),
+					support.Call("call_2", "write", `{"path":"a/b/c/deep.txt","content":"deep"}`),
 					fake.Reply{Text: "Done."},
 				)
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "write deep").ExitCode); err != nil {
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "write deep").ExitCode); err != nil {
 					return err
 				}
 				if _, err := os.Stat(filepath.Join(dir, "a/b/c/deep.txt")); err != nil {
@@ -107,27 +107,27 @@ func TestChapter04(t *testing.T) {
 				"The check belongs on the resolved path, before anything is created.",
 			Hints: hints.Get("04", "write-refuses-escape"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, nil)
+				dir := support.Dir(t)
 				outside := filepath.Join(filepath.Dir(dir), "escaped.txt")
 				_ = os.Remove(outside)
 
 				srv := fake.New(t,
-					callTool("call_3", "write", `{"path":"../escaped.txt","content":"nope"}`),
+					support.Call("call_3", "write", `{"path":"../escaped.txt","content":"nope"}`),
 					fake.Reply{Text: "I could not write there."},
 				)
 
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "write outside")
+				res := blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "write outside")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
 				}
 				if _, err := os.Stat(outside); err == nil {
 					return &grader.Mismatch{Label: "../escaped.txt", Want: "not created", Got: "file exists outside the workspace"}
 				}
-				second, err := requestN(srv, 1)
+				second, err := support.Request(srv, 1)
 				if err != nil {
 					return err
 				}
-				toolMsg, err := lastToolMessage(second)
+				toolMsg, err := support.LastToolResult(second)
 				if err != nil {
 					return err
 				}
@@ -145,21 +145,21 @@ func TestChapter04(t *testing.T) {
 				"has to reach the model, and the working directory has to be the workspace.",
 			Hints: hints.Get("04", "bash-runs-a-command"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, map[string]string{"here.txt": "workspace marker"})
+				dir := support.DirWith(t, map[string]string{"here.txt": "workspace marker"})
 				srv := fake.New(t,
-					callTool("call_4", "bash", `{"command":"ls && cat here.txt"}`),
+					support.Call("call_4", "bash", `{"command":"ls && cat here.txt"}`),
 					fake.Reply{Text: "I see the marker."},
 				)
 
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "list files")
+				res := blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "list files")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
 				}
-				second, err := requestN(srv, 1)
+				second, err := support.Request(srv, 1)
 				if err != nil {
 					return err
 				}
-				toolMsg, err := lastToolMessage(second)
+				toolMsg, err := support.LastToolResult(second)
 				if err != nil {
 					return err
 				}
@@ -177,21 +177,21 @@ func TestChapter04(t *testing.T) {
 				"something that did not work. Exiting removes its chance to react.",
 			Hints: hints.Get("04", "bash-reports-exit-code"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, nil)
+				dir := support.Dir(t)
 				srv := fake.New(t,
-					callTool("call_5", "bash", `{"command":"echo before; exit 3"}`),
+					support.Call("call_5", "bash", `{"command":"echo before; exit 3"}`),
 					fake.Reply{Text: "That failed."},
 				)
 
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "run it")
+				res := blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "run it")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
 				}
-				second, err := requestN(srv, 1)
+				second, err := support.Request(srv, 1)
 				if err != nil {
 					return err
 				}
-				toolMsg, err := lastToolMessage(second)
+				toolMsg, err := support.LastToolResult(second)
 				if err != nil {
 					return err
 				}
@@ -213,21 +213,21 @@ func TestChapter04(t *testing.T) {
 				"to be visible, or the model believes it saw the end of the output.",
 			Hints: hints.Get("04", "bash-truncates-output"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, nil)
+				dir := support.Dir(t)
 				srv := fake.New(t,
-					callTool("call_6", "bash", `{"command":"yes aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa | head -n 5000"}`),
+					support.Call("call_6", "bash", `{"command":"yes aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa | head -n 5000"}`),
 					fake.Reply{Text: "That was a lot."},
 				)
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "be verbose").ExitCode); err != nil {
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "be verbose").ExitCode); err != nil {
 					return err
 				}
-				second, err := requestN(srv, 1)
+				second, err := support.Request(srv, 1)
 				if err != nil {
 					return err
 				}
-				toolMsg, err := lastToolMessage(second)
+				toolMsg, err := support.LastToolResult(second)
 				if err != nil {
 					return err
 				}
@@ -248,13 +248,13 @@ func TestChapter04(t *testing.T) {
 				"The model must receive the timeout as text so it can choose another path.",
 			Hints: hints.Get("04", "bash-timeout-is-a-result"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, nil)
+				dir := support.Dir(t)
 				srv := fake.New(t,
-					callTool("call_7", "bash", `{"command":"sleep 5"}`),
+					support.Call("call_7", "bash", `{"command":"sleep 5"}`),
 					fake.Reply{Text: "That took too long."},
 				)
 
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()),
+				res := blackbox.RunIn(t, dir, support.Env(srv.BaseURL()),
 					"-p", "sleep", "-timeout", "20s", "-tool-timeout", "300ms")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
@@ -262,11 +262,11 @@ func TestChapter04(t *testing.T) {
 				if res.Duration > 3*time.Second {
 					return &grader.Mismatch{Label: "duration", Want: "bounded by -tool-timeout", Got: res.Duration.String()}
 				}
-				second, err := requestN(srv, 1)
+				second, err := support.Request(srv, 1)
 				if err != nil {
 					return err
 				}
-				toolMsg, err := lastToolMessage(second)
+				toolMsg, err := support.LastToolResult(second)
 				if err != nil {
 					return err
 				}
@@ -281,65 +281,6 @@ func TestChapter04(t *testing.T) {
 }
 
 // --- helpers ---
-
-func env(baseURL string) map[string]string {
-	return map[string]string{
-		"OPENAI_BASE_URL": baseURL,
-		"OPENAI_API_KEY":  "test-key",
-	}
-}
-
-func callTool(id, name, args string) fake.Reply {
-	return fake.Reply{Frames: []fake.Frame{
-		{ToolCall: &fake.CallFrame{Index: 0, ID: id, Name: name}},
-		{ToolCall: &fake.CallFrame{Index: 0, Args: args}},
-		{Finish: "tool_calls"},
-	}}
-}
-
-func workspace(t *testing.T, files map[string]string) string {
-	t.Helper()
-	dir := t.TempDir()
-	for name, body := range files {
-		full := filepath.Join(dir, name)
-		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
-			t.Fatalf("mkdir: %v", err)
-		}
-		if err := os.WriteFile(full, []byte(body), 0o644); err != nil {
-			t.Fatalf("write %s: %v", name, err)
-		}
-	}
-	return dir
-}
-
-func requestN(srv *fake.Server, n int) (fake.Recorded, error) {
-	reqs := srv.Requests()
-	if len(reqs) <= n {
-		return fake.Recorded{}, fmt.Errorf("expected at least %d requests, got %d", n+1, len(reqs))
-	}
-	return reqs[n], nil
-}
-
-func lastToolMessage(req fake.Recorded) (fake.RecordedMessage, error) {
-	for i := len(req.Messages) - 1; i >= 0; i-- {
-		if req.Messages[i].Role == "tool" {
-			return req.Messages[i], nil
-		}
-	}
-	return fake.RecordedMessage{}, fmt.Errorf("no tool message in the request")
-}
-
-func toolNames(tools []map[string]any) []string {
-	out := make([]string, 0, len(tools))
-	for _, t := range tools {
-		if fn, ok := t["function"].(map[string]any); ok {
-			if name, ok := fn["name"].(string); ok {
-				out = append(out, name)
-			}
-		}
-	}
-	return out
-}
 
 func contains(list []string, want string) bool {
 	for _, s := range list {

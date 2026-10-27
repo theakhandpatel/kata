@@ -3,14 +3,12 @@
 package checks
 
 import (
-	"encoding/json"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
 	"kata/internal/blackbox"
+	support "kata/internal/checksupport"
 	"kata/internal/fake"
 	"kata/internal/grader"
 	"kata/internal/hints"
@@ -31,14 +29,14 @@ func TestChapter05(t *testing.T) {
 				"mid-task.",
 			Hints: hints.Get("05", "loops-until-done"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, map[string]string{"a.txt": "alpha", "b.txt": "beta"})
+				dir := support.DirWith(t, map[string]string{"a.txt": "alpha", "b.txt": "beta"})
 				srv := fake.New(t,
-					callTool("call_1", "read", `{"path":"a.txt"}`),
-					callTool("call_2", "read", `{"path":"b.txt"}`),
+					support.Call("call_1", "read", `{"path":"a.txt"}`),
+					support.Call("call_2", "read", `{"path":"b.txt"}`),
 					fake.Reply{Text: "alpha and beta"},
 				)
 
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "read both")
+				res := blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "read both")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
 				}
@@ -60,7 +58,7 @@ func TestChapter05(t *testing.T) {
 				"matching the calls.",
 			Hints: hints.Get("05", "preserves-result-order"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, map[string]string{"a.txt": "alpha", "b.txt": "beta"})
+				dir := support.DirWith(t, map[string]string{"a.txt": "alpha", "b.txt": "beta"})
 				srv := fake.New(t,
 					fake.Reply{Frames: []fake.Frame{
 						{ToolCall: &fake.CallFrame{Index: 0, ID: "call_a", Name: "read"}},
@@ -73,10 +71,10 @@ func TestChapter05(t *testing.T) {
 				)
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "read both").ExitCode); err != nil {
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "read both").ExitCode); err != nil {
 					return err
 				}
-				second, err := requestN(srv, 1)
+				second, err := support.Request(srv, 1)
 				if err != nil {
 					return err
 				}
@@ -102,14 +100,14 @@ func TestChapter05(t *testing.T) {
 				"the task did not finish.",
 			Hints: hints.Get("05", "step-cap-stops"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, map[string]string{"a.txt": "alpha"})
+				dir := support.DirWith(t, map[string]string{"a.txt": "alpha"})
 				replies := make([]fake.Reply, 0, 6)
 				for i := 0; i < 6; i++ {
-					replies = append(replies, callTool(fmt.Sprintf("call_%d", i), "read", `{"path":"a.txt"}`))
+					replies = append(replies, support.Call(fmt.Sprintf("call_%d", i), "read", `{"path":"a.txt"}`))
 				}
 				srv := fake.New(t, replies...)
 
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "loop", "-max-steps", "3")
+				res := blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "loop", "-max-steps", "3")
 				if err := grader.Eqf("exit code", 1, res.ExitCode); err != nil {
 					return err
 				}
@@ -130,18 +128,18 @@ func TestChapter05(t *testing.T) {
 				"with a single agent_end.",
 			Hints: hints.Get("05", "events-sequence"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, map[string]string{"a.txt": "alpha"})
+				dir := support.DirWith(t, map[string]string{"a.txt": "alpha"})
 				srv := fake.New(t,
-					callTool("call_1", "read", `{"path":"a.txt"}`),
+					support.Call("call_1", "read", `{"path":"a.txt"}`),
 					fake.Reply{Text: "done"},
 				)
 
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "read it", "-events")
+				res := blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "read it", "-events")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
 				}
 
-				events := parseEvents(t, res.Stderr)
+				events := support.Events(t, res.Stderr)
 				if len(events) == 0 {
 					return &grader.Mismatch{Label: "stderr", Want: "JSON events", Got: res.Stderr}
 				}
@@ -171,15 +169,15 @@ func TestChapter05(t *testing.T) {
 				"log needs the deltas, and their sum must equal the final answer.",
 			Hints: hints.Get("05", "events-text-deltas"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, nil)
+				dir := support.Dir(t)
 				srv := fake.New(t, fake.Reply{Text: "The quick brown fox."})
 
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "x", "-events")
+				res := blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "x", "-events")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
 				}
 
-				events := parseEvents(t, res.Stderr)
+				events := support.Events(t, res.Stderr)
 				var joined strings.Builder
 				n := 0
 				for _, e := range events {
@@ -208,17 +206,17 @@ func TestChapter05(t *testing.T) {
 				"plain answer.",
 			Hints: hints.Get("05", "single-turn-no-tools"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, nil)
+				dir := support.Dir(t)
 				srv := fake.New(t, fake.Reply{Text: "Just text."})
 
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "x", "-events")
+				res := blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "x", "-events")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
 				}
 				if err := grader.Eqf("requests", 1, len(srv.Requests())); err != nil {
 					return err
 				}
-				events := parseEvents(t, res.Stderr)
+				events := support.Events(t, res.Stderr)
 				if err := grader.Eqf("turn_start count", 1, countType(events, "turn_start")); err != nil {
 					return err
 				}
@@ -237,21 +235,21 @@ func TestChapter05(t *testing.T) {
 				"what makes an agent useful.",
 			Hints: hints.Get("05", "continues-after-tool-error"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, map[string]string{"real.txt": "here"})
+				dir := support.DirWith(t, map[string]string{"real.txt": "here"})
 				srv := fake.New(t,
-					callTool("call_1", "read", `{"path":"missing.txt"}`),
-					callTool("call_2", "read", `{"path":"real.txt"}`),
+					support.Call("call_1", "read", `{"path":"missing.txt"}`),
+					support.Call("call_2", "read", `{"path":"real.txt"}`),
 					fake.Reply{Text: "Found it on the second try."},
 				)
 
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "find it", "-events")
+				res := blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "find it", "-events")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
 				}
 				if err := grader.Eqf("requests", 3, len(srv.Requests())); err != nil {
 					return err
 				}
-				events := parseEvents(t, res.Stderr)
+				events := support.Events(t, res.Stderr)
 				if err := grader.Eqf("turn_start count", 3, countType(events, "turn_start")); err != nil {
 					return err
 				}
@@ -269,19 +267,19 @@ func TestChapter05(t *testing.T) {
 				"the request log, one of the two is lying to whoever reads it.",
 			Hints: hints.Get("05", "turn-count-matches-requests"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, map[string]string{"a.txt": "alpha"})
+				dir := support.DirWith(t, map[string]string{"a.txt": "alpha"})
 				srv := fake.New(t,
-					callTool("call_1", "read", `{"path":"a.txt"}`),
-					callTool("call_2", "read", `{"path":"a.txt"}`),
+					support.Call("call_1", "read", `{"path":"a.txt"}`),
+					support.Call("call_2", "read", `{"path":"a.txt"}`),
 					fake.Reply{Text: "done"},
 				)
 
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "x", "-events")
+				res := blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "x", "-events")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
 				}
-				events := parseEvents(t, res.Stderr)
-				end := lastOfType(events, "agent_end")
+				events := support.Events(t, res.Stderr)
+				end := support.LastEventOfType(events, "agent_end")
 				if end == nil {
 					return &grader.Mismatch{Label: "events", Want: "an agent_end", Got: "none"}
 				}
@@ -298,63 +296,9 @@ func TestChapter05(t *testing.T) {
 
 // --- helpers ---
 
-func env(baseURL string) map[string]string {
-	return map[string]string{
-		"OPENAI_BASE_URL": baseURL,
-		"OPENAI_API_KEY":  "test-key",
-	}
-}
-
-func callTool(id, name, args string) fake.Reply {
-	return fake.Reply{Frames: []fake.Frame{
-		{ToolCall: &fake.CallFrame{Index: 0, ID: id, Name: name}},
-		{ToolCall: &fake.CallFrame{Index: 0, Args: args}},
-		{Finish: "tool_calls"},
-	}}
-}
-
-func workspace(t *testing.T, files map[string]string) string {
-	t.Helper()
-	dir := t.TempDir()
-	for name, body := range files {
-		full := filepath.Join(dir, name)
-		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
-			t.Fatalf("mkdir: %v", err)
-		}
-		if err := os.WriteFile(full, []byte(body), 0o644); err != nil {
-			t.Fatalf("write %s: %v", name, err)
-		}
-	}
-	return dir
-}
-
-func requestN(srv *fake.Server, n int) (fake.Recorded, error) {
-	reqs := srv.Requests()
-	if len(reqs) <= n {
-		return fake.Recorded{}, fmt.Errorf("expected at least %d requests, got %d", n+1, len(reqs))
-	}
-	return reqs[n], nil
-}
-
 // parseEvents keeps only the JSON lines on stderr. The program may also write
 // human diagnostics there, and a parser that assumes everything is JSON is a
 // parser that breaks the first time someone adds a log line.
-func parseEvents(t *testing.T, stderr string) []map[string]any {
-	t.Helper()
-	var out []map[string]any
-	for _, line := range strings.Split(stderr, "\n") {
-		line = strings.TrimSpace(line)
-		if !strings.HasPrefix(line, "{") {
-			continue
-		}
-		var m map[string]any
-		if err := json.Unmarshal([]byte(line), &m); err != nil {
-			t.Fatalf("event line is not JSON: %q: %v", line, err)
-		}
-		out = append(out, m)
-	}
-	return out
-}
 
 func countType(events []map[string]any, typ string) int {
 	n := 0
@@ -377,15 +321,6 @@ func idsFor(events []map[string]any, typ string) []string {
 		}
 	}
 	return out
-}
-
-func lastOfType(events []map[string]any, typ string) map[string]any {
-	for i := len(events) - 1; i >= 0; i-- {
-		if events[i]["type"] == typ {
-			return events[i]
-		}
-	}
-	return nil
 }
 
 func hasErrorResult(events []map[string]any) bool {

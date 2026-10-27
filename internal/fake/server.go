@@ -20,7 +20,6 @@ package fake
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -435,7 +434,3 @@ func split(s string, n int) []string {
 	}
 	return out
 }
-
-// ErrScriptExhausted is returned by helpers that need a scripted turn and find
-// none. Callers normally assert on Server.Overrun instead.
-var ErrScriptExhausted = errors.New("fake: script exhausted")

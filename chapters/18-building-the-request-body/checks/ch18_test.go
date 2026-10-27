@@ -3,12 +3,11 @@
 package checks
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
 	"kata/internal/blackbox"
+	support "kata/internal/checksupport"
 	"kata/internal/fake"
 	"kata/internal/grader"
 	"kata/internal/hints"
@@ -28,11 +27,11 @@ func TestChapter18(t *testing.T) {
 				"reads like a broken client.",
 			Hints: hints.Get("18", "required-fields-always-present"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				srv := fake.New(t, fake.Reply{Text: "ok"})
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "hi", "-m", "a-model").ExitCode); err != nil {
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "hi", "-m", "a-model").ExitCode); err != nil {
 					return err
 				}
 				raw := srv.Last().Raw
@@ -58,11 +57,11 @@ func TestChapter18(t *testing.T) {
 				"zero as a deliberate setting. Neither may be sent unless chosen.",
 			Hints: hints.Get("18", "unset-optionals-absent"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				srv := fake.New(t, fake.Reply{Text: "ok"})
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "hi").ExitCode); err != nil {
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "hi").ExitCode); err != nil {
 					return err
 				}
 				raw := srv.Last().Raw
@@ -81,10 +80,10 @@ func TestChapter18(t *testing.T) {
 			Why:   "Omitting them when unset only matters if the chosen values still arrive.",
 			Hints: hints.Get("18", "set-optionals-present"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				srv := fake.New(t, fake.Reply{Text: "ok"})
 
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()),
+				res := blackbox.RunIn(t, dir, support.Env(srv.BaseURL()),
 					"-p", "hi", "-max-tokens", "128", "-temperature", "0.4")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
@@ -107,16 +106,16 @@ func TestChapter18(t *testing.T) {
 				"changes the question being asked.",
 			Hints: hints.Get("18", "messages-keep-their-order"),
 			Run: func(t *testing.T) error {
-				dir := workspaceFiles(t, map[string]string{"AGENTS.md": "be brief\n"})
+				dir := support.DirWith(t, map[string]string{"AGENTS.md": "be brief\n"})
 				srv := fake.New(t, fake.Reply{Text: "ok"})
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "the question").ExitCode); err != nil {
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "the question").ExitCode); err != nil {
 					return err
 				}
 				msgs := srv.Last().Messages
 				if len(msgs) < 2 {
-					return &grader.Mismatch{Label: "messages", Want: "system then user", Got: itoa(len(msgs))}
+					return &grader.Mismatch{Label: "messages", Want: "system then user", Got: support.Itoa(len(msgs))}
 				}
 				if msgs[0].Role != "system" {
 					return &grader.Mismatch{Label: "messages[0].role", Want: "system", Got: msgs[0].Role}
@@ -136,11 +135,11 @@ func TestChapter18(t *testing.T) {
 				"and the parser waits forever.",
 			Hints: hints.Get("18", "headers-decide-the-response"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				srv := fake.New(t, fake.Reply{Text: "ok"})
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "hi").ExitCode); err != nil {
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "hi").ExitCode); err != nil {
 					return err
 				}
 				req := srv.Last()
@@ -161,11 +160,11 @@ func TestChapter18(t *testing.T) {
 				"'why is it 404' reports in the world are this.",
 			Hints: hints.Get("18", "base-url-trailing-slash"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				srv := fake.New(t, fake.Reply{Text: "ok"})
 
 				base := srv.BaseURL() + "/"
-				e := env(base)
+				e := support.Env(base)
 				if err := grader.Eqf("exit code", 0,
 					blackbox.RunIn(t, dir, e, "-p", "hi").ExitCode); err != nil {
 					return err
@@ -184,11 +183,11 @@ func TestChapter18(t *testing.T) {
 				"Some reject the second.",
 			Hints: hints.Get("18", "empty-tool-list-is-sent"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				srv := fake.New(t, fake.Reply{Text: "ok"})
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "hi", "-max-tools", "0").ExitCode); err != nil {
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "hi", "-max-tools", "0").ExitCode); err != nil {
 					return err
 				}
 				raw := srv.Last().Raw
@@ -206,39 +205,3 @@ func TestChapter18(t *testing.T) {
 }
 
 // --- helpers ---
-
-func env(baseURL string) map[string]string {
-	return map[string]string{
-		"OPENAI_BASE_URL": baseURL,
-		"OPENAI_API_KEY":  "test-key",
-	}
-}
-
-func workspace(t *testing.T) string { return t.TempDir() }
-
-func workspaceFiles(t *testing.T, files map[string]string) string {
-	t.Helper()
-	dir := t.TempDir()
-	for name, body := range files {
-		full := filepath.Join(dir, name)
-		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
-			t.Fatalf("mkdir: %v", err)
-		}
-		if err := os.WriteFile(full, []byte(body), 0o644); err != nil {
-			t.Fatalf("write: %v", err)
-		}
-	}
-	return dir
-}
-
-func itoa(n int) string {
-	if n == 0 {
-		return "0"
-	}
-	var digits []byte
-	for n > 0 {
-		digits = append([]byte{byte('0' + n%10)}, digits...)
-		n /= 10
-	}
-	return string(digits)
-}

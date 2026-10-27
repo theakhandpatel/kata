@@ -3,12 +3,12 @@
 package checks
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"kata/internal/blackbox"
+	support "kata/internal/checksupport"
 	"kata/internal/fake"
 	"kata/internal/grader"
 	"kata/internal/hints"
@@ -27,9 +27,9 @@ func TestChapter21(t *testing.T) {
 				"talks to one provider should say so in a file.",
 			Hints: hints.Get("21", "config-from-file"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				srv := fake.New(t, fake.Reply{Text: "from the file"})
-				writeFile(t, filepath.Join(dir, "agent.json"),
+				support.WriteFile(t, filepath.Join(dir, "agent.json"),
 					`{"base_url": "`+srv.BaseURL()+`", "model": "file-model"}`)
 
 				res := runClean(t, dir, "-p", "hi")
@@ -53,9 +53,9 @@ func TestChapter21(t *testing.T) {
 				"model, and the flag is the cheapest way to say so.",
 			Hints: hints.Get("21", "flag-beats-file"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				srv := fake.New(t, fake.Reply{Text: "ok"})
-				writeFile(t, filepath.Join(dir, "agent.json"),
+				support.WriteFile(t, filepath.Join(dir, "agent.json"),
 					`{"base_url": "http://127.0.0.1:1/v1", "model": "file-model"}`)
 
 				res := runClean(t, dir, "-p", "hi", "-base-url", srv.BaseURL(), "-m", "flag-model")
@@ -79,9 +79,9 @@ func TestChapter21(t *testing.T) {
 				"session somewhere else without editing the project.",
 			Hints: hints.Get("21", "env-beats-file"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				srv := fake.New(t, fake.Reply{Text: "ok"})
-				writeFile(t, filepath.Join(dir, "agent.json"),
+				support.WriteFile(t, filepath.Join(dir, "agent.json"),
 					`{"base_url": "http://127.0.0.1:1/v1", "model": "file-model"}`)
 
 				res := blackbox.RunIn(t, dir, map[string]string{
@@ -106,11 +106,11 @@ func TestChapter21(t *testing.T) {
 				"history. A file can be chmod 600 and stays out of both.",
 			Hints: hints.Get("21", "key-from-file"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				srv := fake.New(t, fake.Reply{Text: "ok"})
 				keyPath := filepath.Join(dir, "key.txt")
-				writeFile(t, keyPath, "sk-from-a-file\n")
-				writeFile(t, filepath.Join(dir, "agent.json"),
+				support.WriteFile(t, keyPath, "sk-from-a-file\n")
+				support.WriteFile(t, filepath.Join(dir, "agent.json"),
 					`{"base_url": "`+srv.BaseURL()+`", "model": "m", "api_key_file": "`+keyPath+`"}`)
 
 				res := runClean(t, dir, "-p", "hi")
@@ -131,10 +131,10 @@ func TestChapter21(t *testing.T) {
 				"like a wrong key rather than a missing file.",
 			Hints: hints.Get("21", "missing-key-file-is-reported"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				srv := fake.New(t, fake.Reply{Text: "should not be reached"})
 				missing := filepath.Join(dir, "not-here.txt")
-				writeFile(t, filepath.Join(dir, "agent.json"),
+				support.WriteFile(t, filepath.Join(dir, "agent.json"),
 					`{"base_url": "`+srv.BaseURL()+`", "model": "m", "api_key_file": "`+missing+`"}`)
 
 				res := runClean(t, dir, "-p", "hi")
@@ -157,7 +157,7 @@ func TestChapter21(t *testing.T) {
 				"would make it the least safe command in the tool.",
 			Hints: hints.Get("21", "config-report-redacts-the-key"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				res := blackbox.RunIn(t, dir, map[string]string{
 					"OPENAI_BASE_URL": "https://example.test/v1",
 					"OPENAI_API_KEY":  "sk-super-secret-value",
@@ -183,7 +183,7 @@ func TestChapter21(t *testing.T) {
 			Why:   "Asking how you are configured must work before the configuration is valid.",
 			Hints: hints.Get("21", "config-needs-no-provider"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				res := blackbox.RunIn(t, dir, map[string]string{
 					"OPENAI_BASE_URL": "http://127.0.0.1:1/v1",
 				}, "-config")
@@ -204,7 +204,7 @@ func TestChapter21(t *testing.T) {
 				"setting you typed.",
 			Hints: hints.Get("21", "bad-base-url-is-explained"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				res := blackbox.RunIn(t, dir, map[string]string{
 					"OPENAI_BASE_URL": "api.example.test/v1",
 				}, "-config")
@@ -234,16 +234,4 @@ func runClean(t *testing.T, dir string, args ...string) blackbox.Result {
 		"HOME":            home,
 		"XDG_CONFIG_HOME": filepath.Join(home, ".config"),
 	}, args...)
-}
-
-func workspace(t *testing.T) string { return t.TempDir() }
-
-func writeFile(t *testing.T, path, body string) {
-	t.Helper()
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		t.Fatalf("mkdir: %v", err)
-	}
-	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
-		t.Fatalf("write: %v", err)
-	}
 }

@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"kata/internal/blackbox"
+	support "kata/internal/checksupport"
 	"kata/internal/fake"
 	"kata/internal/grader"
 	"kata/internal/hints"
@@ -28,21 +29,21 @@ func TestChapter15(t *testing.T) {
 				"limit has to be a ceiling, not a rule that applies to everything.",
 			Hints: hints.Get("15", "small-result-passes-through"),
 			Run: func(t *testing.T) error {
-				dir := workspaceFiles(t, map[string]string{"small.txt": "short contents"})
+				dir := support.DirWith(t, map[string]string{"small.txt": "short contents"})
 				srv := fake.New(t,
-					callTool("call_1", "read", `{"path":"small.txt"}`),
+					support.Call("call_1", "read", `{"path":"small.txt"}`),
 					fake.Reply{Text: "done"},
 				)
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "read it").ExitCode); err != nil {
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "read it").ExitCode); err != nil {
 					return err
 				}
-				second, err := requestN(srv, 1)
+				second, err := support.Request(srv, 1)
 				if err != nil {
 					return err
 				}
-				msg, err := toolByID(second, "call_1")
+				msg, err := support.ToolResult(second, "call_1")
 				if err != nil {
 					return err
 				}
@@ -61,22 +62,22 @@ func TestChapter15(t *testing.T) {
 			Hints: hints.Get("15", "large-result-moved"),
 			Run: func(t *testing.T) error {
 				big := strings.Repeat("abcdefghij", 5000) // 50 KB
-				dir := workspaceFiles(t, map[string]string{"big.txt": big})
+				dir := support.DirWith(t, map[string]string{"big.txt": big})
 				srv := fake.New(t,
-					callTool("call_1", "read", `{"path":"big.txt"}`),
+					support.Call("call_1", "read", `{"path":"big.txt"}`),
 					fake.Reply{Text: "done"},
 				)
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()),
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()),
 						"-p", "read it", "-spill-bytes", "8000").ExitCode); err != nil {
 					return err
 				}
-				second, err := requestN(srv, 1)
+				second, err := support.Request(srv, 1)
 				if err != nil {
 					return err
 				}
-				msg, err := toolByID(second, "call_1")
+				msg, err := support.ToolResult(second, "call_1")
 				if err != nil {
 					return err
 				}
@@ -101,22 +102,22 @@ func TestChapter15(t *testing.T) {
 			Hints: hints.Get("15", "result-written-to-disk"),
 			Run: func(t *testing.T) error {
 				big := strings.Repeat("0123456789", 5000)
-				dir := workspaceFiles(t, map[string]string{"big.txt": big})
+				dir := support.DirWith(t, map[string]string{"big.txt": big})
 				srv := fake.New(t,
-					callTool("call_1", "read", `{"path":"big.txt"}`),
+					support.Call("call_1", "read", `{"path":"big.txt"}`),
 					fake.Reply{Text: "done"},
 				)
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()),
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()),
 						"-p", "read it", "-spill-bytes", "8000").ExitCode); err != nil {
 					return err
 				}
-				second, err := requestN(srv, 1)
+				second, err := support.Request(srv, 1)
 				if err != nil {
 					return err
 				}
-				msg, err := toolByID(second, "call_1")
+				msg, err := support.ToolResult(second, "call_1")
 				if err != nil {
 					return err
 				}
@@ -150,22 +151,22 @@ func TestChapter15(t *testing.T) {
 			Hints: hints.Get("15", "read-result-fetches-a-slice"),
 			Run: func(t *testing.T) error {
 				big := strings.Repeat("0123456789", 5000)
-				dir := workspaceFiles(t, map[string]string{"big.txt": big})
+				dir := support.DirWith(t, map[string]string{"big.txt": big})
 				srv := fake.New(t,
-					callTool("call_1", "read", `{"path":"big.txt"}`),
+					support.Call("call_1", "read", `{"path":"big.txt"}`),
 					fake.Reply{Text: "done"},
 				)
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()),
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()),
 						"-p", "read it", "-spill-bytes", "8000").ExitCode); err != nil {
 					return err
 				}
-				second, err := requestN(srv, 1)
+				second, err := support.Request(srv, 1)
 				if err != nil {
 					return err
 				}
-				msg, err := toolByID(second, "call_1")
+				msg, err := support.ToolResult(second, "call_1")
 				if err != nil {
 					return err
 				}
@@ -173,24 +174,24 @@ func TestChapter15(t *testing.T) {
 				if handle == "" {
 					return &grader.Mismatch{Label: "handle", Want: "a handle in the notice", Got: "none"}
 				}
-				if !hasTool(srv.Last().Tools, "read_result") {
-					return &grader.Mismatch{Label: "tools", Want: "read_result advertised", Got: toolNames(srv.Last().Tools)}
+				if !support.HasTool(srv.Last().Tools, "read_result") {
+					return &grader.Mismatch{Label: "tools", Want: "read_result advertised", Got: support.ToolNames(srv.Last().Tools)}
 				}
 
 				// A second run fetches the same slice the summary pointed at.
 				srv2 := fake.New(t,
-					callTool("call_2", "read_result", `{"handle":"`+handle+`","offset":0,"length":100}`),
+					support.Call("call_2", "read_result", `{"handle":"`+handle+`","offset":0,"length":100}`),
 					fake.Reply{Text: "done"},
 				)
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv2.BaseURL()), "-p", "fetch", "-spill-bytes", "8000").ExitCode); err != nil {
+					blackbox.RunIn(t, dir, support.Env(srv2.BaseURL()), "-p", "fetch", "-spill-bytes", "8000").ExitCode); err != nil {
 					return err
 				}
-				after, err := requestN(srv2, 1)
+				after, err := support.Request(srv2, 1)
 				if err != nil {
 					return err
 				}
-				slice, err := toolByID(after, "call_2")
+				slice, err := support.ToolResult(after, "call_2")
 				if err != nil {
 					return err
 				}
@@ -212,21 +213,21 @@ func TestChapter15(t *testing.T) {
 				"the model can read, not a crash.",
 			Hints: hints.Get("15", "unknown-handle-is-a-result"),
 			Run: func(t *testing.T) error {
-				dir := workspaceFiles(t, nil)
+				dir := support.DirWith(t, nil)
 				srv := fake.New(t,
-					callTool("call_1", "read_result", `{"handle":"deadbeef","offset":0}`),
+					support.Call("call_1", "read_result", `{"handle":"deadbeef","offset":0}`),
 					fake.Reply{Text: "I could not find that result."},
 				)
 
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "fetch it")
+				res := blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "fetch it")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
 				}
-				second, err := requestN(srv, 1)
+				second, err := support.Request(srv, 1)
 				if err != nil {
 					return err
 				}
-				msg, err := toolByID(second, "call_1")
+				msg, err := support.ToolResult(second, "call_1")
 				if err != nil {
 					return err
 				}
@@ -245,21 +246,21 @@ func TestChapter15(t *testing.T) {
 			Hints: hints.Get("15", "offset-past-end-is-a-result"),
 			Run: func(t *testing.T) error {
 				big := strings.Repeat("x", 50_000)
-				dir := workspaceFiles(t, map[string]string{"big.txt": big})
+				dir := support.DirWith(t, map[string]string{"big.txt": big})
 				srv := fake.New(t,
-					callTool("call_1", "read", `{"path":"big.txt"}`),
+					support.Call("call_1", "read", `{"path":"big.txt"}`),
 					fake.Reply{Text: "done"},
 				)
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()),
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()),
 						"-p", "read", "-spill-bytes", "8000").ExitCode); err != nil {
 					return err
 				}
-				second, err := requestN(srv, 1)
+				second, err := support.Request(srv, 1)
 				if err != nil {
 					return err
 				}
-				msg, err := toolByID(second, "call_1")
+				msg, err := support.ToolResult(second, "call_1")
 				if err != nil {
 					return err
 				}
@@ -269,18 +270,18 @@ func TestChapter15(t *testing.T) {
 				}
 
 				srv2 := fake.New(t,
-					callTool("call_2", "read_result", `{"handle":"`+handle+`","offset":999999}`),
+					support.Call("call_2", "read_result", `{"handle":"`+handle+`","offset":999999}`),
 					fake.Reply{Text: "that offset is past the end"},
 				)
-				res := blackbox.RunIn(t, dir, env(srv2.BaseURL()), "-p", "fetch", "-spill-bytes", "8000")
+				res := blackbox.RunIn(t, dir, support.Env(srv2.BaseURL()), "-p", "fetch", "-spill-bytes", "8000")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
 				}
-				after, err := requestN(srv2, 1)
+				after, err := support.Request(srv2, 1)
 				if err != nil {
 					return err
 				}
-				slice, err := toolByID(after, "call_2")
+				slice, err := support.ToolResult(after, "call_2")
 				if err != nil {
 					return err
 				}
@@ -299,21 +300,21 @@ func TestChapter15(t *testing.T) {
 				"../../etc/passwd would read a file that has nothing to do with results.",
 			Hints: hints.Get("15", "handle-is-not-a-path"),
 			Run: func(t *testing.T) error {
-				dir := workspaceFiles(t, nil)
+				dir := support.DirWith(t, nil)
 				srv := fake.New(t,
-					callTool("call_1", "read_result", `{"handle":"../../../etc/passwd"}`),
+					support.Call("call_1", "read_result", `{"handle":"../../../etc/passwd"}`),
 					fake.Reply{Text: "no"},
 				)
 
 				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "fetch").ExitCode); err != nil {
+					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "fetch").ExitCode); err != nil {
 					return err
 				}
-				second, err := requestN(srv, 1)
+				second, err := support.Request(srv, 1)
 				if err != nil {
 					return err
 				}
-				msg, err := toolByID(second, "call_1")
+				msg, err := support.ToolResult(second, "call_1")
 				if err != nil {
 					return err
 				}
@@ -332,74 +333,6 @@ func TestChapter15(t *testing.T) {
 
 // --- helpers ---
 
-func env(baseURL string) map[string]string {
-	return map[string]string{
-		"OPENAI_BASE_URL": baseURL,
-		"OPENAI_API_KEY":  "test-key",
-	}
-}
-
-func callTool(id, name, args string) fake.Reply {
-	return fake.Reply{Frames: []fake.Frame{
-		{ToolCall: &fake.CallFrame{Index: 0, ID: id, Name: name}},
-		{ToolCall: &fake.CallFrame{Index: 0, Args: args}},
-		{Finish: "tool_calls"},
-	}}
-}
-
-func workspaceFiles(t *testing.T, files map[string]string) string {
-	t.Helper()
-	dir := t.TempDir()
-	for name, body := range files {
-		full := filepath.Join(dir, name)
-		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
-			t.Fatalf("mkdir: %v", err)
-		}
-		if err := os.WriteFile(full, []byte(body), 0o644); err != nil {
-			t.Fatalf("write %s: %v", name, err)
-		}
-	}
-	return dir
-}
-
-func requestN(srv *fake.Server, n int) (fake.Recorded, error) {
-	reqs := srv.Requests()
-	if len(reqs) <= n {
-		return fake.Recorded{}, &grader.Mismatch{Label: "requests", Want: "at least one more", Got: itoa(len(reqs))}
-	}
-	return reqs[n], nil
-}
-
-func toolByID(req fake.Recorded, id string) (fake.RecordedMessage, error) {
-	for _, m := range req.Messages {
-		if m.Role == "tool" && m.ToolCallID == id {
-			return m, nil
-		}
-	}
-	return fake.RecordedMessage{}, &grader.Mismatch{Label: "tool result " + id, Want: "present", Got: "missing"}
-}
-
-func hasTool(tools []map[string]any, name string) bool {
-	for _, t := range tools {
-		if fn, ok := t["function"].(map[string]any); ok && fn["name"] == name {
-			return true
-		}
-	}
-	return false
-}
-
-func toolNames(tools []map[string]any) []string {
-	out := make([]string, 0, len(tools))
-	for _, t := range tools {
-		if fn, ok := t["function"].(map[string]any); ok {
-			if name, ok := fn["name"].(string); ok {
-				out = append(out, name)
-			}
-		}
-	}
-	return out
-}
-
 // handleFrom pulls the hex handle out of the notice the tool wrote.
 func handleFrom(content string) string {
 	const marker = "handle: "
@@ -413,18 +346,6 @@ func handleFrom(content string) string {
 		end = len(rest)
 	}
 	return strings.TrimSpace(rest[:end])
-}
-
-func itoa(n int) string {
-	if n == 0 {
-		return "0"
-	}
-	var digits []byte
-	for n > 0 {
-		digits = append([]byte{byte('0' + n%10)}, digits...)
-		n /= 10
-	}
-	return string(digits)
 }
 
 func min(a, b int) int {

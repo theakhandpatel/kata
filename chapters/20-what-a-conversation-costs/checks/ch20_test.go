@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"kata/internal/blackbox"
+	support "kata/internal/checksupport"
 	"kata/internal/fake"
 	"kata/internal/grader"
 	"kata/internal/hints"
@@ -25,7 +26,7 @@ func TestChapter20(t *testing.T) {
 				"they are not written down then, they are gone.",
 			Hints: hints.Get("20", "usage-is-recorded"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				srv := fake.New(t, fake.Reply{
 					Text:  "the answer",
 					Usage: &fake.Usage{PromptTokens: 120, CompletionTokens: 30, TotalTokens: 150},
@@ -52,7 +53,7 @@ func TestChapter20(t *testing.T) {
 				"everything ever run.",
 			Hints: hints.Get("20", "usage-per-session"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				srv := fake.New(t, fake.Reply{
 					Text:  "answer",
 					Usage: &fake.Usage{PromptTokens: 200, CompletionTokens: 50, TotalTokens: 250},
@@ -61,7 +62,7 @@ func TestChapter20(t *testing.T) {
 					runAgent(t, dir, srv, "-p", "only conversation").ExitCode); err != nil {
 					return err
 				}
-				id := sessionIDFrom(t, dir)
+				id := support.SessionIDFromStore(t, dir)
 				if id == "" {
 					return &grader.Mismatch{Label: "session", Want: "one stored session", Got: "none"}
 				}
@@ -80,7 +81,7 @@ func TestChapter20(t *testing.T) {
 				"having.",
 			Hints: hints.Get("20", "usage-across-sessions"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 
 				a := fake.New(t, fake.Reply{
 					Text:  "a",
@@ -114,7 +115,7 @@ func TestChapter20(t *testing.T) {
 				"cost, and that needs a rate and arithmetic that does not drift.",
 			Hints: hints.Get("20", "cost-is-computed"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				srv := fake.New(t, fake.Reply{
 					Text:  "answer",
 					Usage: &fake.Usage{PromptTokens: 1000, CompletionTokens: 1000, TotalTokens: 2000},
@@ -141,7 +142,7 @@ func TestChapter20(t *testing.T) {
 				"have to live with the conversation.",
 			Hints: hints.Get("20", "usage-survives-a-resume"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				first := fake.New(t, fake.Reply{
 					Text:  "first",
 					Usage: &fake.Usage{PromptTokens: 300, CompletionTokens: 30, TotalTokens: 330},
@@ -149,7 +150,7 @@ func TestChapter20(t *testing.T) {
 				if err := grader.Eqf("exit code", 0, runAgent(t, dir, first, "-p", "remember this").ExitCode); err != nil {
 					return err
 				}
-				id := sessionIDFrom(t, dir)
+				id := support.SessionIDFromStore(t, dir)
 
 				second := fake.New(t, fake.Reply{
 					Text:  "second",
@@ -173,7 +174,7 @@ func TestChapter20(t *testing.T) {
 			Why:   "Asking what you spent should not cost anything.",
 			Hints: hints.Get("20", "usage-needs-no-provider"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				srv := fake.New(t, fake.Reply{
 					Text:  "x",
 					Usage: &fake.Usage{PromptTokens: 10, CompletionTokens: 1, TotalTokens: 11},
@@ -201,7 +202,7 @@ func TestChapter20(t *testing.T) {
 				"zero conversations is worse than a sentence.",
 			Hints: hints.Get("20", "empty-store-reports-nothing"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t)
+				dir := support.Dir(t)
 				res := runAgent(t, dir, fake.New(t), "-usage")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
@@ -217,30 +218,7 @@ func TestChapter20(t *testing.T) {
 
 // --- helpers ---
 
-func env(baseURL string) map[string]string {
-	return map[string]string{
-		"OPENAI_BASE_URL": baseURL,
-		"OPENAI_API_KEY":  "test-key",
-	}
-}
-
 func runAgent(t *testing.T, dir string, srv *fake.Server, args ...string) blackbox.Result {
 	t.Helper()
-	return blackbox.RunIn(t, dir, env(srv.BaseURL()), args...)
-}
-
-func workspace(t *testing.T) string { return t.TempDir() }
-
-func sessionIDFrom(t *testing.T, dir string) string {
-	t.Helper()
-	res := blackbox.RunIn(t, dir, map[string]string{"OPENAI_BASE_URL": "http://127.0.0.1:1/v1"}, "-sessions")
-	lines := strings.Split(res.Stdout, "\n")
-	if len(lines) < 2 {
-		return ""
-	}
-	fields := strings.Fields(lines[1])
-	if len(fields) == 0 {
-		return ""
-	}
-	return fields[0]
+	return blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), args...)
 }
