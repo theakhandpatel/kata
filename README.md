@@ -89,7 +89,7 @@ kata progress             what passed, and when
 kata verify               prove each chapter rejects its starter and accepts its reference
 kata reset [NN]           restore agent/ to the state before a chapter
 kata read where-next      what to build after the course
-kata site                 render the course as a static website in site/dist
+kata site                 build the website into site/dist (VitePress)
 kata ui                   terminal interface: pick a chapter, grade it
 kata watch [NN]           re-grade on every save
 kata doctor               check the environment
@@ -139,20 +139,20 @@ For a full harness, read [pi](https://github.com/earendil-works/pi),
 
 ## Publishing
 
-The site is committed, so a deploy never needs Go or a browser on the build machine.
+Netlify builds the site from source; nothing generated is committed.
 
-```sh
-kata site                     # writes site/dist through VitePress
-git add site/dist && git commit -m "site: rebuild"
+```
+go run ./cmd/kata site   →   site/src (generated VitePress project)   →   site/dist
 ```
 
-VitePress also validates every internal link, so a broken cross-reference fails the
-build instead of shipping.
+`netlify.toml` runs that command and publishes `site/dist`. VitePress validates every
+internal link, so a broken cross-reference fails the build instead of shipping.
 
-Netlify serves `site/dist` through `netlify.toml`. To deploy by hand:
+To preview locally:
 
 ```sh
-netlify deploy --prod --dir site/dist
+kata site                         # build once, output in site/dist
+cd site && npx vitepress dev src  # live reload while editing chapters
 ```
 
 ## Contributing
