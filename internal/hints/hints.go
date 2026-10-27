@@ -15,6 +15,43 @@ import "sort"
 
 // Table maps chapter number -> case id -> the three rungs.
 var Table = map[string]map[string][3]string{
+	"20": {
+		"usage-is-recorded": {
+			"The counts arrive once, on the last message of the stream.",
+			"Write them beside the assistant message, in columns on the same row.",
+			"The loop sums usage in Result.Usage. Pass it to the store with the new messages and write it on the assistant row.",
+		},
+		"usage-per-session": {
+			"The interesting question is about one conversation.",
+			"Add -usage with -resume to report a single session.",
+			"SELECT SUM(prompt_tokens), SUM(completion_tokens) FROM messages WHERE session_id = ? AND role = 'assistant'.",
+		},
+		"usage-across-sessions": {
+			"A total with no breakdown cannot tell you which conversation to stop having.",
+			"Group by session and print one line each, plus a total.",
+			"GROUP BY session_id, ORDER BY the token sum DESC, and join the title so the rows are recognisable.",
+		},
+		"cost-is-computed": {
+			"Token counts are input; money is the answer.",
+			"Multiply by a rate per thousand tokens, in integer micros.",
+			"micros += tokens * rateMicros / 1000. Accumulate in int64 and format with six decimals. Floats drift and a report off by a cent is a report nobody trusts.",
+		},
+		"usage-survives-a-resume": {
+			"A report that only knows about this process is useless.",
+			"The numbers live in the message rows, so resuming loads them too.",
+			"Sum every assistant row for the session, not just the ones this run added.",
+		},
+		"usage-needs-no-provider": {
+			"Asking what you spent should not cost anything.",
+			"Handle -usage before the prompt check and before building a provider.",
+			"Open the store, query, print, return. No client, no context deadline that can expire first.",
+		},
+		"empty-store-reports-nothing": {
+			"Zero rows is not an error.",
+			"A report claiming zero dollars across zero conversations is worse than a sentence.",
+			`If the total message count is zero, print 'no usage recorded yet' and exit 0.`,
+		},
+	},
 	"19": {
 		"creates-a-session": {
 			"A conversation needs an identity before it can be listed.",
