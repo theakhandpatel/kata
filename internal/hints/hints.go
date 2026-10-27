@@ -15,6 +15,43 @@ import "sort"
 
 // Table maps chapter number -> case id -> the three rungs.
 var Table = map[string]map[string][3]string{
+	"16": {
+		"ceiling-respected": {
+			"Schemas are paid for on every request.",
+			"Advertise at most the ceiling, in registration order.",
+			"Take the first N names from the registry and return only their defs. A registry smaller than the ceiling advertises everything.",
+		},
+		"hidden-tools-are-named": {
+			"A tool that can only be loaded by guessing is never loaded.",
+			"Put the hidden names in the system message, next to the loader's name.",
+			"Append one line: 'Other tools you can load with load_tool: write, bash, ...'. Emit nothing when the list is empty.",
+		},
+		"load-tool-is-always-advertised": {
+			"The loader cannot be subject to the limit it enforces.",
+			"Keep a list of names that are never hidden.",
+			"Always(name) records a name that goes into every advertised set, before the ceiling is applied.",
+		},
+		"loading-a-tool-makes-it-callable": {
+			"Naming a hidden tool is only useful if the next turn carries its schema.",
+			"Record the loaded name, and include it in the advertised set from then on.",
+			"Mount(name) checks the registry and adds the name to an extra set. Mounted() returns always-on names, then the ceiling, then anything explicitly mounted.",
+		},
+		"unknown-tool-load-is-a-result": {
+			"The name comes from the model.",
+			"Look it up before mounting, and return a message when it is missing.",
+			`Return a tool error like "no such tool: <name>" so the registry records an IsError result and the run continues.`,
+		},
+		"no-ceiling-advertises-everything": {
+			"The cap is a ceiling, not a rule.",
+			"Apply the limit only when the registry is larger than it.",
+			"Mounted() breaks out of the loop only when the count reaches the ceiling, so a registry of five with a ceiling of fifty returns all five.",
+		},
+		"schemas-still-count-against-budget": {
+			"The two budgets are related.",
+			"Count the schemas actually advertised, not the ones in the registry.",
+			"Estimate from req.Tools, which the view already filtered. Advertising two instead of nine must lower the estimate.",
+		},
+	},
 	"15": {
 		"small-result-passes-through": {
 			"A limit is a ceiling, not a rule for everything.",
