@@ -8,7 +8,7 @@ into a single `Message`.
 
 | | |
 |---|---|
-| **How it works** | [overview.md](overview.md), the seam, the delta log, the failure map |
+| **How it works** | [overview.md](overview.md): where the model sits, how the reply arrives, what breaks |
 | **What to build** | [problem.md](problem.md), the contract, the graded claims, the hints |
 | **Full implementation** | [example.md](example.md), annotated, after an attempt |
 | **You edit** | `agent/provider_openai.go` only |

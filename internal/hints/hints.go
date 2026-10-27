@@ -465,7 +465,7 @@ var Table = map[string]map[string][3]string{
 		},
 		"prints-reply": {
 			"The answer is printed, not returned, and it arrives in pieces.",
-			"Accumulate every content delta, then print once at the end. If stdout is empty, check where content is read from: the wire nests it under choices[0].delta, not at the top level.",
+			"Keep adding each new piece of text, then print once at the end. If stdout is empty, check where the text is read from: the wire puts it inside choices[0].delta, not at the top level.",
 			`Assigning instead of appending keeps only the last fragment. Use strings.Builder and write it out after the stream ends.`,
 		},
 		"debug-usage": {

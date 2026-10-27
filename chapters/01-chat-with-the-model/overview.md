@@ -26,7 +26,7 @@ flowchart LR
         T --> S[session log]
         S --> P
     end
-    P["Provider seam<br/>Chat(ctx, req)"] --> M{{"the model<br/>(not yours)"}}
+    P["your provider code<br/>Chat(ctx, req)"] --> M{{"the model<br/>(not yours)"}}
     M --> P
 
     style P fill:#1f6feb22,stroke:#1f6feb
@@ -39,13 +39,14 @@ flowchart LR
    loop → tools → session → provider ──┼──▶ model ──▶ back through provider
 ```
 
-Above the seam you can assert anything. Below it, nothing. So the first thing
-you build is the seam, and the first thing you learn is what crosses it.
+On your side of that line you can check anything. On the model's side, nothing. So the
+first thing you build is the line itself, and the first thing you learn is what travels
+across it.
 
-## What actually crosses the seam
+## What travels across the line
 
-Not "a prompt". A structure. An OpenAI-compatible request is a model name, an
-ordered list of messages with roles, and optionally a list of tool definitions:
+Not a prompt string. A structure: a model name, a list of messages in order, each with
+a role, and sometimes a list of tools:
 
 ```
 Request
@@ -55,8 +56,8 @@ Request
 └── stream       true
 ```
 
-The response is not a structure. It is a **sequence of partial structures**, and
-reassembling it is the chapter.
+The response is not a structure. It arrives as **many small pieces**, and putting them
+back together is what this chapter is about.
 
 ### Why the wire is a stream
 
@@ -68,8 +69,9 @@ Two reasons, and only the second is obvious.
    comfortably carry, and the server does not know in advance how long it will
    be.
 
-So the server emits `text/event-stream`: a plain-text framing of "here is a bit
-more". Each bit is a JSON object with a *delta*, meaning "the part that is new".
+So the server sends `text/event-stream`: plain text, one small JSON object at a time,
+each one saying "here is a bit more". The `delta` field inside holds only the new piece,
+not the whole answer so far.
 
 ```
    request ──────────────────────────────▶
@@ -82,9 +84,9 @@ more". Each bit is a JSON object with a *delta*, meaning "the part that is new".
    ◀──── data: [DONE]                                       ← terminator
 ```
 
-The delta is nested twice: one chunk can carry several **choices**, and each choice
-carries its own delta. That nesting is the part people get wrong from memory, so
-here is the exact shape to decode into:
+The text sits two levels down: one message can carry several **choices**, and each
+choice has its own `delta`. That nesting is easy to misremember, so here is the exact
+shape to decode into:
 
 ```json
 {
@@ -96,21 +98,20 @@ here is the exact shape to decode into:
 ```
 
 The `choices` array exists because a request can ask for several completions. This
-course asks for one, sends no `n`, and folds `choices[0]`. A stream with more than
-one choice would interleave alternatives, and folding them all would concatenate
-them.
+course asks for one, sends no `n`, and reads `choices[0]`. If a stream did carry
+several choices, adding them all together would mix up separate answers.
 
-The mental model to hold: **the stream is a delta log, and your job is to fold
-it.** Every chunk is an event, not a document. Nothing in the stream is the
-complete answer; the complete answer is what you get by applying all the deltas
-in order.
+Here is the idea to hold on to. **The stream is a list of pieces, and your job is to
+stick them together.** No single message is the answer. The answer is what you get by
+joining every piece in order.
 
-Once you see it that way, three properties stop being trivia and become obvious:
+Once you see it that way, three things stop being surprising:
 
-- **Append, never assign.** Folding is an accumulation.
-- **Metadata arrives late.** Usage is only known once the server has finished
-  producing the answer, so it rides on the final chunk, whose `delta` is empty.
-- **The terminator is not data.** `[DONE]` is framing, not a message.
+- **Add to the end, never overwrite.** Joining means keeping what you already have.
+- **The token counts come last.** The server only knows them once it has finished, so
+  they arrive on the final message, which has no text in it.
+- **`[DONE]` is not data.** It marks the end of the stream. It is not part of the
+  answer.
 
 ## Why the failure modes cluster here
 
@@ -124,7 +125,7 @@ flowchart TD
     B -- no --> C["non-2xx<br/>429 / 401 / 500"]
     B -- yes --> D{stream healthy?}
     D -- "dies mid-way" --> E["partial answer<br/>looks complete"]
-    D -- "fine" --> F{deltas folded<br/>correctly?}
+    D -- "fine" --> F{pieces joined<br/>in order?}
     F -- no --> G["silently truncated<br/>or wrong"]
     F -- yes --> H[correct message]
     C --> I[typed error → caller decides]
@@ -139,7 +140,7 @@ implementation:
 |---|---|---|
 | non-2xx | decode the error body as a completion | `http-error` |
 | stream dies | ignore `scanner.Err()` | `truncated-stream` |
-| deltas | assign instead of append | `prints-reply` |
+| pieces of text | overwrite instead of add | `prints-reply` |
 | shape | read `delta` from the top level instead of `choices[0].delta` | `prints-reply`, `sse-framing` |
 | metadata | only decode chunks that carry content | `debug-usage` |
 | request | forget `stream: true`, or build the URL by hand | `request-shape`, `request-envelope` |

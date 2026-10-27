@@ -56,7 +56,7 @@ chunk shape, and the nesting matters:
 ```
 
 `content` is at `choices[0].delta.content`, not at the top level. `usage` appears
-once, on the final chunk, whose `delta` is empty.
+once, on the final message, which carries no text.
 
 ## What the verifier does
 
@@ -110,7 +110,7 @@ whether or not you pass the context. Test with a long reply and a slow server.
 <details><summary>Rung 1, the mechanism</summary>
 
 Three separate things break here, and each has its own case: what the request
-looks like, how the deltas are folded, and how the program fails.
+looks like, how the pieces are put back together, and how the program fails.
 </details>
 
 <details><summary>Rung 2, the APIs</summary>
@@ -128,7 +128,7 @@ Build the body and POST it with the caller's ctx. Check the status before readin
 the body; on non-2xx, read at most a few KiB and return
 `&agent.HTTPError{Status, Body}`. Otherwise scan lines, keep those starting
 `data:`, skip `[DONE]`, decode each into a chunk struct with
-`Choices[].Delta.Content` and a top-level `Usage`, append every content delta, and
+`Choices[].Delta.Content` and a top-level `Usage`, add every piece of text to the end, and
 take `usage` when it is non-nil. After the loop, check `scanner.Err()` and
 return it. Assemble the returned message outside the loop.
 

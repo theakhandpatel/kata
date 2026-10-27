@@ -16,13 +16,13 @@ Four jobs, four functions. Knowing the split matters more than the code:
 ```
 Chat
  ├── buildRequest   Request  →  *http.Request     (translate our types → wire)
- ├── do            send, check status, or fail    (transport + error policy)
- └── fold           io.Reader → Message, Usage    (the delta log → one value)
+ ├── do             send, check status, or fail   (transport + error policy)
+ └── readSSE        io.Reader → Message, Usage    (the pieces → one message)
 ```
 
-If you write `Chat` as one 90-line function you will pass, and you will hate it
-in chapter 02 when the fold grows tool calls. Written as three functions, chapter
-02 adds ~15 lines and touches nothing else.
+If you write `Chat` as one 90-line function it will pass, and you will hate it in
+chapter 02, when the parser also has to handle tool calls. Split into three functions,
+chapter 02 adds about 15 lines and touches nothing else.
 
 ## Step 1: translate, don't leak
 
@@ -99,7 +99,7 @@ Three decisions worth defending:
 - **A typed error, not `fmt.Errorf`.** `*HTTPError` is what lets the loop in
   chapter 04 distinguish "retry with backoff" from "the model is wrong".
 
-## Step 4: fold the stream
+## Step 4: read the stream
 
 This is the chapter. Everything above is plumbing.
 
@@ -137,7 +137,7 @@ func readSSE(r io.Reader) (Message, Usage, error) {
 		}
 		for _, choice := range chunk.Choices {
 			content.WriteString(choice.Delta.Content)   // ← append, never assign
-			// tool_calls folding lives here from chapter 02
+			// tool_call parsing lives here from chapter 02
 		}
 	}
 	if err := scanner.Err(); err != nil {              // ← the 3rd trap
@@ -198,7 +198,7 @@ return msg, usage, nil
 
 Banal, but note *where* it happens: outside. Implementations that build the
 `Message` inside the loop and return it early end up with a message that has only
-the last delta. The loop's job is to mutate accumulators; the return's job is to
+the last piece. The loop's job is to fill in the running values; the return's job is to
 snapshot them once.
 
 ---
@@ -239,7 +239,7 @@ competent first implementation does; right is the fix.
 + http.NewRequestWithContext(ctx, http.MethodPost, url, body)
 ```
 
-That is the whole chapter: one fold, one error policy, one lifetime. The other
+That is the whole chapter: one parser, one error policy, one lifetime. The other
 two cases (`request-shape`, `http-error`) are structural and you either have them
 or your first run tells you immediately.
 
