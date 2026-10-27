@@ -1,25 +1,16 @@
-# Netlify serves the built site. The build happens locally because rendering
-# diagrams needs a browser, and a deploy should not depend on one.
-#
-# After changing prose or chapters:
-#
-#   kata site
-#   git add site/dist && git commit -m "site: rebuild"
-#
-# Then push, and Netlify publishes the committed directory.
+# Netlify builds the site from source: Go generates the VitePress project, and
+# VitePress builds it. Nothing generated is committed.
 
 [build]
+  command = "go run ./cmd/kata site"
   publish = "site/dist"
-  # No build command: the directory is committed. Set one only if you move to
-  # building on Netlify, which needs Go and a headless browser in their image.
+
+[build.environment]
+  GO_VERSION = "1.26"
+  NODE_VERSION = "22"
 
 [[headers]]
   for = "/*"
   [headers.values]
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
-
-[[headers]]
-  for = "/*.css"
-  [headers.values]
-    Cache-Control = "public, max-age=3600"

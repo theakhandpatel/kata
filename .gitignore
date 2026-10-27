@@ -30,3 +30,5 @@ docs/research/
 # generated VitePress project and its dependencies
 /site/src/
 /site/node_modules/
+
+/site/dist/
