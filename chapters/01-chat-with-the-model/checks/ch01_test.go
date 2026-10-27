@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"kata/internal/blackbox"
-	support "kata/internal/checksupport"
-	"kata/internal/fake"
-	"kata/internal/grader"
-	"kata/internal/hints"
+	"agent/internal/blackbox"
+	support "agent/internal/checksupport"
+	"agent/internal/fake"
+	"agent/internal/grader"
+	"agent/internal/hints"
 )
 
 // Chapter 01 -- talk to the model.
@@ -176,7 +176,7 @@ func TestChapter01(t *testing.T) {
 				})
 
 				e := support.Env(srv.BaseURL())
-				e["HARNESS_DEBUG"] = "1"
+				e["AGENT_DEBUG"] = "1"
 				res := blackbox.Run(t, e, "-p", "x")
 
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {

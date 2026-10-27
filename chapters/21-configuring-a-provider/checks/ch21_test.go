@@ -7,11 +7,11 @@ import (
 	"strings"
 	"testing"
 
-	"kata/internal/blackbox"
-	support "kata/internal/checksupport"
-	"kata/internal/fake"
-	"kata/internal/grader"
-	"kata/internal/hints"
+	"agent/internal/blackbox"
+	support "agent/internal/checksupport"
+	"agent/internal/fake"
+	"agent/internal/grader"
+	"agent/internal/hints"
 )
 
 // Chapter 21 -- configuring a provider.
@@ -87,7 +87,7 @@ func TestChapter21(t *testing.T) {
 				res := blackbox.RunIn(t, dir, map[string]string{
 					"OPENAI_BASE_URL": srv.BaseURL(),
 					"OPENAI_API_KEY":  "k",
-					"HARNESS_MODEL":   "env-model",
+					"AGENT_MODEL":   "env-model",
 				}, "-p", "hi")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
@@ -118,7 +118,7 @@ func TestChapter21(t *testing.T) {
 				res := blackbox.RunIn(t, dir, map[string]string{
 					"OPENAI_BASE_URL": srv.BaseURL(),
 					"OPENAI_API_KEY":  "k",
-					"HARNESS_MODEL":   "from-env",
+					"AGENT_MODEL":   "from-env",
 					"HOME":            home,
 					"XDG_CONFIG_HOME": filepath.Join(home, ".config"),
 				}, "-p", "hi", "-m", "from-flag")
@@ -133,7 +133,7 @@ func TestChapter21(t *testing.T) {
 				res2 := blackbox.RunIn(t, dir, map[string]string{
 					"OPENAI_BASE_URL": srv2.BaseURL(),
 					"OPENAI_API_KEY":  "k",
-					"HARNESS_MODEL":   "from-env",
+					"AGENT_MODEL":   "from-env",
 					"HOME":            home,
 					"XDG_CONFIG_HOME": filepath.Join(home, ".config"),
 				}, "-p", "hi")
@@ -210,7 +210,7 @@ func TestChapter21(t *testing.T) {
 				res := blackbox.RunIn(t, dir, map[string]string{
 					"OPENAI_BASE_URL": "https://example.test/v1",
 					"OPENAI_API_KEY":  "sk-super-secret-value",
-					"HARNESS_MODEL":   "some-model",
+					"AGENT_MODEL":   "some-model",
 				}, "-config")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
@@ -279,7 +279,7 @@ func runClean(t *testing.T, dir string, args ...string) blackbox.Result {
 	return blackbox.RunIn(t, dir, map[string]string{
 		"OPENAI_BASE_URL": "",
 		"OPENAI_API_KEY":  "",
-		"HARNESS_MODEL":   "",
+		"AGENT_MODEL":   "",
 		"HOME":            home,
 		"XDG_CONFIG_HOME": filepath.Join(home, ".config"),
 	}, args...)

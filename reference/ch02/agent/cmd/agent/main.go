@@ -3,7 +3,7 @@
 // Contract, which later chapters keep:
 //
 //	agent -p "<prompt>"        the answer goes to stdout
-//	HARNESS_DEBUG=1            token usage goes to stderr
+//	AGENT_DEBUG=1            token usage goes to stderr
 //	exit 0 on success, 1 on error
 //
 // stdout carries the answer and nothing else, so a caller can pipe it.
@@ -19,7 +19,7 @@ import (
 	"syscall"
 	"time"
 
-	"kata/agent"
+	"agent/agent"
 )
 
 func main() {
@@ -32,7 +32,7 @@ func main() {
 func run() error {
 	var (
 		prompt  = flag.String("p", "", "the prompt to send (required)")
-		model   = flag.String("m", "", "model name; defaults to $HARNESS_MODEL")
+		model   = flag.String("m", "", "model name; defaults to $AGENT_MODEL")
 		timeout = flag.Duration("timeout", 60*time.Second, "cancel the request after this long")
 	)
 	flag.Parse()
@@ -49,7 +49,7 @@ func run() error {
 	provider := agent.NewOpenAICompat(
 		envOr("OPENAI_BASE_URL", "http://localhost:11434/v1"),
 		os.Getenv("OPENAI_API_KEY"),
-		firstNonEmpty(*model, os.Getenv("HARNESS_MODEL"), "gpt-4o-mini"),
+		firstNonEmpty(*model, os.Getenv("AGENT_MODEL"), "gpt-4o-mini"),
 	)
 
 	// Tools are resolved against the directory the program was started in, so
@@ -113,7 +113,7 @@ func runTools(ctx context.Context, tools *agent.Registry, calls []agent.ToolCall
 }
 
 func debugUsage(u agent.Usage) {
-	if os.Getenv("HARNESS_DEBUG") == "" {
+	if os.Getenv("AGENT_DEBUG") == "" {
 		return
 	}
 	fmt.Fprintf(os.Stderr, "usage prompt=%d completion=%d total=%d\n",

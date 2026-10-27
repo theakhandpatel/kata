@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"kata/internal/hints"
+	"agent/internal/hints"
 )
 
 func timeNow() time.Time { return time.Now().UTC() }

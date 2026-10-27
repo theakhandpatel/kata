@@ -17,9 +17,9 @@ import (
 	"strings"
 	"testing"
 
-	"kata/internal/blackbox"
-	"kata/internal/fake"
-	"kata/internal/grader"
+	"agent/internal/blackbox"
+	"agent/internal/fake"
+	"agent/internal/grader"
 )
 
 // Env points the agent at a scripted server with a test key.
@@ -54,7 +54,7 @@ func RunClean(t *testing.T, dir string, args ...string) blackbox.Result {
 	return blackbox.RunIn(t, dir, map[string]string{
 		"OPENAI_BASE_URL": "",
 		"OPENAI_API_KEY":  "",
-		"HARNESS_MODEL":   "",
+		"AGENT_MODEL":   "",
 		"HOME":            home,
 		"XDG_CONFIG_HOME": filepath.Join(home, ".config"),
 	}, args...)

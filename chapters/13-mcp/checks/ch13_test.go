@@ -9,10 +9,10 @@ import (
 	"strings"
 	"testing"
 
-	"kata/internal/blackbox"
-	"kata/internal/fake"
-	"kata/internal/grader"
-	"kata/internal/hints"
+	"agent/internal/blackbox"
+	"agent/internal/fake"
+	"agent/internal/grader"
+	"agent/internal/hints"
 )
 
 // Chapter 13 -- MCP over stdio.

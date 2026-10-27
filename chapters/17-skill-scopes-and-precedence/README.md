@@ -10,7 +10,7 @@ An agent that reads skills from more than one place, and knows which copy wins.
 $ cat skills/deploy/SKILL.md       # in this repository
 Deploy to $0 using the staging cluster.
 
-$ $XDG_CONFIG_HOME/kata/skills/deploy/SKILL.md
+$ $XDG_CONFIG_HOME/agent/skills/deploy/SKILL.md
 Deploy to $0.                     # a general version, from your machine
 
 $ ./agent -p "/deploy eu-west"
@@ -74,7 +74,7 @@ one in use.
 ## Defaults
 
 ```
-  user      $XDG_CONFIG_HOME/kata/skills, or ~/.config/kata/skills    priority 10
+  user      $XDG_CONFIG_HOME/agent/skills, or ~/.config/agent/skills    priority 10
   project   <repo>/skills                                              priority 20
 ```
 

@@ -11,13 +11,13 @@ $ cat agent.json
 {
   "base_url": "https://api.openai.com/v1",
   "model": "gpt-4o-mini",
-  "api_key_file": "~/.config/kata/openai.key"
+  "api_key_file": "~/.config/agent/openai.key"
 }
 
 $ ./agent -config
 base_url      https://api.openai.com/v1               (project)
 model         gpt-4o-mini                             (project)
-api_key       sk-a…c9f1                               (file /home/you/.config/kata/openai.key)
+api_key       sk-a…c9f1                               (file /home/you/.config/agent/openai.key)
 max_steps     20
 max_context   8000
 max_tools     6
@@ -33,7 +33,7 @@ You edit `agent/cmd/agent/main.go`. You also create one new file, `agent/config.
 ## Three sources, in order
 
 ```
-  agent.json in ~/.config/kata      lowest priority
+  agent.json in ~/.config/agent      lowest priority
   agent.json in the project
   environment variables
   flags                              highest priority
@@ -67,7 +67,7 @@ An environment variable is readable in a process listing, lands in shell history
 inherited by every child process. A file can be `chmod 600` and stays out of both.
 
 ```json
-{"api_key_file": "~/.config/kata/openai.key"}
+{"api_key_file": "~/.config/agent/openai.key"}
 ```
 
 An inline `api_key` still wins, so a shell can override a file for one session.
@@ -142,7 +142,7 @@ temporary home directory, and runs it with a scripted endpoint.
 - `flag-beats-file`: `-base-url` and `-m` override the file.
 - `all-three-sources-at-once`: with a file, an environment variable and a flag all set, the
   flag wins; without the flag, the environment still beats the file.
-- `env-beats-file`: `OPENAI_BASE_URL` and `HARNESS_MODEL` override the file.
+- `env-beats-file`: `OPENAI_BASE_URL` and `AGENT_MODEL` override the file.
 - `key-from-file`: `api_key_file` supplies the bearer token.
 - `missing-key-file-is-reported`: a missing key file exits non-zero, names the path, and
   makes no request.

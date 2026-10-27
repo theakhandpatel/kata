@@ -26,7 +26,7 @@ import (
 	"testing"
 	"time"
 
-	"kata/internal/fake"
+	"agent/internal/fake"
 )
 
 // DefaultTimeout bounds one program run. A harness that blocks costs one case.
@@ -47,7 +47,7 @@ var EntryPoint = "./agent/cmd/agent"
 
 // packagePath is the importable package the harness lives in. Used only to give a better error
 // when the entry point moved but the imports were not updated.
-const packagePath = "kata/agent"
+const packagePath = "agent/agent"
 
 // Binary builds the harness once per test process and returns the path.
 func Binary(t *testing.T) string {
@@ -95,7 +95,7 @@ func explainBuildFailure(root, entry, output string, cause error) error {
 		return fmt.Errorf(
 			"the program moved but its imports still say %q.\n"+
 				"  Either keep the package at that path, or update the import to wherever you moved it,\n"+
-				"  for example: import \"kata/internal/agentcore\" (the checks do not care).\n\n%s",
+				"  for example: import \"agent/internal/agentcore\" (the checks do not care).\n\n%s",
 			packagePath, output)
 
 	case strings.Contains(output, "no Go files"),

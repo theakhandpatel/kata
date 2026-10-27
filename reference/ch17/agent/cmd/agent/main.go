@@ -5,7 +5,7 @@
 //	agent -p "<prompt>"            the answer goes to stdout
 //	agent -p "..." -events         one JSON event per line on stderr
 //	agent -p "..." -steer-stdin    lines on stdin join the run at turn boundaries
-//	HARNESS_DEBUG=1                token usage goes to stderr
+//	AGENT_DEBUG=1                token usage goes to stderr
 //	exit 0 success, 1 error, 130 interrupted
 package main
 
@@ -20,7 +20,7 @@ import (
 	"syscall"
 	"time"
 
-	"kata/agent"
+	"agent/agent"
 )
 
 func main() {
@@ -37,7 +37,7 @@ func main() {
 func run() (int, error) {
 	var (
 		prompt      = flag.String("p", "", "the prompt to send (required)")
-		model       = flag.String("m", "", "model name; defaults to $HARNESS_MODEL")
+		model       = flag.String("m", "", "model name; defaults to $AGENT_MODEL")
 		timeout     = flag.Duration("timeout", 60*time.Second, "cancel the request after this long")
 		toolTTL     = flag.Duration("tool-timeout", 10*time.Second, "cancel one tool call after this long")
 		maxSteps    = flag.Int("max-steps", agent.DefaultMaxSteps, "stop after this many model requests")
@@ -75,7 +75,7 @@ func run() (int, error) {
 	client := agent.NewOpenAICompat(
 		envOr("OPENAI_BASE_URL", "http://localhost:11434/v1"),
 		os.Getenv("OPENAI_API_KEY"),
-		firstNonEmpty(*model, os.Getenv("HARNESS_MODEL"), "gpt-4o-mini"),
+		firstNonEmpty(*model, os.Getenv("AGENT_MODEL"), "gpt-4o-mini"),
 	)
 	client.Retry = agent.RetryPolicy{
 		MaxAttempts: *retries,
@@ -220,7 +220,7 @@ func run() (int, error) {
 }
 
 func debugUsage(u agent.Usage) {
-	if os.Getenv("HARNESS_DEBUG") == "" {
+	if os.Getenv("AGENT_DEBUG") == "" {
 		return
 	}
 	fmt.Fprintf(os.Stderr, "usage prompt=%d completion=%d total=%d\n",

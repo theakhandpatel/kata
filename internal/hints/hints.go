@@ -29,7 +29,7 @@ var Table = map[string]map[string][3]string{
 		"env-beats-file": {
 			"A shell with one export should beat a file.",
 			"Apply the environment after the files, before the flags.",
-			"applyEnv writes OPENAI_BASE_URL, OPENAI_API_KEY and HARNESS_MODEL over whatever the files set.",
+			"applyEnv writes OPENAI_BASE_URL, OPENAI_API_KEY and AGENT_MODEL over whatever the files set.",
 		},
 		"all-three-sources-at-once": {
 			"The order is the feature, and one source at a time does not test it.",
@@ -809,7 +809,7 @@ var Table = map[string]map[string][3]string{
 		"debug-usage": {
 			"stdout carries the answer only; diagnostics go to stderr.",
 			"Read usage from the final chunk, then write it with fmt.Fprintf(os.Stderr, ...).",
-			"Print a line containing prompt=, completion= and total= on stderr when HARNESS_DEBUG is set, and keep stdout to the answer plus one newline.",
+			"Print a line containing prompt=, completion= and total= on stderr when AGENT_DEBUG is set, and keep stdout to the answer plus one newline.",
 		},
 		"http-error": {
 			"Check resp.StatusCode before you touch the body.",

@@ -8,7 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 
-	"kata/internal/grader"
+	"agent/internal/grader"
 )
 
 // cmdUI opens a terminal interface for the course.

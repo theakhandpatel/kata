@@ -172,13 +172,13 @@ func DefaultScopes(projectRoot string) []Scope {
 	if config := os.Getenv("XDG_CONFIG_HOME"); config != "" {
 		scopes = append(scopes, Scope{
 			Name:     "user",
-			Root:     filepath.Join(config, "kata"),
+			Root:     filepath.Join(config, "agent"),
 			Priority: 10,
 		})
 	} else if home, err := os.UserHomeDir(); err == nil && home != "" {
 		scopes = append(scopes, Scope{
 			Name:     "user",
-			Root:     filepath.Join(home, ".config", "kata"),
+			Root:     filepath.Join(home, ".config", "agent"),
 			Priority: 10,
 		})
 	}

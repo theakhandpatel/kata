@@ -11,8 +11,12 @@ BUILD-STATE.md
 /craft
 *.test
 
-# learner progress
+# learner progress and session databases
 .kata/
+.agent/
+
+# a real config holds a key; the example is committed instead
+agent.json
 
 # local tool lockfile
 skills-lock.json

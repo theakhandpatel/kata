@@ -7,11 +7,11 @@ import (
 	"strings"
 	"testing"
 
-	"kata/internal/blackbox"
-	support "kata/internal/checksupport"
-	"kata/internal/fake"
-	"kata/internal/grader"
-	"kata/internal/hints"
+	"agent/internal/blackbox"
+	support "agent/internal/checksupport"
+	"agent/internal/fake"
+	"agent/internal/grader"
+	"agent/internal/hints"
 )
 
 // Chapter 17 -- skill scopes and precedence.
@@ -201,7 +201,7 @@ func scopedWorkspace(t *testing.T, project, user map[string]string) (dir, home s
 		writeSkill(t, filepath.Join(dir, "skills", name), body)
 	}
 	for name, body := range user {
-		writeSkill(t, filepath.Join(home, ".config", "kata", "skills", name), body)
+		writeSkill(t, filepath.Join(home, ".config", "agent", "skills", name), body)
 	}
 	return dir, home
 }

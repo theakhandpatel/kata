@@ -9,11 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"kata/internal/blackbox"
-	support "kata/internal/checksupport"
-	"kata/internal/fake"
-	"kata/internal/grader"
-	"kata/internal/hints"
+	"agent/internal/blackbox"
+	support "agent/internal/checksupport"
+	"agent/internal/fake"
+	"agent/internal/grader"
+	"agent/internal/hints"
 )
 
 // Chapter 04 -- tools that touch disk.

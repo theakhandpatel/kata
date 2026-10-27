@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"kata/internal/fake"
+	"agent/internal/fake"
 )
 
 // Tests for the helpers themselves. They are shared by twenty-one chapters, so a bug here

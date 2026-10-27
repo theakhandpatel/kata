@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"kata/internal/hints"
+	"agent/internal/hints"
 )
 
 // The documentation and the grader must agree. They are the two halves of the course

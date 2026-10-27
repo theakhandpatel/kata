@@ -13,7 +13,7 @@ import (
 	"regexp"
 	"strings"
 
-	"kata/internal/grader"
+	"agent/internal/grader"
 )
 
 // errBuildFailed distinguishes "the program does not compile" from "a case failed". Both

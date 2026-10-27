@@ -54,9 +54,9 @@ func DefaultConfigScopes(projectRoot string) []ConfigScope {
 	var scopes []ConfigScope
 
 	if config := os.Getenv("XDG_CONFIG_HOME"); config != "" {
-		scopes = append(scopes, ConfigScope{Name: "user", Path: filepath.Join(config, "kata", "agent.json")})
+		scopes = append(scopes, ConfigScope{Name: "user", Path: filepath.Join(config, "agent", "agent.json")})
 	} else if home, err := os.UserHomeDir(); err == nil && home != "" {
-		scopes = append(scopes, ConfigScope{Name: "user", Path: filepath.Join(home, ".config", "kata", "agent.json")})
+		scopes = append(scopes, ConfigScope{Name: "user", Path: filepath.Join(home, ".config", "agent", "agent.json")})
 	}
 	scopes = append(scopes, ConfigScope{Name: "project", Path: filepath.Join(projectRoot, "agent.json")})
 	return scopes
@@ -148,8 +148,8 @@ func applyEnv(cfg *Config, env map[string]string) {
 	}
 	set(env["OPENAI_BASE_URL"], &cfg.BaseURL, "base_url")
 	set(env["OPENAI_API_KEY"], &cfg.APIKey, "api_key")
-	set(env["HARNESS_MODEL"], &cfg.Model, "model")
-	set(env["KATA_API_KEY_FILE"], &cfg.KeyFile, "api_key_file")
+	set(env["AGENT_MODEL"], &cfg.Model, "model")
+	set(env["AGENT_API_KEY_FILE"], &cfg.KeyFile, "api_key_file")
 }
 
 // resolveKey prefers an inline key, then a file.

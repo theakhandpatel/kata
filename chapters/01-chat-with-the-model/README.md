@@ -43,15 +43,15 @@ parser below waits for lines that never arrive.
 |---|---|---|
 | `OPENAI_BASE_URL` | server address, ending in `/v1` | `http://localhost:11434/v1` |
 | `OPENAI_API_KEY` | the bearer token | empty |
-| `HARNESS_MODEL` | model name when `-m` is absent | `gpt-4o-mini` |
-| `HARNESS_DEBUG` | print token counts to stderr when set | unset |
+| `AGENT_MODEL` | model name when `-m` is absent | `gpt-4o-mini` |
+| `AGENT_DEBUG` | print token counts to stderr when set | unset |
 
 The endpoint and the model name are settings, not constants. Any server that speaks this
 protocol works, and the model has to be one that server offers:
 
 ```sh
 # a local model, no key needed
-OPENAI_BASE_URL=http://localhost:11434/v1 HARNESS_MODEL=llama3.2 ./agent -p "hi"
+OPENAI_BASE_URL=http://localhost:11434/v1 AGENT_MODEL=llama3.2 ./agent -p "hi"
 
 # a hosted one
 OPENAI_BASE_URL=https://api.openai.com/v1 OPENAI_API_KEY=sk-... ./agent -p "hi" -m gpt-4o-mini
@@ -59,7 +59,7 @@ OPENAI_BASE_URL=https://api.openai.com/v1 OPENAI_API_KEY=sk-... ./agent -p "hi" 
 
 A wrong model name is the most common first failure. Some servers reject it with a 404
 naming the models they do have; others accept anything and answer anyway. The request body
-above is the place to check, and `HARNESS_DEBUG=1` prints what was sent.
+above is the place to check, and `AGENT_DEBUG=1` prints what was sent.
 
 ## The response
 
@@ -127,7 +127,7 @@ then reads what your program printed, its exit code, and the request it sent.
   from the body.
 - `sse-framing`: comment lines, `event:` lines, CRLF endings, and `data:` with no space
   after the colon.
-- `debug-usage`: with `HARNESS_DEBUG=1`, counts to stderr and nothing extra on stdout.
+- `debug-usage`: with `AGENT_DEBUG=1`, counts to stderr and nothing extra on stdout.
 - `http-error`: a 429 exits 1, prints nothing to stdout, names the status on stderr.
 - `truncated-stream`: a connection that dies mid-stream exits 1 with an error.
 - `request-timeout`: with `-timeout 50ms` and a server that never answers, exits 1
