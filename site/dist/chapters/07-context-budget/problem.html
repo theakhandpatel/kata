@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>07 Context budget · Problem · Kata</title>
+<link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+<aside class="nav">
+<a class="brand" href="../../index.html">Kata</a>
+<div class="group">
+<div class="group-title">Start</div>
+<ul>
+<li><a href="../../index.html">Home</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">I. Wire</div>
+<ul>
+<li><a href="../../chapters/01-chat-with-the-model/index.html">01 Talk to the model</a></li>
+<li><a href="../../chapters/02-tool-calling/index.html">02 Tool calling</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">II. Act</div>
+<ul>
+<li><a href="../../chapters/03-tools-that-touch-disk/index.html">03 Tools that touch disk</a></li>
+<li><a href="../../chapters/04-the-agent-loop/index.html">04 The agent loop</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">III. Remember</div>
+<ul>
+<li><a href="../../chapters/05-prompt-assembly/index.html">05 Prompt assembly</a></li>
+<li><a href="../../chapters/06-sessions/index.html">06 Sessions</a></li>
+<li><a href="../../chapters/07-context-budget/index.html">07 Context budget</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">IV. Extend</div>
+<ul>
+<li><a href="../../chapters/08-steer-and-abort/index.html">08 Interrupt and steering</a></li>
+<li><a href="../../chapters/09-skills/index.html">09 Skills</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">V. Compose</div>
+<ul>
+<li><a href="../../chapters/10-subagent/index.html">10 Subagent</a></li>
+<li><a href="../../chapters/11-mcp/index.html">11 MCP</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">Reference</div>
+<ul>
+<li><a href="../../docs/architecture.html">Architecture</a></li>
+<li><a href="../../docs/chapter-format.html">Chapter format</a></li>
+<li><a href="../../docs/writing-style.html">Writing style</a></li>
+<li><a href="../../docs/designs.html">Designs</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">After the course</div>
+<ul>
+<li><a href="../../chapters/where-next.html">Where next</a></li>
+</ul>
+</div>
+</aside>
+<main>
+<nav class="subnav">
+<a href="../../chapters/07-context-budget/overview.html">Overview</a>
+<a class="current" href="../../chapters/07-context-budget/problem.html">Problem</a>
+<a href="../../chapters/07-context-budget/example.html">Example</a>
+</nav>
+<h1>07 — Problem</h1>
+<blockquote><p><strong>Your task:</strong> give the agent a token ceiling, estimate what a request costs,  drop the oldest history when it does not fit, mark the cut, and report the  accounting as an event.</p></blockquote>
+<p><strong>You edit:</strong> <code>agent/budget.go</code>, <code>agent/events.go</code>, <code>agent/cmd/agent/main.go</code> <strong>Given:</strong> <code>agent/loop.go</code>, <code>agent/provider_openai.go</code>, <code>agent/session.go</code> <strong>Time:</strong> 90 to 120 minutes</p>
+<hr>
+<h2>The contract</h2>
+<pre><code class="language-go">// budget.go
+const DefaultMaxContext = 8000
+
+func EstimateTokens(msgs []Message, tools []ToolDef) int
+func Fit(msgs []Message, tools []ToolDef, budget int) ([]Message, int)
+func WithBudget(p StreamingProvider, tools *Registry, budget int, emit Emitter) StreamingProvider
+
+// events.go
+const EventBudget = &#34;budget&#34;
+// Event gains: Tokens int, Budget int, Pruned int</code></pre>
+<p>One flag, one event, one marker:</p>
+<pre><code class="language-sh">agent -p &#34;...&#34; -max-context 2000 -events</code></pre>
+<pre><code class="language-json">{&#34;type&#34;:&#34;budget&#34;,&#34;turn&#34;:1,&#34;tokens&#34;:1840,&#34;budget&#34;:2000,&#34;pruned&#34;:31}</code></pre>
+<p>The marker inserted where history was removed:</p>
+<pre><code>[context pruned: 31 earlier messages omitted to fit 2000 tokens]</code></pre>
+<h2>What the verifier does</h2>
+<p>It builds the binary, writes a session file in the chapter 06 format, runs the program with a small <code>-max-context</code>, then reads the <strong>budget events</strong> on stderr and the <strong>request messages</strong> the server recorded. The estimate is graded through the event, so nothing reaches into your package.</p>
+<h2>The verifier will assert that</h2>
+<ul>
+<li><code>budget-event-reported</code> — at least one <code>budget</code> event, with a positive <code>tokens</code></li>
+</ul>
+<p>and the configured <code>budget</code>.</p>
+<ul>
+<li><code>estimate-counts-tools</code> — a request with one short prompt estimates at 50 tokens</li>
+</ul>
+<p>or more, because three tool schemas are not free.</p>
+<ul>
+<li><code>estimate-grows-with-history</code> — twelve prior messages estimate higher than two.</li>
+<li><code>ceiling-respected</code> — with <code>-max-context 500</code>, every budget event reports at most</li>
+</ul>
+<p>500 tokens.</p>
+<ul>
+<li><code>prunes-when-over</code> — a 40-message session at that ceiling reports <code>pruned &gt; 0</code></li>
+</ul>
+<p>and sends far fewer messages than it loaded.</p>
+<ul>
+<li><code>prune-marker-present</code> — the request carries the marker text.</li>
+<li><code>no-orphaned-tool-pairs</code> — after a cut, no <code>tool</code> message appears whose</li>
+</ul>
+<p><code>toolCallId</code> was not announced by an earlier assistant message.</p>
+<ul>
+<li><code>keeps-system-and-newest</code> — the system message is first and still contains the</li>
+</ul>
+<p><code>AGENTS.md</code> body, and the last message is the prompt that was just typed.</p>
+<h2>Notes</h2>
+<ul>
+<li><strong>Wrap the provider, do not edit the loop.</strong> <code>WithBudget</code> returns a</li>
+</ul>
+<p><code>StreamingProvider</code> that fits <code>req.Messages</code> before delegating. Every turn goes through it, including later ones.</p>
+<ul>
+<li><strong>Keep the system message out of the walk.</strong> Fit the conversation after index 0,</li>
+</ul>
+<p>then reassemble.</p>
+<ul>
+<li><strong>Walk backwards.</strong> Keeping the newest is the point; the cut belongs at the old</li>
+</ul>
+<p>end.</p>
+<ul>
+<li><strong>Always keep one message.</strong> A single message larger than the budget is a fact,</li>
+</ul>
+<p>not something pruning can fix. Sending nothing is worse.</p>
+<ul>
+<li><strong>Drop orphaned tool results after the cut</strong>, and count them as pruned.</li>
+<li><strong>Divide by four once, at the end.</strong> Per-message division under-counts.</li>
+<li><strong>Deliberate omission:</strong> no summarisation and no recall tool. The session file</li>
+</ul>
+<p>keeps everything; the request keeps less.</p>
+<h2>Hints</h2>
+<p>&lt;details&gt;&lt;summary&gt;Rung 1 — the mechanism&lt;/summary&gt;</p>
+<p>Estimate everything a request sends, fit the conversation to the ceiling before each request, and say what you dropped. &lt;/details&gt;</p>
+<p>&lt;details&gt;&lt;summary&gt;Rung 2 — the APIs&lt;/summary&gt;</p>
+<p><code>json.Marshal</code> on a tool&#39;s <code>Parameters</code> for its size. A backwards <code>for</code> over the message slice. A struct that implements <code>StreamingProvider</code> and delegates. &lt;/details&gt;</p>
+<p>&lt;details&gt;&lt;summary&gt;Rung 3 — what the code does&lt;/summary&gt;</p>
+<p><code>EstimateTokens</code> sums role, content, tool-call fields and per-message overhead, adds each tool&#39;s name, description and marshalled schema, divides by four. <code>Fit</code> keeps <code>msgs[0]</code> when it is a system message, walks the remainder backwards accumulating messages until the estimate would exceed the budget, drops leading tool results, then returns the system message, one marker message when anything was dropped, and the kept tail. <code>WithBudget</code> returns a decorator whose <code>Stream</code> fits, emits the budget event, and delegates.</p>
+<p><code>kata hint 07 &lt;case-id&gt;</code> prints these same rungs from the CLI. &lt;/details&gt;</p>
+<h2>Done when</h2>
+<p><code>kata submit 07</code> reports 8/8, and:</p>
+<ul>
+<li>a long session still gets an answer under a small ceiling;</li>
+<li>the event numbers agree with what the server received;</li>
+<li>you can explain why a decorator was the right place for this policy.</li>
+</ul>
+<nav class="pager">
+<a class="prev" href="../../chapters/07-context-budget/overview.html">&larr; 07 Context budget · Overview</a>
+<a class="next" href="../../chapters/07-context-budget/example.html">07 Context budget · Example &rarr;</a>
+</nav>
+</main>
+</body>
+</html>

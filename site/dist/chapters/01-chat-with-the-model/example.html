@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>01 Talk to the model · Example · Kata</title>
+<link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+<aside class="nav">
+<a class="brand" href="../../index.html">Kata</a>
+<div class="group">
+<div class="group-title">Start</div>
+<ul>
+<li><a href="../../index.html">Home</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">I. Wire</div>
+<ul>
+<li><a href="../../chapters/01-chat-with-the-model/index.html">01 Talk to the model</a></li>
+<li><a href="../../chapters/02-tool-calling/index.html">02 Tool calling</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">II. Act</div>
+<ul>
+<li><a href="../../chapters/03-tools-that-touch-disk/index.html">03 Tools that touch disk</a></li>
+<li><a href="../../chapters/04-the-agent-loop/index.html">04 The agent loop</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">III. Remember</div>
+<ul>
+<li><a href="../../chapters/05-prompt-assembly/index.html">05 Prompt assembly</a></li>
+<li><a href="../../chapters/06-sessions/index.html">06 Sessions</a></li>
+<li><a href="../../chapters/07-context-budget/index.html">07 Context budget</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">IV. Extend</div>
+<ul>
+<li><a href="../../chapters/08-steer-and-abort/index.html">08 Interrupt and steering</a></li>
+<li><a href="../../chapters/09-skills/index.html">09 Skills</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">V. Compose</div>
+<ul>
+<li><a href="../../chapters/10-subagent/index.html">10 Subagent</a></li>
+<li><a href="../../chapters/11-mcp/index.html">11 MCP</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">Reference</div>
+<ul>
+<li><a href="../../docs/architecture.html">Architecture</a></li>
+<li><a href="../../docs/chapter-format.html">Chapter format</a></li>
+<li><a href="../../docs/writing-style.html">Writing style</a></li>
+<li><a href="../../docs/designs.html">Designs</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">After the course</div>
+<ul>
+<li><a href="../../chapters/where-next.html">Where next</a></li>
+</ul>
+</div>
+</aside>
+<main>
+<nav class="subnav">
+<a href="../../chapters/01-chat-with-the-model/overview.html">Overview</a>
+<a href="../../chapters/01-chat-with-the-model/problem.html">Problem</a>
+<a class="current" href="../../chapters/01-chat-with-the-model/example.html">Example</a>
+</nav>
+<h1>01 — Example</h1>
+<p><em>Full, annotated implementation. Open this after a real attempt — ideally after <code>kata submit 01</code> passes, then compare. Reading it first turns the exercise into copy-typing.</em></p>
+<p>The complete compilable file is <code>reference/ch01/agent/provider_openai.go</code>. This document is that file taken apart, in the order the thinking happens.</p>
+<hr>
+<h2>The shape, before the code</h2>
+<p>Four jobs, four functions. Knowing the split matters more than the code:</p>
+<pre><code>Chat
+ ├── buildRequest   Request  →  *http.Request     (translate our types → wire)
+ ├── do            send, check status, or fail    (transport + error policy)
+ └── fold           io.Reader → Message, Usage    (the delta log → one value)</code></pre>
+<p>If you write <code>Chat</code> as one 90-line function you will pass, and you will hate it in chapter 02 when the fold grows tool calls. Written as three functions, chapter 02 adds ~15 lines and touches nothing else.</p>
+<h2>Step 1 — translate, don&#39;t leak</h2>
+<p>Your <code>Message</code> and the wire&#39;s message are similar but not the same. Keep a wire type and a conversion function; never put <code>json:</code> tags on your domain types.</p>
+<pre><code class="language-go">// Why a separate type: the wire has `tool_calls` as a nested object, ours has
+// ToolCalls as a flat slice. When those diverge in chapter 02, only this file
+// changes.
+type wireRequest struct {
+	Model       string        `json:&#34;model&#34;`
+	Messages    []wireMessage `json:&#34;messages&#34;`
+	Stream      bool          `json:&#34;stream&#34;`
+	MaxTokens   *int          `json:&#34;max_tokens,omitempty&#34;`
+	Temperature *float64      `json:&#34;temperature,omitempty&#34;`
+	Tools       []wireTool    `json:&#34;tools,omitempty&#34;`
+}
+
+func toWireMessages(msgs []Message) []wireMessage { /* role + content */ }</code></pre>
+<p>Two details that are cheap now and expensive later:</p>
+<ul>
+<li><code>*int</code> / <code>*float64</code> for optionals. With <code>int</code>, zero means both &#34;unset&#34; and</li>
+</ul>
+<p>&#34;zero&#34;, and you will one day send <code>max_tokens: 0</code>.</p>
+<ul>
+<li>The model falls back: <code>req.Model</code> first, then <code>p.Model</code>. Chapter 05 sends</li>
+</ul>
+<p>requests with no model when it reuses a session&#39;s provider.</p>
+<h2>Step 2 — the request, and the three things that are graded</h2>
+<pre><code class="language-go">url := strings.TrimRight(p.BaseURL, &#34;/&#34;) + &#34;/chat/completions&#34;
+httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewReader(body))
+if err != nil {
+	return Message{}, Usage{}, fmt.Errorf(&#34;build request: %w&#34;, err)
+}
+httpReq.Header.Set(&#34;Content-Type&#34;, &#34;application/json&#34;)
+httpReq.Header.Set(&#34;Accept&#34;, &#34;text/event-stream&#34;)
+if p.APIKey != &#34;&#34; {
+	httpReq.Header.Set(&#34;Authorization&#34;, &#34;Bearer &#34;+p.APIKey)
+}</code></pre>
+<ul>
+<li><code>TrimRight(base, &#34;/&#34;)</code> so both <code>http://x/v1</code> and <code>http://x/v1/</code> work. Half the</li>
+</ul>
+<p>&#34;why is it 404&#34; reports in the world are this.</p>
+<ul>
+<li><code>NewRequestWithContext</code>, not <code>NewRequest</code>. This is the only place <code>ctx</code> enters,</li>
+</ul>
+<p>and it is what makes <code>request-timeout</code> pass.</p>
+<ul>
+<li><code>stream: true</code> in the body is <strong>required by the case</strong>, even though our</li>
+</ul>
+<p>function returns a whole message. We stream because chapter 06 will want incremental events, and because learning the stream is the chapter.</p>
+<h2>Step 3 — fail the way a caller can act on</h2>
+<pre><code class="language-go">resp, err := client.Do(httpReq)
+if err != nil {
+	return Message{}, Usage{}, err   // already wraps ctx.Err() when cancelled
+}
+defer resp.Body.Close()
+
+if resp.StatusCode &lt; 200 || resp.StatusCode &gt;= 300 {
+	snippet, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+	return Message{}, Usage{}, &amp;HTTPError{Status: resp.StatusCode, Body: string(snippet)}
+}</code></pre>
+<p>Three decisions worth defending:</p>
+<ul>
+<li><strong>Return <code>client.Do</code>&#39;s error unchanged.</strong> It already wraps <code>context.Canceled</code>;</li>
+</ul>
+<p>wrapping it in a string would break <code>errors.Is</code> and fail <code>request-timeout</code>.</p>
+<ul>
+<li><strong><code>LimitReader</code>, 4 KiB.</strong> Error pages are sometimes megabytes of HTML. You want</li>
+</ul>
+<p>a diagnostic, not a memory event.</p>
+<ul>
+<li><strong>A typed error, not <code>fmt.Errorf</code>.</strong> <code>*HTTPError</code> is what lets the loop in</li>
+</ul>
+<p>chapter 04 distinguish &#34;retry with backoff&#34; from &#34;the model is wrong&#34;.</p>
+<h2>Step 4 — fold the stream</h2>
+<p>This is the chapter. Everything above is plumbing.</p>
+<pre><code class="language-go">func readSSE(r io.Reader) (Message, Usage, error) {
+	var (
+		content strings.Builder
+		usage   Usage
+		calls   = map[int]*callAccumulator{}   // chapter 02; unused here
+	)
+
+	scanner := bufio.NewScanner(r)
+	scanner.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		// SSE framing: blank separators, comments, and named fields other than data.
+		if line == &#34;&#34; || strings.HasPrefix(line, &#34;:&#34;) || !strings.HasPrefix(line, &#34;data:&#34;) {
+			continue
+		}
+
+		data := strings.TrimSpace(strings.TrimPrefix(line, &#34;data:&#34;))
+		if data == &#34;&#34; || data == &#34;[DONE]&#34; {
+			continue
+		}
+
+		var chunk wireChunk
+		if err := json.Unmarshal([]byte(data), &amp;chunk); err != nil {
+			return Message{}, Usage{}, fmt.Errorf(&#34;decode stream chunk: %w&#34;, err)
+		}
+
+		if chunk.Usage != nil {          // ← arrives once, on the last chunk
+			usage = Usage{ /* ... */ }
+		}
+		for _, choice := range chunk.Choices {
+			content.WriteString(choice.Delta.Content)   // ← append, never assign
+			// tool_calls folding lives here from chapter 02
+		}
+	}
+	if err := scanner.Err(); err != nil {              // ← the 3rd trap
+		return Message{}, Usage{}, fmt.Errorf(&#34;read stream: %w&#34;, err)
+	}
+
+	return Message{Role: RoleAssistant, Content: content.String()}, usage, nil
+}</code></pre>
+<p>The chunk struct it decodes into, with the nesting that trips people up:</p>
+<pre><code class="language-go">type wireChunk struct {
+	Choices []struct {
+		Delta struct {
+			Content string `json:&#34;content&#34;`
+		} `json:&#34;delta&#34;`
+		FinishReason string `json:&#34;finish_reason&#34;`
+	} `json:&#34;choices&#34;`
+	Usage *struct {
+		PromptTokens     int `json:&#34;prompt_tokens&#34;`
+		CompletionTokens int `json:&#34;completion_tokens&#34;`
+		TotalTokens      int `json:&#34;total_tokens&#34;`
+	} `json:&#34;usage&#34;`
+}</code></pre>
+<p>A top-level <code>Delta</code> field compiles, decodes without error, and produces an empty string for every chunk. That is the failure the case <code>prints-reply</code> reports as <code>actual: &#34;\n&#34;</code>.</p>
+<h3>Why <code>scanner.Buffer</code> is not optional</h3>
+<p><code>bufio.Scanner</code> has a 64 KiB default line limit. A chunk carrying a large tool result argument, or a provider that batches aggressively, will exceed it. When it does, <code>Scan</code> returns <code>false</code> and the <em>only</em> signal is <code>scanner.Err()</code> returning <code>bufio.ErrTooLong</code>. You will see: a truncated answer, no error, no clue.</p>
+<p>Raising the cap to 4 MiB is a guess; every harness guesses. Production code (pi included) either raises it or replaces <code>Scanner</code> with a <code>Reader</code>-based framing loop that has no per-line ceiling. We raise it, and note the tradeoff.</p>
+<h3>Why <code>[DONE]</code> must be checked before unmarshalling</h3>
+<p>It is not JSON. <code>json.Unmarshal</code> on <code>[DONE]</code> returns <code>invalid character &#39;D&#39; looking for beginning of value</code>, which the naive implementation wraps as &#34;decode stream chunk&#34; and reports as a protocol error — on a completely healthy stream. This is the single most common first-run failure in this chapter.</p>
+<h2>Step 5 — assemble outside the loop</h2>
+<pre><code class="language-go">msg := Message{Role: RoleAssistant, Content: content.String()}
+return msg, usage, nil</code></pre>
+<p>Banal, but note <em>where</em> it happens: outside. Implementations that build the <code>Message</code> inside the loop and return it early end up with a message that has only the last delta. The loop&#39;s job is to mutate accumulators; the return&#39;s job is to snapshot them once.</p>
+<hr>
+<h2>The four diffs</h2>
+<p>Each of these is a real failure mode with a graded case. Left is what a competent first implementation does; right is the fix.</p>
+<p><strong>1. Assign instead of append</strong> — <code>prints-reply</code></p>
+<pre><code class="language-diff">- msg.Content = choice.Delta.Content
++ content.WriteString(choice.Delta.Content)</code></pre>
+<p><strong>2. Ignore the scanner&#39;s error</strong> — <code>truncated-stream</code></p>
+<pre><code class="language-diff">  for scanner.Scan() { ... }
++ if err := scanner.Err(); err != nil {
++     return Message{}, Usage{}, err
++ }
+  return Message{Content: content.String()}, usage, nil</code></pre>
+<p><strong>3. Only decode chunks with content</strong> — <code>debug-usage</code></p>
+<pre><code class="language-diff">- if choice.Delta.Content == &#34;&#34; { continue }
+  if chunk.Usage != nil { usage = ... }</code></pre>
+<p><strong>4. Background context</strong> — <code>request-timeout</code></p>
+<pre><code class="language-diff">- http.NewRequest(http.MethodPost, url, body)
++ http.NewRequestWithContext(ctx, http.MethodPost, url, body)</code></pre>
+<p>That is the whole chapter: one fold, one error policy, one lifetime. The other two cases (<code>request-shape</code>, <code>http-error</code>) are structural and you either have them or your first run tells you immediately.</p>
+<h2>What production adds, and why we don&#39;t</h2>
+<table>
+<thead><tr><th>Feature</th><th>File in pi</th><th>Why it is out of scope here</th></tr></thead>
+<tbody>
+<tr><td>Retry with backoff + <code>Retry-After</code></td><td><code>api/openai-completions.ts</code></td><td>chapter 04 gives you one retry path; a full policy is a chapter of its own</td></tr>
+<tr><td>Prompt caching headers</td><td><code>api/openai-prompt-cache.ts</code></td><td>provider-specific, no teaching value</td></tr>
+<tr><td>~30 provider wire formats</td><td><code>providers/*.ts</code></td><td>one adapter teaches the abstraction; thirty teach maintenance</td></tr>
+<tr><td>Abort mid-tool-call</td><td><code>agent/agent-loop.ts</code></td><td>chapter 08</td></tr>
+<tr><td>Token counting before send</td><td><code>agent/context_tokens.go</code> (PiG)</td><td>chapter 07</td></tr>
+</tbody>
+</table>
+<p>The one thing worth stealing early, when you get to chapter 07: pi estimates tokens <em>before</em> sending, so it can refuse a request rather than discover the overflow from a 400. That is a design decision, not a feature, and it is easier to add while <code>Chat</code> is still small.</p>
+<h2>Comparison checklist</h2>
+<p>When you look at <code>reference/ch01</code>, check whether yours differs in:</p>
+<ul>
+<li>[ ] separate wire types vs <code>json</code> tags on domain types</li>
+<li>[ ] <code>*int</code> for optionals</li>
+<li>[ ] <code>client.Do</code> error returned unwrapped</li>
+<li>[ ] typed <code>*HTTPError</code></li>
+<li>[ ] <code>scanner.Buffer</code> raised</li>
+<li>[ ] <code>[DONE]</code> handled before <code>Unmarshal</code></li>
+<li>[ ] <code>scanner.Err()</code> checked</li>
+<li>[ ] message assembled outside the loop</li>
+</ul>
+<p>Differences outside this list are style. Differences inside it are bugs waiting for a later chapter.</p>
+<nav class="pager">
+<a class="prev" href="../../chapters/01-chat-with-the-model/problem.html">&larr; 01 Talk to the model · Problem</a>
+<a class="next" href="../../chapters/02-tool-calling/index.html">02 Tool calling &rarr;</a>
+</nav>
+</main>
+</body>
+</html>

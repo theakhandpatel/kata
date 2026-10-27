@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>10 Subagent · Overview · Kata</title>
+<link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+<aside class="nav">
+<a class="brand" href="../../index.html">Kata</a>
+<div class="group">
+<div class="group-title">Start</div>
+<ul>
+<li><a href="../../index.html">Home</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">I. Wire</div>
+<ul>
+<li><a href="../../chapters/01-chat-with-the-model/index.html">01 Talk to the model</a></li>
+<li><a href="../../chapters/02-tool-calling/index.html">02 Tool calling</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">II. Act</div>
+<ul>
+<li><a href="../../chapters/03-tools-that-touch-disk/index.html">03 Tools that touch disk</a></li>
+<li><a href="../../chapters/04-the-agent-loop/index.html">04 The agent loop</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">III. Remember</div>
+<ul>
+<li><a href="../../chapters/05-prompt-assembly/index.html">05 Prompt assembly</a></li>
+<li><a href="../../chapters/06-sessions/index.html">06 Sessions</a></li>
+<li><a href="../../chapters/07-context-budget/index.html">07 Context budget</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">IV. Extend</div>
+<ul>
+<li><a href="../../chapters/08-steer-and-abort/index.html">08 Interrupt and steering</a></li>
+<li><a href="../../chapters/09-skills/index.html">09 Skills</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">V. Compose</div>
+<ul>
+<li><a href="../../chapters/10-subagent/index.html">10 Subagent</a></li>
+<li><a href="../../chapters/11-mcp/index.html">11 MCP</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">Reference</div>
+<ul>
+<li><a href="../../docs/architecture.html">Architecture</a></li>
+<li><a href="../../docs/chapter-format.html">Chapter format</a></li>
+<li><a href="../../docs/writing-style.html">Writing style</a></li>
+<li><a href="../../docs/designs.html">Designs</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">After the course</div>
+<ul>
+<li><a href="../../chapters/where-next.html">Where next</a></li>
+</ul>
+</div>
+</aside>
+<main>
+<nav class="subnav">
+<a class="current" href="../../chapters/10-subagent/overview.html">Overview</a>
+<a href="../../chapters/10-subagent/problem.html">Problem</a>
+<a href="../../chapters/10-subagent/example.html">Example</a>
+</nav>
+<h1>10 — Overview</h1>
+<p><em>How subagents work, and what isolation buys. Read this before you write code.</em></p>
+<hr>
+<h2>The problem a child solves</h2>
+<p>A parent conversation has one budget and one purpose. A task like &#34;find every TODO and summarise them&#34; produces twenty file reads of detail, and none of it is useful to the parent once the summary exists. Left in the parent, it costs context for the rest of the session.</p>
+<p>A subagent is a way to spend context in a place that gets thrown away:</p>
+<pre><code>  parent: &#34;summarise the TODOs&#34;  →  task(prompt)  →  [child: 20 reads]  →  &#34;3 TODOs, all in x&#34;
+  parent history grows by:           one tool result</code></pre>
+<figure class="diagram"><svg id="my-svg" width="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" class="flowchart" style="max-width: 369px; background-color: transparent;" viewBox="4 4 369 664" role="graphics-document document" aria-roledescription="flowchart-v2"><style>#my-svg{font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:16px;fill:#000000;}@keyframes edge-animation-frame{from{stroke-dashoffset:0;}}@keyframes dash{to{stroke-dashoffset:0;}}#my-svg .edge-animation-slow{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 50s linear infinite;stroke-linecap:round;}#my-svg .edge-animation-fast{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 20s linear infinite;stroke-linecap:round;}#my-svg .error-icon{fill:#552222;}#my-svg .error-text{fill:#552222;stroke:#552222;}#my-svg .edge-thickness-normal{stroke-width:1px;}#my-svg .edge-thickness-thick{stroke-width:3.5px;}#my-svg .edge-pattern-solid{stroke-dasharray:0;}#my-svg .edge-thickness-invisible{stroke-width:0;fill:none;}#my-svg .edge-pattern-dashed{stroke-dasharray:3;}#my-svg .edge-pattern-dotted{stroke-dasharray:2;}#my-svg .marker{fill:#666;stroke:#666;}#my-svg .marker.cross{stroke:#666;}#my-svg svg{font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:16px;}#my-svg p{margin:0;}#my-svg .label{font-family:"trebuchet ms",verdana,arial,sans-serif;color:#000000;}#my-svg .cluster-label text{fill:#333;}#my-svg .cluster-label span{color:#333;}#my-svg .cluster-label span p{background-color:transparent;}#my-svg .label text,#my-svg span{fill:#000000;color:#000000;}#my-svg .node rect,#my-svg .node circle,#my-svg .node ellipse,#my-svg .node polygon,#my-svg .node path{fill:#eee;stroke:#999;stroke-width:1px;}#my-svg .rough-node .label text,#my-svg .node .label text,#my-svg .image-shape .label,#my-svg .icon-shape .label{text-anchor:middle;}#my-svg .node .katex path{fill:#000;stroke:#000;stroke-width:1px;}#my-svg .rough-node .label,#my-svg .node .label,#my-svg .image-shape .label,#my-svg .icon-shape .label{text-align:center;}#my-svg .node.clickable{cursor:pointer;}#my-svg .root .anchor path{fill:#666!important;stroke-width:0;stroke:#666;}#my-svg .arrowheadPath{fill:#333333;}#my-svg .edgePaths .path{stroke:#666;stroke-width:1px;}#my-svg .flowchart-link{stroke:#666;fill:none;}#my-svg .edgeLabel{background-color:white;text-align:center;}#my-svg .edgeLabel p{background-color:white;}#my-svg .edgeLabel rect{opacity:0.5;background-color:white;fill:white;}#my-svg .labelBkg{background-color:rgba(255, 255, 255, 0.5);}#my-svg .cluster rect{fill:hsl(0, 0%, 98.9215686275%);stroke:#707070;stroke-width:1px;}#my-svg .cluster text{fill:#333;}#my-svg .cluster span{color:#333;}#my-svg .node .collapsed-indicator{fill:#707070;stroke:none;opacity:0.6;}#my-svg .node .collapsed-separator{stroke:#707070;stroke-width:0.75px;}#my-svg div.mermaidTooltip{position:absolute;text-align:center;max-width:200px;padding:2px;font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:12px;background:hsl(-160, 0%, 93.3333333333%);border:1px solid #707070;border-radius:2px;pointer-events:none;z-index:100;}#my-svg .flowchartTitleText{text-anchor:middle;font-size:18px;fill:#000000;}#my-svg rect.text{fill:none;stroke-width:0;}#my-svg .icon-shape,#my-svg .image-shape{background-color:white;text-align:center;}#my-svg .icon-shape p,#my-svg .image-shape p{background-color:white;padding:2px;}#my-svg .icon-shape .label rect,#my-svg .image-shape .label rect{opacity:0.5;background-color:white;fill:white;}#my-svg .label-icon{display:inline-block;height:1em;overflow:visible;vertical-align:-0.125em;}#my-svg .node .label-icon path{fill:currentColor;stroke:revert;stroke-width:revert;}#my-svg .node .neo-node{stroke:#999;}#my-svg [data-look="neo"].node rect,#my-svg [data-look="neo"].cluster rect,#my-svg [data-look="neo"].node polygon{stroke:url(#my-svg-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg [data-look="neo"].swimlane.cluster rect{filter:none;}#my-svg [data-look="neo"].node path{stroke:url(#my-svg-gradient);stroke-width:1px;}#my-svg [data-look="neo"].node .outer-path{filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg [data-look="neo"].node .neo-line path{stroke:#999;filter:none;}#my-svg [data-look="neo"].node circle{stroke:url(#my-svg-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg [data-look="neo"].node circle .state-start{fill:#000000;}#my-svg [data-look="neo"].icon-shape .icon{fill:url(#my-svg-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg [data-look="neo"].icon-shape .icon-neo path{stroke:url(#my-svg-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg :root{--mermaid-font-family:"trebuchet ms",verdana,arial,sans-serif;}</style><g><marker id="my-svg_flowchart-v2-pointEnd" class="marker flowchart-v2" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-pointStart" class="marker flowchart-v2" viewBox="0 0 10 10" refX="4.5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 5 L 10 10 L 10 0 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-pointEnd-margin" class="marker flowchart-v2" viewBox="0 0 11.5 14" refX="11.5" refY="7" markerUnits="userSpaceOnUse" markerWidth="10.5" markerHeight="14" orient="auto"><path d="M 0 0 L 11.5 7 L 0 14 z" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-pointStart-margin" class="marker flowchart-v2" viewBox="0 0 11.5 14" refX="1" refY="7" markerUnits="userSpaceOnUse" markerWidth="11.5" markerHeight="14" orient="auto"><polygon points="0,7 11.5,14 11.5,0" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-circleEnd" class="marker flowchart-v2" viewBox="0 0 10 10" refX="11" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-circleStart" class="marker flowchart-v2" viewBox="0 0 10 10" refX="-1" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-circleEnd-margin" class="marker flowchart-v2" viewBox="0 0 10 10" refY="5" refX="12.25" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-circleStart-margin" class="marker flowchart-v2" viewBox="0 0 10 10" refX="-2" refY="5" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-crossEnd" class="marker cross flowchart-v2" viewBox="0 0 11 11" refX="12" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-crossStart" class="marker cross flowchart-v2" viewBox="0 0 11 11" refX="-1" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-crossEnd-margin" class="marker cross flowchart-v2" viewBox="0 0 15 15" refX="17.7" refY="7.5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto"><path d="M 1,1 L 14,14 M 1,14 L 14,1" class="arrowMarkerPath" style="stroke-width: 2.5;"/></marker><marker id="my-svg_flowchart-v2-crossStart-margin" class="marker cross flowchart-v2" viewBox="0 0 15 15" refX="-3.5" refY="7.5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto"><path d="M 1,1 L 14,14 M 1,14 L 14,1" class="arrowMarkerPath" style="stroke-width: 2.5; stroke-dasharray: 1, 0;"/></marker><g class="root"><g class="clusters"/><g class="edges edgePaths"><path d="M190.75,60L190.75,72.92893218813452Q190.75,80 183.67893218813452,80L121.57106781186548,80Q114.5,80 114.5,87.07106781186548L114.5,96" id="my-svg-L_P_T_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 102.9216537475586 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_P_T_0" data-points="W3sieCI6MTkwLjc1LCJ5Ijo2MH0seyJ4IjoxOTAuNzUsInkiOjgwfSx7IngiOjExNC41LCJ5Ijo4MH0seyJ4IjoxMTQuNSwieSI6MTAwfV0=" data-look="neo" marker-end="url(#my-svg_flowchart-v2-pointEnd-margin)"/><path d="M114.5,148L114.5,184" id="my-svg-L_T_C_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 32 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_T_C_0" data-points="W3sieCI6MTE0LjUsInkiOjE0OH0seyJ4IjoxMTQuNSwieSI6MTg4fV0=" data-look="neo" marker-end="url(#my-svg_flowchart-v2-pointEnd-margin)"/><path d="M114.5,236L114.5,272" id="my-svg-L_C_C1_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 32 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_C_C1_0" data-points="W3sieCI6MTE0LjUsInkiOjIzNn0seyJ4IjoxMTQuNSwieSI6Mjc2fV0=" data-look="neo" marker-end="url(#my-svg_flowchart-v2-pointEnd-margin)"/><path d="M114.5,372L114.5,408" id="my-svg-L_C1_C2_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 32 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_C1_C2_0" data-points="W3sieCI6MTE0LjUsInkiOjM3Mn0seyJ4IjoxMTQuNSwieSI6NDEyfV0=" data-look="neo" marker-end="url(#my-svg_flowchart-v2-pointEnd-margin)"/><path d="M136.5,484L136.5,496.9289321881345Q136.5,504 143.57106781186548,504L259.9289321881345,504Q267,504 267,511.0710678118655L267,520" id="my-svg-L_C2_C3_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 157.1717071533203 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_C2_C3_0" data-points="W3sieCI6MTM2LjUsInkiOjQ4NH0seyJ4IjoxMzYuNSwieSI6NTA0fSx7IngiOjI2NywieSI6NTA0fSx7IngiOjI2NywieSI6NTI0fV0=" data-look="neo" marker-end="url(#my-svg_flowchart-v2-pointEnd-margin)"/><path d="M311,524L311,448L311,324L311,124L311,87.07106781186548Q311,80 303.9289321881345,80L241.82106781186548,80Q234.75,80 234.75,72.92893218813452L234.75,64" id="my-svg-L_C3_P_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 526.9216918945312 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_C3_P_0" data-points="W3sieCI6MzExLCJ5Ijo1MjR9LHsieCI6MzExLCJ5Ijo0NDh9LHsieCI6MzExLCJ5IjozMjR9LHsieCI6MzExLCJ5IjoxMjR9LHsieCI6MzExLCJ5Ijo4MH0seyJ4IjoyMzQuNzUsInkiOjgwfSx7IngiOjIzNC43NSwieSI6NjB9XQ==" data-look="neo" marker-end="url(#my-svg_flowchart-v2-pointEnd-margin)"/><path d="M92.5,484L92.5,608" id="my-svg-L_C2_X_0" class="edge-thickness-normal edge-pattern-dotted edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_C2_X_0" data-points="W3sieCI6OTIuNSwieSI6NDg0fSx7IngiOjkyLjUsInkiOjYxMn1d" data-look="neo" marker-end="url(#my-svg_flowchart-v2-pointEnd-margin)"/></g><g class="edgeLabels"><g class="edgeLabel" transform="translate(310.7578125, 212)"><g class="label" data-id="L_C3_P_0" transform="translate(-50.2578125, -12)"><foreignObject width="100.515625" height="24"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"><p>one tool result</p></span></div></foreignObject></g></g><g class="edgeLabel" transform="translate(92.5, 548)"><g class="label" data-id="L_C2_X_0" transform="translate(-80.5, -24)"><foreignObject width="161" height="48"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"><p>20 messages<br />never reach the parent</p></span></div></foreignObject></g></g></g><g class="nodes"><g class="node default" id="my-svg-flowchart-P-0" data-look="neo" transform="translate(212.75, 36)"><rect class="basic label-container" style="" x="-76" y="-24" width="152" height="48"/><g class="label" style="" transform="translate(-60, -12)"><rect/><foreignObject width="120" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: nowrap; line-height: 1.5; max-width: 120px; text-align: center; width: 120px;"><span class="nodeLabel"><p>parent turn</p></span></div></foreignObject></g></g><g class="node default" id="my-svg-flowchart-T-1" data-look="neo" transform="translate(114.5, 124)"><rect class="basic label-container" style="" x="-76" y="-24" width="152" height="48"/><g class="label" style="" transform="translate(-60, -12)"><rect/><foreignObject width="120" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: nowrap; line-height: 1.5; max-width: 120px; text-align: center; width: 120px;"><span class="nodeLabel"><p>task tool</p></span></div></foreignObject></g></g><g class="node default" id="my-svg-flowchart-C-3" data-look="neo" transform="translate(114.5, 212)"><rect class="basic label-container" style="" x="-76" y="-24" width="152" height="48"/><g class="label" style="" transform="translate(-60, -12)"><rect/><foreignObject width="120" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: nowrap; line-height: 1.5; max-width: 120px; text-align: center; width: 120px;"><span class="nodeLabel"><p>child run</p></span></div></foreignObject></g></g><g class="node default" id="my-svg-flowchart-C1-5" data-look="neo" transform="translate(114.5, 324)"><rect class="basic label-container" style="" x="-76" y="-48" width="152" height="96"/><g class="label" style="" transform="translate(-60, -36)"><rect/><foreignObject width="120" height="72"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: break-spaces; line-height: 1.5; max-width: 120px; text-align: center; width: 120px;"><span class="nodeLabel"><p>child context:<br />system + task prompt</p></span></div></foreignObject></g></g><g class="node default" id="my-svg-flowchart-C2-7" data-look="neo" transform="translate(114.5, 448)"><rect class="basic label-container" style="" x="-76" y="-36" width="152" height="72"/><g class="label" style="" transform="translate(-60, -24)"><rect/><foreignObject width="120" height="48"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: break-spaces; line-height: 1.5; max-width: 120px; text-align: center; width: 120px;"><span class="nodeLabel"><p>read, read, read...</p></span></div></foreignObject></g></g><g class="node default" id="my-svg-flowchart-C3-9" data-look="neo" transform="translate(289, 548)"><rect class="basic label-container" style="" x="-76" y="-24" width="152" height="48"/><g class="label" style="" transform="translate(-60, -12)"><rect/><foreignObject width="120" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: nowrap; line-height: 1.5; max-width: 120px; text-align: center; width: 120px;"><span class="nodeLabel"><p>child answer</p></span></div></foreignObject></g></g><g class="node default" id="my-svg-flowchart-X-13" data-look="neo" transform="translate(92.5, 636)"><rect class="basic label-container" style="" x="-76" y="-24" width="152" height="48"/><g class="label" style="" transform="translate(-60, -12)"><rect/><foreignObject width="120" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: nowrap; line-height: 1.5; max-width: 120px; text-align: center; width: 120px;"><span class="nodeLabel"><p>discarded</p></span></div></foreignObject></g></g></g></g></g><defs><filter id="my-svg-drop-shadow" height="130%" width="130%"><feDropShadow dx="4" dy="4" stdDeviation="0" flood-opacity="0.06" flood-color="#000000"/></filter></defs><defs><filter id="my-svg-drop-shadow-small" height="150%" width="150%"><feDropShadow dx="2" dy="2" stdDeviation="0" flood-opacity="0.06" flood-color="#000000"/></filter></defs><linearGradient id="my-svg-gradient" gradientUnits="objectBoundingBox" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="hsl(0, 0%, 83.3333333333%)" stop-opacity="1"/><stop offset="100%" stop-color="hsl(0, 0%, 88.9215686275%)" stop-opacity="1"/></linearGradient></svg></figure>
+<p>The parent&#39;s history grows by one result. That is the entire economic argument.</p>
+<h2>Isolation means empty, not inherited</h2>
+<p>The child starts from:</p>
+<pre><code>  [ system message, task prompt ]</code></pre>
+<p>Not from the parent&#39;s history. Not from a summary of it. Two reasons:</p>
+<ol>
+<li><strong>Cost.</strong> Inheriting the parent&#39;s conversation makes the child as expensive as</li>
+</ol>
+<p>the parent, and the detail problem is unsolved.</p>
+<ol>
+<li><strong>Clarity.</strong> A child told &#34;do this specific thing&#34; is easier to reason about</li>
+</ol>
+<p>than one that has read everything the parent has said.</p>
+<p>The consequence is a constraint on whoever writes the task prompt: <strong>the child cannot see the conversation.</strong> That is why the prompt has to be complete, and why the tool description says so. A model told to &#34;fix it&#34; without being told what &#34;it&#34; is produces a confident wrong answer.</p>
+<h2>Recursion is prevented by the registry, not by a rule</h2>
+<p>The dangerous version of this feature is a child that can spawn children. Two levels of fan-out turn one request into a tree, and the request count explodes before anyone notices.</p>
+<p>There are two ways to prevent it:</p>
+<table>
+<thead><tr><th>Approach</th><th>Behaviour</th></tr></thead>
+<tbody>
+<tr><td>a depth counter, checked at runtime</td><td>a bug in the check is a runaway</td></tr>
+<tr><td>the tool is absent from the child&#39;s registry</td><td>impossible</td></tr>
+</tbody>
+</table>
+<p>This chapter uses the second. The child&#39;s registry is built before the task tool exists:</p>
+<pre><code class="language-go">base := []Tool{read, write, bash}
+child := NewRegistry(base...)                       // no task
+parent := NewRegistry(append(base, task)...)        // task, once</code></pre>
+<p>The child still has real tools, because a subagent that cannot read a file cannot summarise a repository. The restriction is on delegation, not on work.</p>
+<h2>One call, one result, every time</h2>
+<p>The parent is blocked inside a tool call. Whatever the child does, that call has to resolve:</p>
+<table>
+<thead><tr><th>Child outcome</th><th>Parent receives</th></tr></thead>
+<tbody>
+<tr><td>answered</td><td>the answer text</td></tr>
+<tr><td>hit its step cap</td><td>an error result naming the cap</td></tr>
+<tr><td>provider failed</td><td>an error result naming the failure</td></tr>
+<tr><td>returned empty</td><td>an error result</td></tr>
+</tbody>
+</table>
+<p>An unresolved call is not a degraded conversation, it is an invalid one: providers reject a tool call with no result. So the failure path is part of the contract, not an afterthought.</p>
+<p>Returning <code>(&#34;&#34;, err)</code> from <code>Execute</code> is enough, because <code>Registry.Run</code> already converts an error into an <code>IsError</code> result. Writing a success result <em>and</em> returning an error is how a call gets two results, which is the case <code>exactly-one-result</code> catches.</p>
+<h2>The parent blocks, and that is a design choice</h2>
+<p>This chapter runs the child synchronously: the parent&#39;s turn waits.</p>
+<p>The alternative is a background child that returns a receipt and delivers its answer later as a separate message. That is what real harnesses do for long jobs, and it is strictly harder:</p>
+<ul>
+<li>the result arrives when no call is waiting for it;</li>
+<li>the parent needs a queue and an ordering rule;</li>
+<li>an interrupted parent has a child that is still running.</li>
+</ul>
+<p>Sync first is the right order for learning. You cannot debug the async version without having seen the simple one.</p>
+<h2>What this chapter does not do</h2>
+<ul>
+<li><strong>No parallel children.</strong> One task call runs one child, in order. Two calls in one</li>
+</ul>
+<p>message run one after the other.</p>
+<ul>
+<li><strong>No background delivery.</strong> The parent waits.</li>
+<li><strong>No per-child model or budget.</strong> The child uses the same provider and the same</li>
+</ul>
+<p>context ceiling as the parent, with a smaller step cap.</p>
+<ul>
+<li><strong>No child events.</strong> The child&#39;s turns emit into the same event stream, so a</li>
+</ul>
+<p>consumer sees a flat sequence with no indication of nesting.</p>
+<p>That last gap is honest and visible: the event stream from a parent with a child looks like one long run.</p>
+<h2>Where the real implementations go further</h2>
+<table>
+<thead><tr><th>Concern</th><th>Implementation</th></tr></thead>
+<tbody>
+<tr><td>Background children with receipts</td><td>pi subagent extensions</td></tr>
+<tr><td>Fan-out limits and scheduling</td><td>pi-subagent-manager</td></tr>
+<tr><td>Inherited context, as an opt-in</td><td>some extensions, via a transcript prefix</td></tr>
+<tr><td>Depth limits when the registry is shared</td><td>depth counters in the loop</td></tr>
+</tbody>
+</table>
+<p>One warning from the survey: an extension advertising &#34;inherit context&#34; may only prefix the child&#39;s prompt with a text transcript, which is not the same as a session fork. If you build that later, decide which one you mean.</p>
+<h2>Self-check</h2>
+<ol>
+<li>What does the parent&#39;s history grow by, and what does that buy?</li>
+</ol>
+<p><em>(The problem a child solves)</em></p>
+<ol>
+<li>Why does the child start empty rather than inheriting a summary?</li>
+</ol>
+<p><em>(Isolation means empty, not inherited)</em></p>
+<ol>
+<li>How is recursion prevented, and why is that better than a depth check?</li>
+</ol>
+<p><em>(Recursion is prevented by the registry, not by a rule)</em></p>
+<ol>
+<li>Name four child outcomes and what the parent receives for each.</li>
+</ol>
+<p><em>(One call, one result, every time)</em></p>
+<ol>
+<li>Why is synchronous the right first version? *(The parent blocks, and that is a</li>
+</ol>
+<p>design choice)*</p>
+<nav class="pager">
+<a class="prev" href="../../chapters/10-subagent/index.html">&larr; 10 Subagent</a>
+<a class="next" href="../../chapters/10-subagent/problem.html">10 Subagent · Problem &rarr;</a>
+</nav>
+</main>
+</body>
+</html>

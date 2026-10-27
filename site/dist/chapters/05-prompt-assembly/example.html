@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>05 Prompt assembly · Example · Kata</title>
+<link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+<aside class="nav">
+<a class="brand" href="../../index.html">Kata</a>
+<div class="group">
+<div class="group-title">Start</div>
+<ul>
+<li><a href="../../index.html">Home</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">I. Wire</div>
+<ul>
+<li><a href="../../chapters/01-chat-with-the-model/index.html">01 Talk to the model</a></li>
+<li><a href="../../chapters/02-tool-calling/index.html">02 Tool calling</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">II. Act</div>
+<ul>
+<li><a href="../../chapters/03-tools-that-touch-disk/index.html">03 Tools that touch disk</a></li>
+<li><a href="../../chapters/04-the-agent-loop/index.html">04 The agent loop</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">III. Remember</div>
+<ul>
+<li><a href="../../chapters/05-prompt-assembly/index.html">05 Prompt assembly</a></li>
+<li><a href="../../chapters/06-sessions/index.html">06 Sessions</a></li>
+<li><a href="../../chapters/07-context-budget/index.html">07 Context budget</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">IV. Extend</div>
+<ul>
+<li><a href="../../chapters/08-steer-and-abort/index.html">08 Interrupt and steering</a></li>
+<li><a href="../../chapters/09-skills/index.html">09 Skills</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">V. Compose</div>
+<ul>
+<li><a href="../../chapters/10-subagent/index.html">10 Subagent</a></li>
+<li><a href="../../chapters/11-mcp/index.html">11 MCP</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">Reference</div>
+<ul>
+<li><a href="../../docs/architecture.html">Architecture</a></li>
+<li><a href="../../docs/chapter-format.html">Chapter format</a></li>
+<li><a href="../../docs/writing-style.html">Writing style</a></li>
+<li><a href="../../docs/designs.html">Designs</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">After the course</div>
+<ul>
+<li><a href="../../chapters/where-next.html">Where next</a></li>
+</ul>
+</div>
+</aside>
+<main>
+<nav class="subnav">
+<a href="../../chapters/05-prompt-assembly/overview.html">Overview</a>
+<a href="../../chapters/05-prompt-assembly/problem.html">Problem</a>
+<a class="current" href="../../chapters/05-prompt-assembly/example.html">Example</a>
+</nav>
+<h1>05 — Example</h1>
+<p><em>Full, annotated implementation. Read it after <code>kata submit 05</code> passes.</em></p>
+<p>The compilable files are <code>reference/ch05/agent/prompt.go</code> and <code>reference/ch05/agent/cmd/agent/main.go</code>. The loop and the provider are unchanged from chapter 04, which is the point of the seam.</p>
+<hr>
+<h2>The shape</h2>
+<pre><code>prompt.go   BasePrompt, Contributor, BuildSystemPrompt, AgentsFile
+main.go     build the system message, prepend it to history
+loop.go     untouched
+provider    untouched</code></pre>
+<p>Two files changed. That is the design working.</p>
+<h2>Step 1 — the builder is a fold</h2>
+<pre><code class="language-go">func BuildSystemPrompt(ctx context.Context, base string, contributors ...Contributor) (string, error) {
+	var b strings.Builder
+	b.WriteString(strings.TrimRight(base, &#34;\n&#34;))
+	b.WriteString(&#34;\n&#34;)
+
+	for _, c := range contributors {
+		if c == nil {
+			continue
+		}
+		section, err := c.Contribute(ctx)
+		if err != nil {
+			return &#34;&#34;, err
+		}
+		section = strings.TrimSpace(section)
+		if section == &#34;&#34; {
+			continue
+		}
+		b.WriteString(&#34;\n&#34;)
+		b.WriteString(section)
+		b.WriteString(&#34;\n&#34;)
+	}
+	return b.String(), nil
+}</code></pre>
+<p>Two details carry weight:</p>
+<ul>
+<li><code>if c == nil { continue }</code> lets a caller pass an optional contributor without a</li>
+</ul>
+<p>wrapper type.</p>
+<ul>
+<li><code>if section == &#34;&#34; { continue }</code> is where &#34;nothing to add&#34; is handled once, so no</li>
+</ul>
+<p>contributor has to think about spacing.</p>
+<p>A contributor returns a <em>section</em>, not a line. It decides its own heading. That keeps the builder ignorant of what kinds of things contribute, which is what lets chapter 09 reuse it unchanged.</p>
+<h2>Step 2 — discovery walks up, rendering runs down</h2>
+<pre><code class="language-go">func (a *AgentsFile) discover() ([]string, error) {
+	dir := abs            // the workspace
+	var found []string
+	for i := 0; i &lt; depth; i++ {
+		candidate := filepath.Join(dir, &#34;AGENTS.md&#34;)
+		if info, err := os.Stat(candidate); err == nil &amp;&amp; !info.IsDir() {
+			found = append(found, candidate)
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
+	}
+	for i, j := 0, len(found)-1; i &lt; j; i, j = i+1, j-1 {
+		found[i], found[j] = found[j], found[i]
+	}
+	return found, nil
+}</code></pre>
+<p>The reverse is the whole chapter. Collected order is nearest-first, because that is the direction you can walk. Rendered order must be nearest-last, because that is the direction a model reads.</p>
+<p><code>parent == dir</code> is how the walk terminates at <code>/</code> without a special case. The depth bound is a second guard: a stray <code>/AGENTS.md</code> on a container image should not silently become project instructions.</p>
+<h2>Step 3 — empty is absent, and the heading is written once</h2>
+<pre><code class="language-go">for _, path := range files {
+	body, err := os.ReadFile(path)
+	if err != nil {
+		continue
+	}
+	text := strings.TrimRight(string(body), &#34;\n&#34;)
+	if strings.TrimSpace(text) == &#34;&#34; {
+		continue
+	}
+	if included == 0 {
+		b.WriteString(&#34;# Project instructions\n&#34;)
+	}
+	included++
+	fmt.Fprintf(&amp;b, &#34;\n## %s\n%s\n&#34;, path, text)
+}
+if included == 0 {
+	return &#34;&#34;, nil
+}</code></pre>
+<p>Three failure modes collapsed into one loop:</p>
+<table>
+<thead><tr><th>Without the guard</th><th>What the model sees</th></tr></thead>
+<tbody>
+<tr><td>no <code>included</code> counter</td><td><code># Project instructions</code> with nothing under it</td></tr>
+<tr><td>no empty check</td><td><code>## /repo/AGENTS.md</code> followed by a blank line</td></tr>
+<tr><td>a read error treated as fatal</td><td>the agent refuses to run because one file was unreadable</td></tr>
+</tbody>
+</table>
+<p>A file that disappears between discovery and reading is skipped on purpose. The instruction is nice to have; the run is not.</p>
+<h2>Step 4 — the loop does not change</h2>
+<pre><code class="language-go">system, err := agent.BuildSystemPrompt(ctx, agent.BasePrompt,
+	&amp;agent.AgentsFile{Root: root},
+)
+history := []agent.Message{
+	{Role: agent.RoleSystem, Content: system},
+	{Role: agent.RoleUser, Content: *prompt},
+}
+res, err := agent.RunLoop(ctx, provider, tools, history, opts)</code></pre>
+<p>The system message is just the first element of history. <code>RunLoop</code> already sends whatever it is given, so nothing in the loop needed to learn about prompts.</p>
+<p>That is worth pausing on. The instinct is to add a <code>SystemPrompt</code> field to <code>LoopOptions</code> and let the loop build it. That works and it couples the loop to prompt policy forever. Prepending a message keeps the loop&#39;s contract simple: it sends a conversation.</p>
+<h2>The diffs</h2>
+<p><strong>1. Pasting instead of assembling</strong> — <code>system-message-first</code></p>
+<pre><code class="language-diff">- history := []Message{{Role: RoleUser, Content: prompt}}
++ history := []Message{{Role: RoleSystem, Content: system}, {Role: RoleUser, Content: prompt}}</code></pre>
+<p><strong>2. Rendering in discovery order</strong> — <code>agents-md-order</code></p>
+<pre><code class="language-diff">- return found                     // nearest first
++ reverse(found); return found     // outermost first</code></pre>
+<p><strong>3. A heading per file</strong> — <code>empty-agents-md</code></p>
+<pre><code class="language-diff">- b.WriteString(&#34;# Project instructions\n&#34;)    // outside the loop
++ if included == 0 { b.WriteString(&#34;# Project instructions\n&#34;) }</code></pre>
+<p><strong>4. Unstable prefix</strong> — <code>system-prompt-stable</code></p>
+<pre><code class="language-diff">- fmt.Fprintf(&amp;b, &#34;# Context\nworking in %s at %s\n&#34;, dir, time.Now())
++ // nothing that varies between runs</code></pre>
+<h2>Complete files</h2>
+<table>
+<thead><tr><th>File</th><th>Lines</th><th>What to read it for</th></tr></thead>
+<tbody>
+<tr><td><code>reference/ch05/agent/prompt.go</code></td><td>165</td><td>the fold, discovery, empty handling</td></tr>
+<tr><td><code>reference/ch05/agent/cmd/agent/main.go</code></td><td>115</td><td>prepending instead of threading a field</td></tr>
+</tbody>
+</table>
+<h2>Comparison checklist</h2>
+<ul>
+<li>[ ] base prompt is a constant with no varying content</li>
+<li>[ ] contributors are folded in order, nil and empty skipped</li>
+<li>[ ] discovery walks up and is bounded</li>
+<li>[ ] rendered order is outermost first</li>
+<li>[ ] heading written once, only if something was included</li>
+<li>[ ] unreadable and empty files skipped rather than fatal</li>
+<li>[ ] system message prepended, loop unchanged</li>
+<li>[ ] user message byte-identical to what was typed</li>
+</ul>
+<p>Differences outside this list are style.</p>
+<nav class="pager">
+<a class="prev" href="../../chapters/05-prompt-assembly/problem.html">&larr; 05 Prompt assembly · Problem</a>
+<a class="next" href="../../chapters/06-sessions/index.html">06 Sessions &rarr;</a>
+</nav>
+</main>
+</body>
+</html>

@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chapter format · Kata</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<aside class="nav">
+<a class="brand" href="../index.html">Kata</a>
+<div class="group">
+<div class="group-title">Start</div>
+<ul>
+<li><a href="../index.html">Home</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">I. Wire</div>
+<ul>
+<li><a href="../chapters/01-chat-with-the-model/index.html">01 Talk to the model</a></li>
+<li><a href="../chapters/02-tool-calling/index.html">02 Tool calling</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">II. Act</div>
+<ul>
+<li><a href="../chapters/03-tools-that-touch-disk/index.html">03 Tools that touch disk</a></li>
+<li><a href="../chapters/04-the-agent-loop/index.html">04 The agent loop</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">III. Remember</div>
+<ul>
+<li><a href="../chapters/05-prompt-assembly/index.html">05 Prompt assembly</a></li>
+<li><a href="../chapters/06-sessions/index.html">06 Sessions</a></li>
+<li><a href="../chapters/07-context-budget/index.html">07 Context budget</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">IV. Extend</div>
+<ul>
+<li><a href="../chapters/08-steer-and-abort/index.html">08 Interrupt and steering</a></li>
+<li><a href="../chapters/09-skills/index.html">09 Skills</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">V. Compose</div>
+<ul>
+<li><a href="../chapters/10-subagent/index.html">10 Subagent</a></li>
+<li><a href="../chapters/11-mcp/index.html">11 MCP</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">Reference</div>
+<ul>
+<li><a href="../docs/architecture.html">Architecture</a></li>
+<li><a class="current" href="../docs/chapter-format.html">Chapter format</a></li>
+<li><a href="../docs/writing-style.html">Writing style</a></li>
+<li><a href="../docs/designs.html">Designs</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">After the course</div>
+<ul>
+<li><a href="../chapters/where-next.html">Where next</a></li>
+</ul>
+</div>
+</aside>
+<main>
+<h1>Chapter format</h1>
+<p>Every chapter is one directory with <strong>three reader-facing documents</strong>, one grader, and one reference solution. The three documents answer three different questions and are read at three different times; merging any two of them produces a page that is simultaneously too long to work from and too thin to learn from.</p>
+<pre><code>chapters/NN-slug/
+  README.md      one-screen index: goal, time, difficulty, edit list, doc links
+  overview.md    how the mechanism works, in general. Concept + diagrams.
+  problem.md     what you must build, what exactly is graded, and the hints.
+  example.md     a complete, annotated implementation. Implementation-heavy.
+  checks/        Go test suite — the only thing that defines &#34;done&#34;
+reference/chNN/  reference implementation, cumulative, separate Go module</code></pre>
+<h2>The three documents</h2>
+<table>
+<thead><tr><th></th><th><code>overview.md</code></th><th><code>problem.md</code></th><th><code>example.md</code></th></tr></thead>
+<tbody>
+<tr><td>Question</td><td><em>how does this work?</em></td><td><em>what must I do?</em></td><td><em>what does a full one look like?</em></td></tr>
+<tr><td>Read when</td><td>before you start</td><td>at the keyboard</td><td>after a real attempt</td></tr>
+<tr><td>Shape</td><td>prose, diagrams, worked byte-level examples</td><td>tables, claims, hints</td><td>code, diffs, annotations</td></tr>
+<tr><td>Length</td><td>long, discursive</td><td>short, scannable</td><td>as long as the code</td></tr>
+<tr><td>Spoilers</td><td>none — concept only</td><td>none</td><td>total, by design</td></tr>
+<tr><td>Ends with</td><td>self-check questions</td><td>done-when</td><td>comparison checklist</td></tr>
+</tbody>
+</table>
+<p>The rule that keeps them honest: <strong><code>overview.md</code> may not contain a working implementation, and <code>example.md</code> may not contain new concepts.</strong> If an idea only appears in the example, it belongs in the overview first.</p>
+<h3><code>overview.md</code> — the general doc</h3>
+<p>Free-form, but must contain:</p>
+<ol>
+<li><strong>Why it exists</strong> — the mechanism in the domain&#39;s terms, not Go&#39;s.</li>
+<li><strong>A diagram</strong> — <code>mermaid</code> for GitHub/HTML, plus a short ASCII version when the</li>
+</ol>
+<p>diagram is load-bearing, because the terminal cannot render mermaid.</p>
+<ol>
+<li><strong>Real bytes</strong> — an actual SSE chunk, an actual JSON body, an actual file.</li>
+</ol>
+<p>Not &#34;the model returns chunks&#34;; the chunk.</p>
+<ol>
+<li><strong>A failure map</strong> — the ways this goes wrong, drawn as a tree, each branch</li>
+</ol>
+<p>labelled with the case id that catches it. This is the link between teaching and grading.</p>
+<ol>
+<li><strong>Where the real implementations go further</strong> — pi/crush/PiG file paths, and</li>
+</ol>
+<p>what they add that we skipped.</p>
+<ol>
+<li><strong>Self-check</strong> — 3–5 questions answerable only if the concept landed, each</li>
+</ol>
+<p>pointing at the section that answers it.</p>
+<h3><code>problem.md</code> — the contract</h3>
+<p>Fixed sections, in this order. No freestyle.</p>
+<ol>
+<li><strong>Your task</strong> — one sentence, naming a capability, never a function.</li>
+<li><strong>The contract</strong> — the signature, the wire shape, the file format. Tables.</li>
+<li><strong>What the verifier does</strong> — what it runs, and <em>that it inspects requests</em>,</li>
+</ol>
+<p>not only output.</p>
+<ol>
+<li><strong>The verifier will assert that</strong> — one bullet per graded case, phrased as a</li>
+</ol>
+<p>promise, named by case id. Must match <code>checks/</code> exactly; if they diverge the checks are truth and this page is a bug.</p>
+<ol>
+<li><strong>Notes</strong> — edge cases you must handle; deliberate omissions with a link to</li>
+</ol>
+<p>the real implementation; the output contract (stdout vs stderr, exit codes).</p>
+<ol>
+<li><strong>Hints</strong> — three rungs, spoiler-collapsed, identical to <code>internal/hints</code>.</li>
+<li><strong>Done when</strong> — <code>kata submit NN</code> green, plus one self-check sentence.</li>
+</ol>
+<h3><code>example.md</code> — the implementation doc</h3>
+<p>The full annotated answer, structured as the <em>thinking order</em>, not the file order:</p>
+<ol>
+<li><strong>The shape</strong> — the function split, before any code.</li>
+<li><strong>Steps</strong> — one section per decision, each with the code and <em>why</em>.</li>
+<li><strong>The diffs</strong> — wrong vs right for each trap, labelled with the case id.</li>
+<li><strong>The complete file</strong> — or a pointer to <code>reference/chNN/</code>.</li>
+<li><strong>Production delta</strong> — a table of what pi/crush add and why we skipped it.</li>
+<li><strong>Comparison checklist</strong> — differences that are bugs vs differences that are</li>
+</ol>
+<p>style.</p>
+<h2>Which driver</h2>
+<p>Each case names its driver, and the chapter&#39;s <code>problem.md</code> groups the claims by it. The rule is in <a href="architecture.md#grading-policy">architecture.md</a>: black box by default, function level only for pure transforms with awkward inputs.</p>
+<pre><code class="language-go">// black box: build and run ./agent/cmd/agent
+res := blackbox.Run(t, env(srv.BaseURL()), &#34;-p&#34;, &#34;list the files&#34;)
+
+// function level: a pinned, deliberately small surface
+got := agent.SubstituteArgs(&#34;Deploy to $0 in $1&#34;, []string{&#34;staging&#34;, &#34;eu&#34;})</code></pre>
+<p>A case that pins a function must say so in <code>problem.md</code> under &#34;given surface&#34;, so a learner never discovers the requirement from a compile error.</p>
+<h2>The build tag</h2>
+<p>Chapter checks carry <code>//go:build kata_checks</code>. That keeps <code>go test ./...</code> green in a fresh clone, where <code>agent/</code> is still the starter and every case is supposed to fail. <code>kata submit</code> and <code>kata verify</code> add the tag themselves, so you never pass it by hand.</p>
+<pre><code class="language-sh">go test -tags=kata_checks ./chapters/01-chat-with-the-model/checks/</code></pre>
+<h2>Indexing</h2>
+<p>CodeCrafters indexes stages globally with sections as headers. We do not: <strong>a chapter is the unit</strong>, <code>NN</code> is its identity, and cases inside a chapter are addressable only by case id (for hints). Inserting a chapter never renumbers a learner&#39;s progress, and the arc stays editable while it is being written.</p>
+<h2>Grouping into parts</h2>
+<table>
+<thead><tr><th>Part</th><th>Chapters</th><th>The leap</th></tr></thead>
+<tbody>
+<tr><td>I. Wire</td><td>01–02</td><td>talk to a model, survive its output</td></tr>
+<tr><td>II. Act</td><td>03–04</td><td>tools, then the loop that drives them</td></tr>
+<tr><td>III. Remember</td><td>05–07</td><td>prompt, sessions, budget</td></tr>
+<tr><td>IV. Extend</td><td>08–09</td><td>steering, skills</td></tr>
+<tr><td>V. Compose</td><td>10–11</td><td>subagents, MCP</td></tr>
+</tbody>
+</table>
+<p>Part boundaries are where the mental model changes, and where a learner can stop and still have something useful.</p>
+<nav class="pager">
+<a class="prev" href="../docs/architecture.html">&larr; Architecture</a>
+<a class="next" href="../docs/writing-style.html">Writing style &rarr;</a>
+</nav>
+</main>
+</body>
+</html>

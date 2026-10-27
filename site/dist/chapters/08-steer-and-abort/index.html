@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>08 Interrupt and steering · Kata</title>
+<link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+<aside class="nav">
+<a class="brand" href="../../index.html">Kata</a>
+<div class="group">
+<div class="group-title">Start</div>
+<ul>
+<li><a href="../../index.html">Home</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">I. Wire</div>
+<ul>
+<li><a href="../../chapters/01-chat-with-the-model/index.html">01 Talk to the model</a></li>
+<li><a href="../../chapters/02-tool-calling/index.html">02 Tool calling</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">II. Act</div>
+<ul>
+<li><a href="../../chapters/03-tools-that-touch-disk/index.html">03 Tools that touch disk</a></li>
+<li><a href="../../chapters/04-the-agent-loop/index.html">04 The agent loop</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">III. Remember</div>
+<ul>
+<li><a href="../../chapters/05-prompt-assembly/index.html">05 Prompt assembly</a></li>
+<li><a href="../../chapters/06-sessions/index.html">06 Sessions</a></li>
+<li><a href="../../chapters/07-context-budget/index.html">07 Context budget</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">IV. Extend</div>
+<ul>
+<li><a class="current" href="../../chapters/08-steer-and-abort/index.html">08 Interrupt and steering</a></li>
+<li><a href="../../chapters/09-skills/index.html">09 Skills</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">V. Compose</div>
+<ul>
+<li><a href="../../chapters/10-subagent/index.html">10 Subagent</a></li>
+<li><a href="../../chapters/11-mcp/index.html">11 MCP</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">Reference</div>
+<ul>
+<li><a href="../../docs/architecture.html">Architecture</a></li>
+<li><a href="../../docs/chapter-format.html">Chapter format</a></li>
+<li><a href="../../docs/writing-style.html">Writing style</a></li>
+<li><a href="../../docs/designs.html">Designs</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">After the course</div>
+<ul>
+<li><a href="../../chapters/where-next.html">Where next</a></li>
+</ul>
+</div>
+</aside>
+<main>
+<nav class="subnav">
+<a href="../../chapters/08-steer-and-abort/overview.html">Overview</a>
+<a href="../../chapters/08-steer-and-abort/problem.html">Problem</a>
+<a href="../../chapters/08-steer-and-abort/example.html">Example</a>
+</nav>
+<h1>08 — Steer and abort</h1>
+<p><strong>Part IV · Extend</strong> · Difficulty: medium-hard · 75 to 100 minutes · 8 graded cases</p>
+<p>A run stops being something you wait for. You can interrupt it and keep what arrived, or say something while it works and have it land at the turn boundary.</p>
+<table>
+<thead><tr><th></th><th></th></tr></thead>
+<tbody>
+<tr><td><strong>How it works</strong></td><td><a href="overview.html">overview.md</a> — where an interrupt lands, and why steering is a boundary problem</td></tr>
+<tr><td><strong>What to build</strong></td><td><a href="problem.html">problem.md</a> — the contract, the graded claims, the hints</td></tr>
+<tr><td><strong>Full implementation</strong></td><td><a href="example.html">example.md</a> — annotated, after an attempt</td></tr>
+<tr><td><strong>You edit</strong></td><td><code>agent/loop.go</code>, <code>agent/steering.go</code>, <code>agent/provider_openai.go</code>, <code>agent/events.go</code>, <code>agent/cmd/agent/main.go</code></td></tr>
+<tr><td><strong>Submit</strong></td><td><code>kata submit 08</code></td></tr>
+</tbody>
+</table>
+<h2>Done when</h2>
+<p><code>kata submit 08</code> reports 8/8, and this works against a real endpoint:</p>
+<pre><code class="language-sh">printf &#39;also check the tests\n&#39; | ./agent -p &#34;add a flag&#34; -steer-stdin</code></pre>
+<hr>
+<p>Next: <strong>09 — Skills</strong>, where the agent starts reading instructions you wrote for it, on demand.</p>
+<nav class="pager">
+<a class="prev" href="../../chapters/07-context-budget/example.html">&larr; 07 Context budget · Example</a>
+<a class="next" href="../../chapters/08-steer-and-abort/overview.html">08 Interrupt and steering · Overview &rarr;</a>
+</nav>
+</main>
+</body>
+</html>

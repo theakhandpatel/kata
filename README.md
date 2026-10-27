@@ -134,6 +134,21 @@ For a full harness, read [pi](https://github.com/earendil-works/pi),
 [crush](https://github.com/charmbracelet/crush), and
 [PiG](https://github.com/MichaelKinsy/PiG).
 
+## Publishing
+
+The site is committed, so a deploy never needs Go or a browser on the build machine.
+
+```sh
+kata site --diagrams=render   # writes site/dist, pre-renders every diagram
+git add site/dist && git commit -m "site: rebuild"
+```
+
+Netlify serves `site/dist` through `netlify.toml`. To deploy by hand:
+
+```sh
+netlify deploy --prod --dir site/dist
+```
+
 ## Contributing
 
 A chapter is done when `kata verify` is clean: its reference passes every case

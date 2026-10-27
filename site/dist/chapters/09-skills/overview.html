@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>09 Skills · Overview · Kata</title>
+<link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+<aside class="nav">
+<a class="brand" href="../../index.html">Kata</a>
+<div class="group">
+<div class="group-title">Start</div>
+<ul>
+<li><a href="../../index.html">Home</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">I. Wire</div>
+<ul>
+<li><a href="../../chapters/01-chat-with-the-model/index.html">01 Talk to the model</a></li>
+<li><a href="../../chapters/02-tool-calling/index.html">02 Tool calling</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">II. Act</div>
+<ul>
+<li><a href="../../chapters/03-tools-that-touch-disk/index.html">03 Tools that touch disk</a></li>
+<li><a href="../../chapters/04-the-agent-loop/index.html">04 The agent loop</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">III. Remember</div>
+<ul>
+<li><a href="../../chapters/05-prompt-assembly/index.html">05 Prompt assembly</a></li>
+<li><a href="../../chapters/06-sessions/index.html">06 Sessions</a></li>
+<li><a href="../../chapters/07-context-budget/index.html">07 Context budget</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">IV. Extend</div>
+<ul>
+<li><a href="../../chapters/08-steer-and-abort/index.html">08 Interrupt and steering</a></li>
+<li><a href="../../chapters/09-skills/index.html">09 Skills</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">V. Compose</div>
+<ul>
+<li><a href="../../chapters/10-subagent/index.html">10 Subagent</a></li>
+<li><a href="../../chapters/11-mcp/index.html">11 MCP</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">Reference</div>
+<ul>
+<li><a href="../../docs/architecture.html">Architecture</a></li>
+<li><a href="../../docs/chapter-format.html">Chapter format</a></li>
+<li><a href="../../docs/writing-style.html">Writing style</a></li>
+<li><a href="../../docs/designs.html">Designs</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">After the course</div>
+<ul>
+<li><a href="../../chapters/where-next.html">Where next</a></li>
+</ul>
+</div>
+</aside>
+<main>
+<nav class="subnav">
+<a class="current" href="../../chapters/09-skills/overview.html">Overview</a>
+<a href="../../chapters/09-skills/problem.html">Problem</a>
+<a href="../../chapters/09-skills/example.html">Example</a>
+</nav>
+<h1>09 — Overview</h1>
+<p><em>How skills work, and why the description is separate from the body. Read this before you write code.</em></p>
+<hr>
+<h2>One file, two audiences</h2>
+<p>A skill is a folder with a <code>SKILL.md</code>:</p>
+<pre><code>skills/deploy/SKILL.md
+---
+name: deploy
+description: Deploy the app to a region.
+---
+Check the tests pass, then deploy to $0 in $1.
+Report the deployed version. Full request: $ARGUMENTS</code></pre>
+<p>The file has two audiences and they read different parts:</p>
+<table>
+<thead><tr><th>Part</th><th>Audience</th><th>When it is sent</th></tr></thead>
+<tbody>
+<tr><td><code>name</code>, <code>description</code></td><td>the model, every request</td><td>always</td></tr>
+<tr><td>body</td><td>the model, only when invoked</td><td>on <code>/deploy</code></td></tr>
+<tr><td>the whole file</td><td>you, and the agent&#39;s loader</td><td>never verbatim</td></tr>
+</tbody>
+</table>
+<p>That split is the feature. A project with fifty skills pays fifty lines on every request, not fifty documents. The alternative, sending every body, is the tool schema problem from chapter 07 with a different name.</p>
+<figure class="diagram"><svg id="my-svg" width="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" class="flowchart" style="max-width: 1105.92px; background-color: transparent;" viewBox="4 4 1105.921875 224" role="graphics-document document" aria-roledescription="flowchart-v2"><style>#my-svg{font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:16px;fill:#000000;}@keyframes edge-animation-frame{from{stroke-dashoffset:0;}}@keyframes dash{to{stroke-dashoffset:0;}}#my-svg .edge-animation-slow{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 50s linear infinite;stroke-linecap:round;}#my-svg .edge-animation-fast{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 20s linear infinite;stroke-linecap:round;}#my-svg .error-icon{fill:#552222;}#my-svg .error-text{fill:#552222;stroke:#552222;}#my-svg .edge-thickness-normal{stroke-width:1px;}#my-svg .edge-thickness-thick{stroke-width:3.5px;}#my-svg .edge-pattern-solid{stroke-dasharray:0;}#my-svg .edge-thickness-invisible{stroke-width:0;fill:none;}#my-svg .edge-pattern-dashed{stroke-dasharray:3;}#my-svg .edge-pattern-dotted{stroke-dasharray:2;}#my-svg .marker{fill:#666;stroke:#666;}#my-svg .marker.cross{stroke:#666;}#my-svg svg{font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:16px;}#my-svg p{margin:0;}#my-svg .label{font-family:"trebuchet ms",verdana,arial,sans-serif;color:#000000;}#my-svg .cluster-label text{fill:#333;}#my-svg .cluster-label span{color:#333;}#my-svg .cluster-label span p{background-color:transparent;}#my-svg .label text,#my-svg span{fill:#000000;color:#000000;}#my-svg .node rect,#my-svg .node circle,#my-svg .node ellipse,#my-svg .node polygon,#my-svg .node path{fill:#eee;stroke:#999;stroke-width:1px;}#my-svg .rough-node .label text,#my-svg .node .label text,#my-svg .image-shape .label,#my-svg .icon-shape .label{text-anchor:middle;}#my-svg .node .katex path{fill:#000;stroke:#000;stroke-width:1px;}#my-svg .rough-node .label,#my-svg .node .label,#my-svg .image-shape .label,#my-svg .icon-shape .label{text-align:center;}#my-svg .node.clickable{cursor:pointer;}#my-svg .root .anchor path{fill:#666!important;stroke-width:0;stroke:#666;}#my-svg .arrowheadPath{fill:#333333;}#my-svg .edgePaths .path{stroke:#666;stroke-width:1px;}#my-svg .flowchart-link{stroke:#666;fill:none;}#my-svg .edgeLabel{background-color:white;text-align:center;}#my-svg .edgeLabel p{background-color:white;}#my-svg .edgeLabel rect{opacity:0.5;background-color:white;fill:white;}#my-svg .labelBkg{background-color:rgba(255, 255, 255, 0.5);}#my-svg .cluster rect{fill:hsl(0, 0%, 98.9215686275%);stroke:#707070;stroke-width:1px;}#my-svg .cluster text{fill:#333;}#my-svg .cluster span{color:#333;}#my-svg .node .collapsed-indicator{fill:#707070;stroke:none;opacity:0.6;}#my-svg .node .collapsed-separator{stroke:#707070;stroke-width:0.75px;}#my-svg div.mermaidTooltip{position:absolute;text-align:center;max-width:200px;padding:2px;font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:12px;background:hsl(-160, 0%, 93.3333333333%);border:1px solid #707070;border-radius:2px;pointer-events:none;z-index:100;}#my-svg .flowchartTitleText{text-anchor:middle;font-size:18px;fill:#000000;}#my-svg rect.text{fill:none;stroke-width:0;}#my-svg .icon-shape,#my-svg .image-shape{background-color:white;text-align:center;}#my-svg .icon-shape p,#my-svg .image-shape p{background-color:white;padding:2px;}#my-svg .icon-shape .label rect,#my-svg .image-shape .label rect{opacity:0.5;background-color:white;fill:white;}#my-svg .label-icon{display:inline-block;height:1em;overflow:visible;vertical-align:-0.125em;}#my-svg .node .label-icon path{fill:currentColor;stroke:revert;stroke-width:revert;}#my-svg .node .neo-node{stroke:#999;}#my-svg [data-look="neo"].node rect,#my-svg [data-look="neo"].cluster rect,#my-svg [data-look="neo"].node polygon{stroke:url(#my-svg-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg [data-look="neo"].swimlane.cluster rect{filter:none;}#my-svg [data-look="neo"].node path{stroke:url(#my-svg-gradient);stroke-width:1px;}#my-svg [data-look="neo"].node .outer-path{filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg [data-look="neo"].node .neo-line path{stroke:#999;filter:none;}#my-svg [data-look="neo"].node circle{stroke:url(#my-svg-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg [data-look="neo"].node circle .state-start{fill:#000000;}#my-svg [data-look="neo"].icon-shape .icon{fill:url(#my-svg-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg [data-look="neo"].icon-shape .icon-neo path{stroke:url(#my-svg-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg :root{--mermaid-font-family:"trebuchet ms",verdana,arial,sans-serif;}</style><g><marker id="my-svg_flowchart-v2-pointEnd" class="marker flowchart-v2" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-pointStart" class="marker flowchart-v2" viewBox="0 0 10 10" refX="4.5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 5 L 10 10 L 10 0 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-pointEnd-margin" class="marker flowchart-v2" viewBox="0 0 11.5 14" refX="11.5" refY="7" markerUnits="userSpaceOnUse" markerWidth="10.5" markerHeight="14" orient="auto"><path d="M 0 0 L 11.5 7 L 0 14 z" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-pointStart-margin" class="marker flowchart-v2" viewBox="0 0 11.5 14" refX="1" refY="7" markerUnits="userSpaceOnUse" markerWidth="11.5" markerHeight="14" orient="auto"><polygon points="0,7 11.5,14 11.5,0" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-circleEnd" class="marker flowchart-v2" viewBox="0 0 10 10" refX="11" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-circleStart" class="marker flowchart-v2" viewBox="0 0 10 10" refX="-1" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-circleEnd-margin" class="marker flowchart-v2" viewBox="0 0 10 10" refY="5" refX="12.25" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-circleStart-margin" class="marker flowchart-v2" viewBox="0 0 10 10" refX="-2" refY="5" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-crossEnd" class="marker cross flowchart-v2" viewBox="0 0 11 11" refX="12" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-crossStart" class="marker cross flowchart-v2" viewBox="0 0 11 11" refX="-1" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-crossEnd-margin" class="marker cross flowchart-v2" viewBox="0 0 15 15" refX="17.7" refY="7.5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto"><path d="M 1,1 L 14,14 M 1,14 L 14,1" class="arrowMarkerPath" style="stroke-width: 2.5;"/></marker><marker id="my-svg_flowchart-v2-crossStart-margin" class="marker cross flowchart-v2" viewBox="0 0 15 15" refX="-3.5" refY="7.5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto"><path d="M 1,1 L 14,14 M 1,14 L 14,1" class="arrowMarkerPath" style="stroke-width: 2.5; stroke-dasharray: 1, 0;"/></marker><g class="root"><g class="clusters"/><g class="edges edgePaths"><path d="M164.046875,122L200.046875,122" id="my-svg-L_F_P_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 32 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_F_P_0" data-points="W3sieCI6MTY0LjA0Njg3NSwieSI6MTIyfSx7IngiOjIwNC4wNDY4NzUsInkiOjEyMn1d" data-look="neo" marker-end="url(#my-svg_flowchart-v2-pointEnd-margin)"/><path d="M356.046875,113.33333333333333L368.9758071881345,113.33333333333333Q376.046875,113.33333333333333 376.046875,106.26226552146785L376.046875,67.07106781186548Q376.046875,60 383.1179428118655,60L392.046875,60" id="my-svg-L_P_D_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 80.00505828857422 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_P_D_0" data-points="W3sieCI6MzU2LjA0Njg3NSwieSI6MTEzLjMzMzMzMzMzMzMzMzMzfSx7IngiOjM3Ni4wNDY4NzUsInkiOjExMy4zMzMzMzMzMzMzMzMzM30seyJ4IjozNzYuMDQ2ODc1LCJ5Ijo2MH0seyJ4IjozOTYuMDQ2ODc1LCJ5Ijo2MH1d" data-look="neo" marker-end="url(#my-svg_flowchart-v2-pointEnd-margin)"/><path d="M356.046875,130.66666666666666L368.9758071881345,130.66666666666666Q376.046875,130.66666666666666 376.046875,137.73773447853213L376.046875,176.92893218813452Q376.046875,184 383.1179428118655,184L392.046875,184" id="my-svg-L_P_B_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 80.00505065917969 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_P_B_0" data-points="W3sieCI6MzU2LjA0Njg3NSwieSI6MTMwLjY2NjY2NjY2NjY2NjY2fSx7IngiOjM3Ni4wNDY4NzUsInkiOjEzMC42NjY2NjY2NjY2NjY2Nn0seyJ4IjozNzYuMDQ2ODc1LCJ5IjoxODR9LHsieCI6Mzk2LjA0Njg3NSwieSI6MTg0fV0=" data-look="neo" marker-end="url(#my-svg_flowchart-v2-pointEnd-margin)"/><path d="M548.046875,60L652.984375,60L753.921875,60" id="my-svg-L_D_S_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 201.875 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_D_S_0" data-points="W3sieCI6NTQ4LjA0Njg3NSwieSI6NjB9LHsieCI6NjUyLjk4NDM3NSwieSI6NjB9LHsieCI6NzU3LjkyMTg3NSwieSI6NjB9XQ==" data-look="neo" marker-end="url(#my-svg_flowchart-v2-pointEnd-margin)"/><path d="M548.046875,184L753.921875,184" id="my-svg-L_B_U_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 201.875 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_B_U_0" data-points="W3sieCI6NTQ4LjA0Njg3NSwieSI6MTg0fSx7IngiOjc1Ny45MjE4NzUsInkiOjE4NH1d" data-look="neo" marker-end="url(#my-svg_flowchart-v2-pointEnd-margin)"/><path d="M909.921875,60L922.8508071881345,60Q929.921875,60 929.921875,67.07106781186548L929.921875,110.26226552146787Q929.921875,117.33333333333334 936.9929428118655,117.33333333333334L945.921875,117.33333333333334" id="my-svg-L_S_R_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 84.00506591796875 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_S_R_0" data-points="W3sieCI6OTA5LjkyMTg3NSwieSI6NjB9LHsieCI6OTI5LjkyMTg3NSwieSI6NjB9LHsieCI6OTI5LjkyMTg3NSwieSI6MTE3LjMzMzMzMzMzMzMzMzM0fSx7IngiOjk0OS45MjE4NzUsInkiOjExNy4zMzMzMzMzMzMzMzMzNH1d" data-look="neo" marker-end="url(#my-svg_flowchart-v2-pointEnd-margin)"/><path d="M909.921875,184L922.8508071881345,184Q929.921875,184 929.921875,176.92893218813452L929.921875,133.73773447853216Q929.921875,126.66666666666667 936.9929428118655,126.66666666666667L945.921875,126.66666666666667" id="my-svg-L_U_R_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 84.00506591796875 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_U_R_0" data-points="W3sieCI6OTA5LjkyMTg3NSwieSI6MTg0fSx7IngiOjkyOS45MjE4NzUsInkiOjE4NH0seyJ4Ijo5MjkuOTIxODc1LCJ5IjoxMjYuNjY2NjY2NjY2NjY2Njd9LHsieCI6OTQ5LjkyMTg3NSwieSI6MTI2LjY2NjY2NjY2NjY2NjY3fV0=" data-look="neo" marker-end="url(#my-svg_flowchart-v2-pointEnd-margin)"/></g><g class="edgeLabels"><g class="edgeLabel" transform="translate(652.984375, 183.5)"><g class="label" data-id="L_B_U_0" transform="translate(-64.9375, -12)"><foreignObject width="129.875" height="24"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"><p>/deploy staging eu</p></span></div></foreignObject></g></g></g><g class="nodes"><g class="node default" id="my-svg-flowchart-F-0" data-look="neo" transform="translate(88.0234375, 122)"><rect class="basic label-container" style="" x="-76.0234375" y="-24" width="152.046875" height="48"/><g class="label" style="" transform="translate(-60.0234375, -12)"><rect/><foreignObject width="120.046875" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: break-spaces; line-height: 1.5; max-width: 120px; text-align: center; width: 120px;"><span class="nodeLabel"><p>skills/*/SKILL.md</p></span></div></foreignObject></g></g><g class="node default" id="my-svg-flowchart-P-1" data-look="neo" transform="translate(280.046875, 122)"><rect class="basic label-container" style="" x="-76" y="-36" width="152" height="72"/><g class="label" style="" transform="translate(-60, -24)"><rect/><foreignObject width="120" height="48"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: break-spaces; line-height: 1.5; max-width: 120px; text-align: center; width: 120px;"><span class="nodeLabel"><p>parse frontmatter</p></span></div></foreignObject></g></g><g class="node default" id="my-svg-flowchart-D-3" data-look="neo" transform="translate(472.046875, 60)"><rect class="basic label-container" style="" x="-76" y="-36" width="152" height="72"/><g class="label" style="" transform="translate(-60, -24)"><rect/><foreignObject width="120" height="48"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: break-spaces; line-height: 1.5; max-width: 120px; text-align: center; width: 120px;"><span class="nodeLabel"><p>name + description</p></span></div></foreignObject></g></g><g class="node default" id="my-svg-flowchart-B-5" data-look="neo" transform="translate(472.046875, 184)"><rect class="basic label-container" style="" x="-76" y="-24" width="152" height="48"/><g class="label" style="" transform="translate(-60, -12)"><rect/><foreignObject width="120" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: nowrap; line-height: 1.5; max-width: 120px; text-align: center; width: 120px;"><span class="nodeLabel"><p>body</p></span></div></foreignObject></g></g><g class="node default" id="my-svg-flowchart-S-7" data-look="neo" transform="translate(833.921875, 60)"><rect class="basic label-container" style="" x="-76" y="-48" width="152" height="96"/><g class="label" style="" transform="translate(-60, -36)"><rect/><foreignObject width="120" height="72"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: break-spaces; line-height: 1.5; max-width: 120px; text-align: center; width: 120px;"><span class="nodeLabel"><p>system message<br />every request</p></span></div></foreignObject></g></g><g class="node default" id="my-svg-flowchart-U-9" data-look="neo" transform="translate(833.921875, 184)"><rect class="basic label-container" style="" x="-76" y="-36" width="152" height="72"/><g class="label" style="" transform="translate(-60, -24)"><rect/><foreignObject width="120" height="48"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: nowrap; line-height: 1.5; max-width: 120px; text-align: center; width: 120px;"><span class="nodeLabel"><p>user message<br />one request</p></span></div></foreignObject></g></g><g class="node default" id="my-svg-flowchart-R-11" data-look="neo" transform="translate(1025.921875, 122)"><rect class="basic label-container" style="" x="-76" y="-24" width="152" height="48"/><g class="label" style="" transform="translate(-60, -12)"><rect/><foreignObject width="120" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: nowrap; line-height: 1.5; max-width: 120px; text-align: center; width: 120px;"><span class="nodeLabel"><p>request</p></span></div></foreignObject></g></g></g></g></g><defs><filter id="my-svg-drop-shadow" height="130%" width="130%"><feDropShadow dx="4" dy="4" stdDeviation="0" flood-opacity="0.06" flood-color="#000000"/></filter></defs><defs><filter id="my-svg-drop-shadow-small" height="150%" width="150%"><feDropShadow dx="2" dy="2" stdDeviation="0" flood-opacity="0.06" flood-color="#000000"/></filter></defs><linearGradient id="my-svg-gradient" gradientUnits="objectBoundingBox" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="hsl(0, 0%, 83.3333333333%)" stop-opacity="1"/><stop offset="100%" stop-color="hsl(0, 0%, 88.9215686275%)" stop-opacity="1"/></linearGradient></svg></figure>
+<h2>Invocation is text substitution, not a tool call</h2>
+<p>A tool call is the model&#39;s decision. A skill invocation is the person&#39;s: they type <code>/deploy staging</code>, and the agent expands it before the model sees anything.</p>
+<pre><code>  typed:   /deploy staging eu-west
+  sent:    Check the tests pass, then deploy to staging in eu-west.
+           Report the deployed version. Full request: staging eu-west</code></pre>
+<p>Three consequences:</p>
+<ol>
+<li><strong>The model never sees the shorthand.</strong> It sees instructions, which is what it</li>
+</ol>
+<p>can act on.</p>
+<ol>
+<li><strong>Expansion happens before the session records the turn.</strong> A resumed run replays</li>
+</ol>
+<p>what was sent, not the shorthand.</p>
+<ol>
+<li><strong>An unknown name is passed through.</strong> Deleting the person&#39;s text because of a</li>
+</ol>
+<p>typo is worse than sending a slash command the model ignores.</p>
+<h2>Placeholders</h2>
+<p>Two forms, often in one body:</p>
+<table>
+<thead><tr><th>Placeholder</th><th>Replaced with</th></tr></thead>
+<tbody>
+<tr><td><code>$ARGUMENTS</code></td><td>everything after the skill name, as one string</td></tr>
+<tr><td><code>$0</code>, <code>$1</code>, <code>$2</code></td><td>one whitespace-separated word, by position</td></tr>
+<tr><td><code>$9</code> with no argument</td><td>the empty string</td></tr>
+</tbody>
+</table>
+<p>Replace <code>$ARGUMENTS</code> <strong>first</strong>. Both forms start with <code>$</code>, and a positional pass that runs first can corrupt the longer token.</p>
+<pre><code>  args:  staging eu-west
+  &#34;Deploy to $0 in $1. Full: $ARGUMENTS&#34;
+  → &#34;Deploy to staging in eu-west. Full: staging eu-west&#34;</code></pre>
+<p>Arguments are split on whitespace. Quoting inside an argument is not handled, and the overview says so rather than implying otherwise.</p>
+<h2>Stacking</h2>
+<p>One prompt can name several skills. Arguments run from the skill name to the next slash command:</p>
+<pre><code>  &#34;/review /deploy production eu-west&#34;
+
+  review  → arguments: &#34;&#34;                    (nothing before the next command)
+  deploy  → arguments: &#34;production eu-west&#34;</code></pre>
+<p>Expansion walks left to right and preserves order, because the order is the instruction. &#34;Review, then deploy&#34; and &#34;deploy, then review&#34; are different jobs.</p>
+<h2>The catalogue is a Contributor</h2>
+<p>Chapter 05 built the seam for exactly this:</p>
+<pre><code class="language-go">system, err := agent.BuildSystemPrompt(ctx, agent.BasePrompt,
+	&amp;agent.AgentsFile{Root: root},
+	catalog,                  // ← skills, added in this chapter
+)</code></pre>
+<p><code>Catalog.Contribute</code> renders the list. The prompt builder did not change. The loop did not change. That is the third chapter in a row where a feature arrived without touching either.</p>
+<h2>Why the frontmatter is not YAML</h2>
+<p><code>name:</code> and <code>description:</code> on their own lines between <code>---</code> fences is enough for this feature and needs no dependency. A real <code>SKILL.md</code> format often uses YAML with lists and nesting; that is a dependency and a specification, and neither is the lesson here.</p>
+<p>The rule this chapter does keep from real formats: <strong>a file that cannot be parsed is skipped, not fatal.</strong> One malformed skill must not stop the agent from starting.</p>
+<h2>What this chapter does not do</h2>
+<ul>
+<li><strong>No scripts.</strong> A skill is instructions, not a bundled program.</li>
+<li><strong>No named arguments.</strong> Only <code>$ARGUMENTS</code> and positional.</li>
+<li><strong>No model-chosen invocation.</strong> The person types the slash command. Letting the</li>
+</ul>
+<p>model choose from the catalogue is a tool-calling problem, and chapter 04 already covered the mechanism.</p>
+<ul>
+<li><strong>No skill events.</strong> A terminal UI would want one; the event stream does not have</li>
+</ul>
+<p>it yet.</p>
+<h2>Where the real implementations go further</h2>
+<table>
+<thead><tr><th>Concern</th><th>Implementation</th></tr></thead>
+<tbody>
+<tr><td>Progressive disclosure</td><td>pi skills: description first, body on demand</td></tr>
+<tr><td>Skill directories with scripts</td><td>CodeCrafters &#34;run a script bundled with a skill&#34;</td></tr>
+<tr><td>Model-chosen skills</td><td>the catalogue as a tool, not a prompt section</td></tr>
+<tr><td>Frontmatter with lists and defaults</td><td>YAML parsing</td></tr>
+</tbody>
+</table>
+<p>The first row is this chapter. The second is a natural extension for a learner who wants to keep going, and it is listed in &#34;where next&#34;.</p>
+<h2>Self-check</h2>
+<ol>
+<li>Which part of a skill is sent on every request, and why is the other part not?</li>
+</ol>
+<p><em>(One file, two audiences)</em></p>
+<ol>
+<li>Who decides to invoke a skill: the model or the person? *(Invocation is text</li>
+</ol>
+<p>substitution, not a tool call)*</p>
+<ol>
+<li>Why is <code>$ARGUMENTS</code> replaced before <code>$0</code>? <em>(Placeholders)</em></li>
+<li>How are arguments delimited when two skills share a prompt? <em>(Stacking)</em></li>
+<li>What happens to a skill file that has no frontmatter, and why is that the right</li>
+</ol>
+<p>choice? <em>(Why the frontmatter is not YAML)</em></p>
+<nav class="pager">
+<a class="prev" href="../../chapters/09-skills/index.html">&larr; 09 Skills</a>
+<a class="next" href="../../chapters/09-skills/problem.html">09 Skills · Problem &rarr;</a>
+</nav>
+</main>
+</body>
+</html>

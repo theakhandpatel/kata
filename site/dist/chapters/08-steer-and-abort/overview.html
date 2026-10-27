@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>08 Interrupt and steering · Overview · Kata</title>
+<link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+<aside class="nav">
+<a class="brand" href="../../index.html">Kata</a>
+<div class="group">
+<div class="group-title">Start</div>
+<ul>
+<li><a href="../../index.html">Home</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">I. Wire</div>
+<ul>
+<li><a href="../../chapters/01-chat-with-the-model/index.html">01 Talk to the model</a></li>
+<li><a href="../../chapters/02-tool-calling/index.html">02 Tool calling</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">II. Act</div>
+<ul>
+<li><a href="../../chapters/03-tools-that-touch-disk/index.html">03 Tools that touch disk</a></li>
+<li><a href="../../chapters/04-the-agent-loop/index.html">04 The agent loop</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">III. Remember</div>
+<ul>
+<li><a href="../../chapters/05-prompt-assembly/index.html">05 Prompt assembly</a></li>
+<li><a href="../../chapters/06-sessions/index.html">06 Sessions</a></li>
+<li><a href="../../chapters/07-context-budget/index.html">07 Context budget</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">IV. Extend</div>
+<ul>
+<li><a href="../../chapters/08-steer-and-abort/index.html">08 Interrupt and steering</a></li>
+<li><a href="../../chapters/09-skills/index.html">09 Skills</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">V. Compose</div>
+<ul>
+<li><a href="../../chapters/10-subagent/index.html">10 Subagent</a></li>
+<li><a href="../../chapters/11-mcp/index.html">11 MCP</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">Reference</div>
+<ul>
+<li><a href="../../docs/architecture.html">Architecture</a></li>
+<li><a href="../../docs/chapter-format.html">Chapter format</a></li>
+<li><a href="../../docs/writing-style.html">Writing style</a></li>
+<li><a href="../../docs/designs.html">Designs</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">After the course</div>
+<ul>
+<li><a href="../../chapters/where-next.html">Where next</a></li>
+</ul>
+</div>
+</aside>
+<main>
+<nav class="subnav">
+<a class="current" href="../../chapters/08-steer-and-abort/overview.html">Overview</a>
+<a href="../../chapters/08-steer-and-abort/problem.html">Problem</a>
+<a href="../../chapters/08-steer-and-abort/example.html">Example</a>
+</nav>
+<h1>08 — Overview</h1>
+<p><em>How interruption and steering work. Read this before you write code.</em></p>
+<hr>
+<h2>Two clocks, one conversation</h2>
+<p>A run is not a function call. It takes seconds, sometimes minutes, and a person is sitting in front of it. Two things become possible:</p>
+<ul>
+<li>stop it;</li>
+<li>say something while it is going.</li>
+</ul>
+<p>Both need the same thing: a boundary where a new event can enter without corrupting the conversation. That boundary is the end of a turn.</p>
+<figure class="diagram"><svg id="my-svg" width="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" class="flowchart" style="max-width: 586px; background-color: transparent;" viewBox="4 4 586 902" role="graphics-document document" aria-roledescription="flowchart-v2"><style>#my-svg{font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:16px;fill:#000000;}@keyframes edge-animation-frame{from{stroke-dashoffset:0;}}@keyframes dash{to{stroke-dashoffset:0;}}#my-svg .edge-animation-slow{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 50s linear infinite;stroke-linecap:round;}#my-svg .edge-animation-fast{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 20s linear infinite;stroke-linecap:round;}#my-svg .error-icon{fill:#552222;}#my-svg .error-text{fill:#552222;stroke:#552222;}#my-svg .edge-thickness-normal{stroke-width:1px;}#my-svg .edge-thickness-thick{stroke-width:3.5px;}#my-svg .edge-pattern-solid{stroke-dasharray:0;}#my-svg .edge-thickness-invisible{stroke-width:0;fill:none;}#my-svg .edge-pattern-dashed{stroke-dasharray:3;}#my-svg .edge-pattern-dotted{stroke-dasharray:2;}#my-svg .marker{fill:#666;stroke:#666;}#my-svg .marker.cross{stroke:#666;}#my-svg svg{font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:16px;}#my-svg p{margin:0;}#my-svg .label{font-family:"trebuchet ms",verdana,arial,sans-serif;color:#000000;}#my-svg .cluster-label text{fill:#333;}#my-svg .cluster-label span{color:#333;}#my-svg .cluster-label span p{background-color:transparent;}#my-svg .label text,#my-svg span{fill:#000000;color:#000000;}#my-svg .node rect,#my-svg .node circle,#my-svg .node ellipse,#my-svg .node polygon,#my-svg .node path{fill:#eee;stroke:#999;stroke-width:1px;}#my-svg .rough-node .label text,#my-svg .node .label text,#my-svg .image-shape .label,#my-svg .icon-shape .label{text-anchor:middle;}#my-svg .node .katex path{fill:#000;stroke:#000;stroke-width:1px;}#my-svg .rough-node .label,#my-svg .node .label,#my-svg .image-shape .label,#my-svg .icon-shape .label{text-align:center;}#my-svg .node.clickable{cursor:pointer;}#my-svg .root .anchor path{fill:#666!important;stroke-width:0;stroke:#666;}#my-svg .arrowheadPath{fill:#333333;}#my-svg .edgePaths .path{stroke:#666;stroke-width:1px;}#my-svg .flowchart-link{stroke:#666;fill:none;}#my-svg .edgeLabel{background-color:white;text-align:center;}#my-svg .edgeLabel p{background-color:white;}#my-svg .edgeLabel rect{opacity:0.5;background-color:white;fill:white;}#my-svg .labelBkg{background-color:rgba(255, 255, 255, 0.5);}#my-svg .cluster rect{fill:hsl(0, 0%, 98.9215686275%);stroke:#707070;stroke-width:1px;}#my-svg .cluster text{fill:#333;}#my-svg .cluster span{color:#333;}#my-svg .node .collapsed-indicator{fill:#707070;stroke:none;opacity:0.6;}#my-svg .node .collapsed-separator{stroke:#707070;stroke-width:0.75px;}#my-svg div.mermaidTooltip{position:absolute;text-align:center;max-width:200px;padding:2px;font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:12px;background:hsl(-160, 0%, 93.3333333333%);border:1px solid #707070;border-radius:2px;pointer-events:none;z-index:100;}#my-svg .flowchartTitleText{text-anchor:middle;font-size:18px;fill:#000000;}#my-svg rect.text{fill:none;stroke-width:0;}#my-svg .icon-shape,#my-svg .image-shape{background-color:white;text-align:center;}#my-svg .icon-shape p,#my-svg .image-shape p{background-color:white;padding:2px;}#my-svg .icon-shape .label rect,#my-svg .image-shape .label rect{opacity:0.5;background-color:white;fill:white;}#my-svg .label-icon{display:inline-block;height:1em;overflow:visible;vertical-align:-0.125em;}#my-svg .node .label-icon path{fill:currentColor;stroke:revert;stroke-width:revert;}#my-svg .node .neo-node{stroke:#999;}#my-svg [data-look="neo"].node rect,#my-svg [data-look="neo"].cluster rect,#my-svg [data-look="neo"].node polygon{stroke:url(#my-svg-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg [data-look="neo"].swimlane.cluster rect{filter:none;}#my-svg [data-look="neo"].node path{stroke:url(#my-svg-gradient);stroke-width:1px;}#my-svg [data-look="neo"].node .outer-path{filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg [data-look="neo"].node .neo-line path{stroke:#999;filter:none;}#my-svg [data-look="neo"].node circle{stroke:url(#my-svg-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg [data-look="neo"].node circle .state-start{fill:#000000;}#my-svg [data-look="neo"].icon-shape .icon{fill:url(#my-svg-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg [data-look="neo"].icon-shape .icon-neo path{stroke:url(#my-svg-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg :root{--mermaid-font-family:"trebuchet ms",verdana,arial,sans-serif;}</style><g><marker id="my-svg_flowchart-v2-pointEnd" class="marker flowchart-v2" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-pointStart" class="marker flowchart-v2" viewBox="0 0 10 10" refX="4.5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 5 L 10 10 L 10 0 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-pointEnd-margin" class="marker flowchart-v2" viewBox="0 0 11.5 14" refX="11.5" refY="7" markerUnits="userSpaceOnUse" markerWidth="10.5" markerHeight="14" orient="auto"><path d="M 0 0 L 11.5 7 L 0 14 z" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-pointStart-margin" class="marker flowchart-v2" viewBox="0 0 11.5 14" refX="1" refY="7" markerUnits="userSpaceOnUse" markerWidth="11.5" markerHeight="14" orient="auto"><polygon points="0,7 11.5,14 11.5,0" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-circleEnd" class="marker flowchart-v2" viewBox="0 0 10 10" refX="11" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-circleStart" class="marker flowchart-v2" viewBox="0 0 10 10" refX="-1" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-circleEnd-margin" class="marker flowchart-v2" viewBox="0 0 10 10" refY="5" refX="12.25" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-circleStart-margin" class="marker flowchart-v2" viewBox="0 0 10 10" refX="-2" refY="5" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-crossEnd" class="marker cross flowchart-v2" viewBox="0 0 11 11" refX="12" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-crossStart" class="marker cross flowchart-v2" viewBox="0 0 11 11" refX="-1" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-crossEnd-margin" class="marker cross flowchart-v2" viewBox="0 0 15 15" refX="17.7" refY="7.5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto"><path d="M 1,1 L 14,14 M 1,14 L 14,1" class="arrowMarkerPath" style="stroke-width: 2.5;"/></marker><marker id="my-svg_flowchart-v2-crossStart-margin" class="marker cross flowchart-v2" viewBox="0 0 15 15" refX="-3.5" refY="7.5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto"><path d="M 1,1 L 14,14 M 1,14 L 14,1" class="arrowMarkerPath" style="stroke-width: 2.5; stroke-dasharray: 1, 0;"/></marker><g class="root"><g class="clusters"/><g class="edges edgePaths"><path d="M289.08333333333337,60L289.08333333333337,72.92893218813452Q289.08333333333337,80 282.0122655214679,80L242.90440114519882,80Q235.83333333333334,80 235.83333333333334,87.07106781186548L235.83333333333334,96" id="my-svg-L_A_B_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 79.92169952392578 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_A_B_0" data-points="W3sieCI6Mjg5LjA4MzMzMzMzMzMzMzM3LCJ5Ijo2MH0seyJ4IjoyODkuMDgzMzMzMzMzMzMzMzcsInkiOjgwfSx7IngiOjIzNS44MzMzMzMzMzMzMzMzNCwieSI6ODB9LHsieCI6MjM1LjgzMzMzMzMzMzMzMzM0LCJ5IjoxMDB9XQ==" data-look="neo" marker-end="url(#my-svg_flowchart-v2-pointEnd-margin)"/><path d="M213.83333333333334,148L213.83333333333334,160.92893218813452Q213.83333333333334,168 206.76226552146787,168L95.07106781186548,168Q88,168 88,175.07106781186548L88,272" id="my-svg-L_B_X_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 240.5050048828125 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_B_X_0" data-points="W3sieCI6MjEzLjgzMzMzMzMzMzMzMzM0LCJ5IjoxNDh9LHsieCI6MjEzLjgzMzMzMzMzMzMzMzM0LCJ5IjoxNjh9LHsieCI6ODgsInkiOjE2OH0seyJ4Ijo4OCwieSI6Mjc2fV0=" data-look="neo" marker-end="url(#my-svg_flowchart-v2-pointEnd-margin)"/><path d="M257.83333333333337,148L257.83333333333337,160.92893218813452Q257.83333333333337,168 264.90440114519885,168L329.5122655214679,168Q336.58333333333337,168 336.58333333333337,175.07106781186548L336.58333333333337,184" id="my-svg-L_B_C_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 105.4217300415039 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_B_C_0" data-points="W3sieCI6MjU3LjgzMzMzMzMzMzMzMzM3LCJ5IjoxNDh9LHsieCI6MjU3LjgzMzMzMzMzMzMzMzM3LCJ5IjoxNjh9LHsieCI6MzM2LjU4MzMzMzMzMzMzMzM3LCJ5IjoxNjh9LHsieCI6MzM2LjU4MzMzMzMzMzMzMzM3LCJ5IjoxODh9XQ==" data-look="neo" marker-end="url(#my-svg_flowchart-v2-pointEnd-margin)"/><path d="M336.58333333333337,236L336.58333333333337,288" id="my-svg-L_C_D_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 48 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_C_D_0" data-points="W3sieCI6MzM2LjU4MzMzMzMzMzMzMzM3LCJ5IjoyMzZ9LHsieCI6MzM2LjU4MzMzMzMzMzMzMzM3LCJ5IjoyOTJ9XQ==" data-look="neo" marker-end="url(#my-svg_flowchart-v2-pointEnd-margin)"/><path d="M314.58333333333337,340L314.58333333333337,360.9289321881345Q314.58333333333337,368 307.5122655214679,368L274.5710678118655,368Q267.5,368 267.5,375.0710678118655L267.5,544" id="my-svg-L_D_E_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 241.75506591796875 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_D_E_0" data-points="W3sieCI6MzE0LjU4MzMzMzMzMzMzMzM3LCJ5IjozNDB9LHsieCI6MzE0LjU4MzMzMzMzMzMzMzM3LCJ5IjozNjh9LHsieCI6MjY3LjUsInkiOjM2OH0seyJ4IjoyNjcuNSwieSI6NTQ4fV0=" data-look="neo" marker-end="url(#my-svg_flowchart-v2-pointEnd-margin)"/><path d="M358.58333333333337,340L358.58333333333337,360.9289321881345Q358.58333333333337,368 365.65440114519885,368L422.1789321881345,368Q429.25,368 429.25,375.0710678118655L429.25,520.9289321881345Q429.25,528 436.3210678118655,528L445.7622655214679,528Q452.83333333333337,528 452.83333333333337,535.0710678118655L452.83333333333337,548L452.83333333333337,573.666690826416" id="my-svg-L_D_F_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 313.2601318359375 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_D_F_0" data-points="W3sieCI6MzU4LjU4MzMzMzMzMzMzMzM3LCJ5IjozNDB9LHsieCI6MzU4LjU4MzMzMzMzMzMzMzM3LCJ5IjozNjh9LHsieCI6NDI5LjI1LCJ5IjozNjh9LHsieCI6NDI5LjI1LCJ5Ijo1Mjh9LHsieCI6NDUyLjgzMzMzMzMzMzMzMzM3LCJ5Ijo1Mjh9LHsieCI6NDUyLjgzMzMzMzMzMzMzMzM3LCJ5Ijo1NDh9LHsieCI6NDUyLjgzMzMzMzMzMzMzMzM3LCJ5Ijo1NzcuNjY2NjkwODI2NDE2fV0=" data-look="neo" marker-end="url(#my-svg_flowchart-v2-pointEnd-margin)"/><path d="M512.1666666666667,577.666690826416L512.1666666666667,548L512.1666666666667,448L512.1666666666667,312L512.1666666666667,124L512.1666666666667,87.07106781186548Q512.1666666666667,80 505.09559885480127,80L340.15440114519885,80Q333.08333333333337,80 333.08333333333337,72.92893218813452L333.08333333333337,64" id="my-svg-L_F_A_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 683.4218139648438 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_F_A_0" data-points="W3sieCI6NTEyLjE2NjY2NjY2NjY2NjcsInkiOjU3Ny42NjY2OTA4MjY0MTZ9LHsieCI6NTEyLjE2NjY2NjY2NjY2NjcsInkiOjU0OH0seyJ4Ijo1MTIuMTY2NjY2NjY2NjY2NywieSI6NDQ4fSx7IngiOjUxMi4xNjY2NjY2NjY2NjY3LCJ5IjozMTJ9LHsieCI6NTEyLjE2NjY2NjY2NjY2NjcsInkiOjEyNH0seyJ4Ijo1MTIuMTY2NjY2NjY2NjY2NywieSI6ODB9LHsieCI6MzMzLjA4MzMzMzMzMzMzMzM3LCJ5Ijo4MH0seyJ4IjozMzMuMDgzMzMzMzMzMzMzMzcsInkiOjYwfV0=" data-look="neo" marker-end="url(#my-svg_flowchart-v2-pointEnd-margin)"/><path d="M482.5,746L482.5,846" id="my-svg-L_F_G_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 96 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_F_G_0" data-points="W3sieCI6NDgyLjUsInkiOjc0Nn0seyJ4Ijo0ODIuNSwieSI6ODUwfV0=" data-look="neo" marker-end="url(#my-svg_flowchart-v2-pointEnd-margin)"/><path d="M88,348L88,384" id="my-svg-L_X_H_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 32 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_X_H_0" data-points="W3sieCI6ODgsInkiOjM0OH0seyJ4Ijo4OCwieSI6Mzg4fV0=" data-look="neo" marker-end="url(#my-svg_flowchart-v2-pointEnd-margin)"/></g><g class="edgeLabels"><g class="edgeLabel" transform="translate(87.8828125, 212)"><g class="label" data-id="L_B_X_0" transform="translate(-20.8828125, -12)"><foreignObject width="41.765625" height="24"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"><p>Ctrl-C</p></span></div></foreignObject></g></g><g class="edgeLabel" transform="translate(267.140625, 448)"><g class="label" data-id="L_D_E_0" transform="translate(-63.140625, -12)"><foreignObject width="126.28125" height="24"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"><p>messages arrived</p></span></div></foreignObject></g></g><g class="edgeLabel" transform="translate(429, 448)"><g class="label" data-id="L_D_F_0" transform="translate(-26.25, -12)"><foreignObject width="52.5" height="24"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"><p>nothing</p></span></div></foreignObject></g></g><g class="edgeLabel" transform="translate(512.1197916666667, 212)"><g class="label" data-id="L_F_A_0" transform="translate(-12.453125, -12)"><foreignObject width="24.90625" height="24"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"><p>yes</p></span></div></foreignObject></g></g><g class="edgeLabel" transform="translate(482.3984375, 798)"><g class="label" data-id="L_F_G_0" transform="translate(-8.8984375, -12)"><foreignObject width="17.796875" height="24"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"><p>no</p></span></div></foreignObject></g></g></g><g class="nodes"><g class="node default" id="my-svg-flowchart-A-0" data-look="neo" transform="translate(311.08333333333337, 36)"><rect class="basic label-container" style="" x="-76" y="-24" width="152" height="48"/><g class="label" style="" transform="translate(-60, -12)"><rect/><foreignObject width="120" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: nowrap; line-height: 1.5; max-width: 120px; text-align: center; width: 120px;"><span class="nodeLabel"><p>turn_start</p></span></div></foreignObject></g></g><g class="node default" id="my-svg-flowchart-B-1" data-look="neo" transform="translate(235.83333333333334, 124)"><rect class="basic label-container" style="" x="-76" y="-24" width="152" height="48"/><g class="label" style="" transform="translate(-60, -12)"><rect/><foreignObject width="120" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: nowrap; line-height: 1.5; max-width: 120px; text-align: center; width: 120px;"><span class="nodeLabel"><p>stream the reply</p></span></div></foreignObject></g></g><g class="node default" id="my-svg-flowchart-X-3" data-look="neo" transform="translate(88, 312)"><rect class="basic label-container" style="" x="-76" y="-36" width="152" height="72"/><g class="label" style="" transform="translate(-60, -24)"><rect/><foreignObject width="120" height="48"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: nowrap; line-height: 1.5; max-width: 120px; text-align: center; width: 120px;"><span class="nodeLabel"><p>abort:<br />keep partial text</p></span></div></foreignObject></g></g><g class="node default" id="my-svg-flowchart-C-5" data-look="neo" transform="translate(336.58333333333337, 212)"><rect class="basic label-container" style="" x="-76" y="-24" width="152" height="48"/><g class="label" style="" transform="translate(-60, -12)"><rect/><foreignObject width="120" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: nowrap; line-height: 1.5; max-width: 120px; text-align: center; width: 120px;"><span class="nodeLabel"><p>run tools</p></span></div></foreignObject></g></g><g class="node default" id="my-svg-flowchart-D-7" data-look="neo" transform="translate(336.58333333333337, 316)"><rect class="basic label-container" style="" x="-76" y="-24" width="152" height="48"/><g class="label" style="" transform="translate(-60, -12)"><rect/><foreignObject width="120" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: nowrap; line-height: 1.5; max-width: 120px; text-align: center; width: 120px;"><span class="nodeLabel"><p>drain steering</p></span></div></foreignObject></g></g><g class="node default" id="my-svg-flowchart-E-9" data-look="neo" transform="translate(267.5, 584)"><rect class="basic label-container" style="" x="-76" y="-36" width="152" height="72"/><g class="label" style="" transform="translate(-60, -24)"><rect/><foreignObject width="120" height="48"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: nowrap; line-height: 1.5; max-width: 120px; text-align: center; width: 120px;"><span class="nodeLabel"><p>append as user<br />and loop again</p></span></div></foreignObject></g></g><g class="node default" id="my-svg-flowchart-F-11" data-look="neo" transform="translate(482.5, 647)"><polygon points="99,0 198,-99 99,-198 0,-99" class="label-container" transform="translate(-98.5, 99)"/><g class="label" style="" transform="translate(-60, -24)"><rect/><foreignObject width="120" height="48"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: nowrap; line-height: 1.5; max-width: 120px; text-align: center; width: 120px;"><span class="nodeLabel"><p>model asked<br />for tools?</p></span></div></foreignObject></g></g><g class="node default" id="my-svg-flowchart-G-15" data-look="neo" transform="translate(482.5, 874)"><rect class="basic label-container" style="" x="-76" y="-24" width="152" height="48"/><g class="label" style="" transform="translate(-60, -12)"><rect/><foreignObject width="120" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: nowrap; line-height: 1.5; max-width: 120px; text-align: center; width: 120px;"><span class="nodeLabel"><p>agent_end done</p></span></div></foreignObject></g></g><g class="node default" id="my-svg-flowchart-H-17" data-look="neo" transform="translate(88, 448)"><rect class="basic label-container" style="" x="-76" y="-60" width="152" height="120"/><g class="label" style="" transform="translate(-60, -48)"><rect/><foreignObject width="120" height="96"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: break-spaces; line-height: 1.5; max-width: 120px; text-align: center; width: 120px;"><span class="nodeLabel"><p>agent_end aborted<br />session still written</p></span></div></foreignObject></g></g></g></g></g><defs><filter id="my-svg-drop-shadow" height="130%" width="130%"><feDropShadow dx="4" dy="4" stdDeviation="0" flood-opacity="0.06" flood-color="#000000"/></filter></defs><defs><filter id="my-svg-drop-shadow-small" height="150%" width="150%"><feDropShadow dx="2" dy="2" stdDeviation="0" flood-opacity="0.06" flood-color="#000000"/></filter></defs><linearGradient id="my-svg-gradient" gradientUnits="objectBoundingBox" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="hsl(0, 0%, 83.3333333333%)" stop-opacity="1"/><stop offset="100%" stop-color="hsl(0, 0%, 88.9215686275%)" stop-opacity="1"/></linearGradient></svg></figure>
+<h2>Abort: the text already arrived</h2>
+<p>The important property is not &#34;the program stops&#34;. It is that <strong>stopping does not erase what the user already read</strong>.</p>
+<p>A streaming client accumulates text as it arrives. When the request is cancelled, the read fails part-way. Most implementations return an empty message with an error, and the caller prints the error. That loses the half-sentence the user was looking at, and it makes &#34;I interrupted it&#34; indistinguishable from &#34;it crashed&#34;.</p>
+<p>So the parser returns both:</p>
+<pre><code class="language-go">return Message{Role: RoleAssistant, Content: content.String()}, usage,
+	fmt.Errorf(&#34;read stream: %w&#34;, err)</code></pre>
+<p>and the loop keeps it:</p>
+<pre><code class="language-go">if err != nil {
+	if msg.Content != &#34;&#34; {
+		history = append(history, msg)
+	}
+	...
+}</code></pre>
+<p>Three consequences, and all three are graded:</p>
+<table>
+<thead><tr><th>Behaviour</th><th>Without it</th></tr></thead>
+<tbody>
+<tr><td>partial text printed</td><td>the user sees an error and loses the answer</td></tr>
+<tr><td>exit code 130</td><td>a script cannot tell interrupted from failed</td></tr>
+<tr><td>the turn persisted</td><td>the next run repeats work the user already saw</td></tr>
+</tbody>
+</table>
+<p>Exit 130 is the shell convention for a process stopped by SIGINT (128 + 2). It is not a detail: <code>if agent -p ...; then ...</code> should be able to reason about it.</p>
+<h2>Steering: a boundary, not a merge</h2>
+<p>The tempting implementation is to append what the user typed to the prompt. That is wrong in a way that looks fine on a short run: the model answers a prompt the user did not type, and the reply addresses a question that was already being answered.</p>
+<p>The correct place is the end of the turn:</p>
+<pre><code>  request 1:  system, user(&#34;add a flag&#34;)
+  reply 1:    &#34;I added the flag.&#34;
+  steer:      &#34;also check the tests&#34;        ← typed during reply 1
+  request 2:  system, user, assistant, user(&#34;also check the tests&#34;)</code></pre>
+<p>Two properties follow, and both are graded:</p>
+<ol>
+<li><strong>It is a new message, not an edit.</strong> The first request must not contain the</li>
+</ol>
+<p>steering text at all.</p>
+<ol>
+<li><strong>It keeps the run alive.</strong> If the model said it was done and the user then says</li>
+</ol>
+<p>something, the run must continue. Stopping would ignore the person.</p>
+<pre><code>  done condition:  no tool calls  AND  nothing steered</code></pre>
+<p>That <code>and</code> is the whole design. Without it, a steered message after a finished answer is accepted, recorded, and ignored.</p>
+<h2>A queue needs a lock and a clear</h2>
+<p>Steering arrives on a goroutine reading stdin, and is consumed on the loop&#39;s goroutine. Two rules make that safe:</p>
+<ul>
+<li><strong>Drain takes and clears under a lock.</strong> A queue that is read but not cleared</li>
+</ul>
+<p>replays the same instruction every turn.</p>
+<ul>
+<li><strong>Drain never blocks.</strong> A hook that waits for input turns the loop into a program</li>
+</ul>
+<p>that waits for a human, which is the opposite of the feature.</p>
+<pre><code class="language-go">func (s *StdinSteering) Drain() []Message {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if len(s.queue) == 0 {
+		return nil
+	}
+	out := s.queue
+	s.queue = nil
+	return out
+}</code></pre>
+<h2>Why this chapter edits the loop</h2>
+<p>Every previous chapter added files. This one changes <code>loop.go</code>, and that is deliberate: steering is a state transition inside the loop, not a policy around it. The budget could be a provider decorator because it only rewrites a request. Steering changes the history the loop owns, so it belongs there.</p>
+<p>The rule is not &#34;never touch the loop&#34;. It is &#34;touch the loop only for loop state&#34;. This is loop state.</p>
+<h2>What this chapter does not do</h2>
+<ul>
+<li><strong>No interactive UI.</strong> Steering comes from stdin as lines, which is enough to</li>
+</ul>
+<p>prove the mechanism without building a terminal application.</p>
+<ul>
+<li><strong>No queue persistence.</strong> An undelivered steered message dies with the process.</li>
+<li><strong>No graceful process-group teardown.</strong> A cancelled tool&#39;s grandchildren are</li>
+</ul>
+<p>still the known limitation from chapter 03.</p>
+<h2>Where the real implementations go further</h2>
+<table>
+<thead><tr><th>Concern</th><th>pi</th><th>crush</th></tr></thead>
+<tbody>
+<tr><td>Steering messages</td><td><code>getSteeringMessages</code> in the loop</td><td><code>internal/agent/coordinator.go</code></td></tr>
+<tr><td>Abort</td><td><code>AbortSignal</code> through every layer</td><td>context plus a cancel channel</td></tr>
+<tr><td>Queue drain points</td><td>after the assistant turn, one-at-a-time or all</td><td>queued run ids</td></tr>
+</tbody>
+</table>
+<p>pi distinguishes steering from follow-up messages: steering enters during a run, follow-ups only after it ends. This chapter has one queue, which is the honest minimum for two graded claims.</p>
+<h2>Self-check</h2>
+<ol>
+<li>What must survive an interrupt, and what does the exit code 130 tell a script?</li>
+</ol>
+<p><em>(Abort: the text already arrived)</em></p>
+<ol>
+<li>Where does a steered message enter, and what is wrong with merging it into the</li>
+</ol>
+<p>prompt? <em>(Steering: a boundary, not a merge)</em></p>
+<ol>
+<li>State the done condition of the loop in one line. *(Steering: a boundary, not a</li>
+</ol>
+<p>merge)*</p>
+<ol>
+<li>Why must Drain clear the queue, and why must it not block?</li>
+</ol>
+<p><em>(A queue needs a lock and a clear)</em></p>
+<ol>
+<li>Why is editing the loop justified here when a decorator was right for the</li>
+</ol>
+<p>budget? <em>(Why this chapter edits the loop)</em></p>
+<nav class="pager">
+<a class="prev" href="../../chapters/08-steer-and-abort/index.html">&larr; 08 Interrupt and steering</a>
+<a class="next" href="../../chapters/08-steer-and-abort/problem.html">08 Interrupt and steering · Problem &rarr;</a>
+</nav>
+</main>
+</body>
+</html>

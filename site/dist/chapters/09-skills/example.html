@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>09 Skills · Example · Kata</title>
+<link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+<aside class="nav">
+<a class="brand" href="../../index.html">Kata</a>
+<div class="group">
+<div class="group-title">Start</div>
+<ul>
+<li><a href="../../index.html">Home</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">I. Wire</div>
+<ul>
+<li><a href="../../chapters/01-chat-with-the-model/index.html">01 Talk to the model</a></li>
+<li><a href="../../chapters/02-tool-calling/index.html">02 Tool calling</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">II. Act</div>
+<ul>
+<li><a href="../../chapters/03-tools-that-touch-disk/index.html">03 Tools that touch disk</a></li>
+<li><a href="../../chapters/04-the-agent-loop/index.html">04 The agent loop</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">III. Remember</div>
+<ul>
+<li><a href="../../chapters/05-prompt-assembly/index.html">05 Prompt assembly</a></li>
+<li><a href="../../chapters/06-sessions/index.html">06 Sessions</a></li>
+<li><a href="../../chapters/07-context-budget/index.html">07 Context budget</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">IV. Extend</div>
+<ul>
+<li><a href="../../chapters/08-steer-and-abort/index.html">08 Interrupt and steering</a></li>
+<li><a href="../../chapters/09-skills/index.html">09 Skills</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">V. Compose</div>
+<ul>
+<li><a href="../../chapters/10-subagent/index.html">10 Subagent</a></li>
+<li><a href="../../chapters/11-mcp/index.html">11 MCP</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">Reference</div>
+<ul>
+<li><a href="../../docs/architecture.html">Architecture</a></li>
+<li><a href="../../docs/chapter-format.html">Chapter format</a></li>
+<li><a href="../../docs/writing-style.html">Writing style</a></li>
+<li><a href="../../docs/designs.html">Designs</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">After the course</div>
+<ul>
+<li><a href="../../chapters/where-next.html">Where next</a></li>
+</ul>
+</div>
+</aside>
+<main>
+<nav class="subnav">
+<a href="../../chapters/09-skills/overview.html">Overview</a>
+<a href="../../chapters/09-skills/problem.html">Problem</a>
+<a class="current" href="../../chapters/09-skills/example.html">Example</a>
+</nav>
+<h1>09 — Example</h1>
+<p><em>Full, annotated implementation. Read it after <code>kata submit 09</code> passes.</em></p>
+<p>The compilable files are <code>reference/ch09/agent/skill.go</code> and <code>reference/ch09/agent/cmd/agent/main.go</code>. The prompt builder and the loop are unchanged; the catalogue arrives through the <code>Contributor</code> seam from chapter 05.</p>
+<hr>
+<h2>The shape</h2>
+<pre><code>skill.go    ParseSkill, LoadSkills, Catalog, Expand, expandBody
+main.go     load, pass to BuildSystemPrompt, expand the prompt</code></pre>
+<h2>Step 1 — parse without a YAML dependency</h2>
+<pre><code class="language-go">if !strings.HasPrefix(text, &#34;---&#34;) {
+	return Skill{}, ErrNoFrontmatter
+}
+rest := text[3:]
+end := strings.Index(rest, &#34;\n---&#34;)
+if end &lt; 0 {
+	return Skill{}, ErrNoFrontmatter
+}
+
+for _, line := range strings.Split(rest[:end], &#34;\n&#34;) {
+	key, value, ok := strings.Cut(line, &#34;:&#34;)
+	if !ok {
+		continue
+	}
+	meta[strings.ToLower(strings.TrimSpace(key))] = trimQuotes(strings.TrimSpace(value))
+}</code></pre>
+<p><code>strings.Cut</code> splits on the first colon, so a description containing a colon still works: <code>description: Deploy: to a region</code> keeps the rest. That is the one place a naive <code>strings.Split(line, &#34;:&#34;)</code> fails, and descriptions contain colons constantly.</p>
+<p>Quotes are trimmed rather than required, because both <code>name: deploy</code> and <code>name: &#34;deploy&#34;</code> appear in the wild.</p>
+<h2>Step 2 — required fields, and skipping is not failing</h2>
+<pre><code class="language-go">name := meta[&#34;name&#34;]
+description := meta[&#34;description&#34;]
+if name == &#34;&#34; || description == &#34;&#34; {
+	return Skill{}, fmt.Errorf(&#34;%s: name and description are required&#34;, path)
+}</code></pre>
+<pre><code class="language-go">skill, err := ParseSkill(path, data)
+if err != nil {
+	continue
+}</code></pre>
+<p>A skill with no description cannot be advertised, so there is nothing useful to do with it. The choice is between failing the run and skipping the file. Skipping wins: the agent still works, and the person can fix the file when they notice.</p>
+<h2>Step 3 — advertise the minimum</h2>
+<pre><code class="language-go">b.WriteString(&#34;# Skills\n\n&#34;)
+b.WriteString(&#34;Invoke a skill by writing /name followed by its arguments.\n&#34;)
+for _, s := range c.skills {
+	fmt.Fprintf(&amp;b, &#34;\n- %s: %s\n&#34;, s.Name, s.Description)
+}</code></pre>
+<p>One line of instructions, then one line per skill. The body is nowhere in this function, which is what keeps a large catalogue cheap.</p>
+<p>The instruction line matters: without it the model sees a list of names and no statement about how they are used.</p>
+<h2>Step 4 — expansion is a left-to-right walk</h2>
+<pre><code class="language-go">for i, m := range matches {
+	name := prompt[m[4]:m[5]]
+
+	argsEnd := len(prompt)
+	if i+1 &lt; len(matches) {
+		argsEnd = matches[i+1][0]
+	}
+	args := strings.TrimSpace(prompt[m[1]:argsEnd])
+
+	skill, ok := c.byName[name]
+	if !ok {
+		b.WriteString(prompt[last:argsEnd])
+		last = argsEnd
+		continue
+	}
+
+	b.WriteString(strings.TrimRight(prompt[last:m[0]], &#34; \t&#34;))
+	b.WriteString(expandBody(skill.Body, args))
+	used = append(used, Expansion{Name: name, Args: args})
+	last = argsEnd
+}
+b.WriteString(prompt[last:])</code></pre>
+<p>Four details, each with a failure behind it:</p>
+<ul>
+<li><strong><code>argsEnd</code> from the next match</strong> is what makes stacking work. Without it the</li>
+</ul>
+<p>first skill swallows the whole prompt.</p>
+<ul>
+<li><strong>Unknown names are copied, not dropped.</strong> <code>prompt[last:argsEnd]</code> includes the</li>
+</ul>
+<p>slash and its arguments.</p>
+<ul>
+<li><strong><code>TrimRight</code> on the preceding text</strong> removes the single space before the command,</li>
+</ul>
+<p>so the body does not start with an indent.</p>
+<ul>
+<li><strong>The trailing write after the loop</strong> keeps text that follows the last command.</li>
+</ul>
+<h2>Step 5 — placeholders, longest first</h2>
+<pre><code class="language-go">out := strings.ReplaceAll(body, &#34;$ARGUMENTS&#34;, args)
+
+words := strings.Fields(args)
+out = positional.ReplaceAllStringFunc(out, func(m string) string {
+	idx, err := strconv.Atoi(m[1:])
+	if err != nil || idx &gt;= len(words) {
+		return &#34;&#34;
+	}
+	return words[idx]
+})</code></pre>
+<p><code>$ARGUMENTS</code> is replaced first because it shares the <code>$</code> prefix. A positional regex that ran first would match nothing in <code>$ARGUMENTS</code> (the next character is a letter), but a hand-rolled <code>strings.Replace(body, &#34;$0&#34;, ...)</code> loop over indices would happily corrupt <code>$0</code> inside <code>$0-something</code>. A regex with a digit group is the version that does not need care.</p>
+<p>A missing argument becomes empty. Leaving <code>$3</code> literal would send the model a placeholder it cannot resolve.</p>
+<h2>Step 6 — wiring through the existing seam</h2>
+<pre><code class="language-go">skills, err := agent.LoadSkills(root)
+catalog := agent.NewCatalog(skills)
+
+system, err := agent.BuildSystemPrompt(ctx, agent.BasePrompt,
+	&amp;agent.AgentsFile{Root: root},
+	catalog,
+)</code></pre>
+<pre><code class="language-go">userText, _ := catalog.Expand(*prompt)
+history = append(history, agent.Message{Role: agent.RoleUser, Content: userText})</code></pre>
+<p>Two lines of wiring, no change to <code>BuildSystemPrompt</code> and none to <code>RunLoop</code>. The <code>Contribute</code> method is the whole interface.</p>
+<p>Expansion happens before the message enters history, so a resumed session replays the expanded text. The session stores what was sent, not the shorthand.</p>
+<h2>The diffs</h2>
+<p><strong>1. Sending every body</strong> — <code>body-not-advertised</code></p>
+<pre><code class="language-diff">- fmt.Fprintf(&amp;b, &#34;\n- %s: %s\n%s\n&#34;, s.Name, s.Description, s.Body)
++ fmt.Fprintf(&amp;b, &#34;\n- %s: %s\n&#34;, s.Name, s.Description)</code></pre>
+<p><strong>2. Replacing <code>$0</code> before <code>$ARGUMENTS</code></strong> — <code>substitutes-arguments</code></p>
+<pre><code class="language-diff">- out = strings.ReplaceAll(out, &#34;$0&#34;, words[0])
+  out = strings.ReplaceAll(out, &#34;$ARGUMENTS&#34;, args)</code></pre>
+<p><strong>3. Dropping an unknown command</strong> — <code>unknown-skill-preserved</code></p>
+<pre><code class="language-diff">- if !ok { continue }
++ if !ok { b.WriteString(prompt[last:argsEnd]); last = argsEnd; continue }</code></pre>
+<p><strong>4. Editing the prompt in place for every invocation</strong> — <code>stacks-skills</code></p>
+<pre><code class="language-diff">- prompt = strings.Replace(prompt, &#34;/&#34;+name, body, 1)   // loses arguments and order
++ // walk matches and rebuild once</code></pre>
+<h2>Complete files</h2>
+<table>
+<thead><tr><th>File</th><th>Lines</th><th>What to read it for</th></tr></thead>
+<tbody>
+<tr><td><code>reference/ch09/agent/skill.go</code></td><td>235</td><td>parsing, catalogue, expansion</td></tr>
+<tr><td><code>reference/ch09/agent/cmd/agent/main.go</code></td><td>180</td><td>two lines of wiring</td></tr>
+</tbody>
+</table>
+<h2>Comparison checklist</h2>
+<ul>
+<li>[ ] frontmatter parsed without a YAML dependency, colons in values survive</li>
+<li>[ ] name and description required; malformed files skipped</li>
+<li>[ ] <code>skills/</code> missing is not an error</li>
+<li>[ ] catalogue advertises name and description only</li>
+<li>[ ] expansion walks matches left to right</li>
+<li>[ ] arguments end at the next slash command</li>
+<li>[ ] unknown commands pass through verbatim</li>
+<li>[ ] <code>$ARGUMENTS</code> replaced before positional forms</li>
+<li>[ ] missing positional argument becomes empty</li>
+<li>[ ] expansion happens before the turn is recorded</li>
+</ul>
+<p>Differences outside this list are style.</p>
+<nav class="pager">
+<a class="prev" href="../../chapters/09-skills/problem.html">&larr; 09 Skills · Problem</a>
+<a class="next" href="../../chapters/10-subagent/index.html">10 Subagent &rarr;</a>
+</nav>
+</main>
+</body>
+</html>

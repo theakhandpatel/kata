@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>07 Context budget · Example · Kata</title>
+<link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+<aside class="nav">
+<a class="brand" href="../../index.html">Kata</a>
+<div class="group">
+<div class="group-title">Start</div>
+<ul>
+<li><a href="../../index.html">Home</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">I. Wire</div>
+<ul>
+<li><a href="../../chapters/01-chat-with-the-model/index.html">01 Talk to the model</a></li>
+<li><a href="../../chapters/02-tool-calling/index.html">02 Tool calling</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">II. Act</div>
+<ul>
+<li><a href="../../chapters/03-tools-that-touch-disk/index.html">03 Tools that touch disk</a></li>
+<li><a href="../../chapters/04-the-agent-loop/index.html">04 The agent loop</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">III. Remember</div>
+<ul>
+<li><a href="../../chapters/05-prompt-assembly/index.html">05 Prompt assembly</a></li>
+<li><a href="../../chapters/06-sessions/index.html">06 Sessions</a></li>
+<li><a href="../../chapters/07-context-budget/index.html">07 Context budget</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">IV. Extend</div>
+<ul>
+<li><a href="../../chapters/08-steer-and-abort/index.html">08 Interrupt and steering</a></li>
+<li><a href="../../chapters/09-skills/index.html">09 Skills</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">V. Compose</div>
+<ul>
+<li><a href="../../chapters/10-subagent/index.html">10 Subagent</a></li>
+<li><a href="../../chapters/11-mcp/index.html">11 MCP</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">Reference</div>
+<ul>
+<li><a href="../../docs/architecture.html">Architecture</a></li>
+<li><a href="../../docs/chapter-format.html">Chapter format</a></li>
+<li><a href="../../docs/writing-style.html">Writing style</a></li>
+<li><a href="../../docs/designs.html">Designs</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">After the course</div>
+<ul>
+<li><a href="../../chapters/where-next.html">Where next</a></li>
+</ul>
+</div>
+</aside>
+<main>
+<nav class="subnav">
+<a href="../../chapters/07-context-budget/overview.html">Overview</a>
+<a href="../../chapters/07-context-budget/problem.html">Problem</a>
+<a class="current" href="../../chapters/07-context-budget/example.html">Example</a>
+</nav>
+<h1>07 — Example</h1>
+<p><em>Full, annotated implementation. Read it after <code>kata submit 07</code> passes.</em></p>
+<p>The compilable files are <code>reference/ch07/agent/budget.go</code>, <code>reference/ch07/agent/events.go</code> and <code>reference/ch07/agent/cmd/agent/main.go</code>. The loop and the provider are unchanged.</p>
+<hr>
+<h2>The shape</h2>
+<pre><code>budget.go   EstimateTokens, Fit, WithBudget, budgetedProvider
+events.go   three new fields and the budget event type
+main.go     -max-context, and one wrapper around the provider</code></pre>
+<h2>Step 1 — estimate everything that is sent</h2>
+<pre><code class="language-go">func EstimateTokens(msgs []Message, tools []ToolDef) int {
+	bytes := 0
+	for _, m := range msgs {
+		bytes += len(m.Role) + len(m.Content) + 4
+		for _, tc := range m.ToolCalls {
+			bytes += len(tc.ID) + len(tc.Name) + len(tc.Arguments)
+		}
+	}
+	for _, t := range tools {
+		bytes += len(t.Name) + len(t.Description)
+		if schema, err := json.Marshal(t.Parameters); err == nil {
+			bytes += len(schema)
+		}
+	}
+	return bytes / 4
+}</code></pre>
+<p>Three decisions:</p>
+<ul>
+<li><strong>Tool calls inside messages count.</strong> An assistant message carrying a 3 KB</li>
+</ul>
+<p>argument string is not free, and neither is the tool result that follows it.</p>
+<ul>
+<li><strong>A fixed +4 per message.</strong> Every message carries a role and separators. Without</li>
+</ul>
+<p>it, a hundred empty messages estimate to zero.</p>
+<ul>
+<li><strong>One division at the end.</strong> Dividing per message rounds each cost down and</li>
+</ul>
+<p>under-counts long conversations badly.</p>
+<h2>Step 2 — fit from the newest end</h2>
+<pre><code class="language-go">kept := make([]Message, 0, len(rest))
+for i := len(rest) - 1; i &gt;= 0; i-- {
+	candidate := append([]Message{rest[i]}, kept...)
+	trial := append(append([]Message{}, system...), candidate...)
+	if len(kept) &gt; 0 &amp;&amp; EstimateTokens(trial, tools) &gt; budget {
+		break
+	}
+	kept = candidate
+}</code></pre>
+<p><code>len(kept) &gt; 0</code> is the guard that keeps at least one message. Without it, a single message bigger than the budget produces an empty conversation, and the model gets a system message and nothing to do.</p>
+<p>Recomputing the estimate per candidate is O(n²) in the worst case. For a conversation of a few hundred messages that is microseconds, and it is much easier to get right than incremental accounting. Say so in a comment if you rewrite it.</p>
+<h2>Step 3 — repair the boundary</h2>
+<pre><code class="language-go">for len(kept) &gt; 0 &amp;&amp; kept[0].Role == RoleTool {
+	kept = kept[1:]
+	dropped++
+}</code></pre>
+<p>Walking backwards means the cut can land between an assistant message and the tool results that answer it. A tool result whose call is missing makes the request invalid: providers reject it with a message about orphaned tool calls.</p>
+<p>The cheapest correct fix is to drop the orphan. The alternative, pulling its call back in, can exceed the budget again.</p>
+<h2>Step 4 — one marker, not one per drop</h2>
+<pre><code class="language-go">if dropped &gt; 0 {
+	out = append(out, Message{
+		Role:    RoleSystem,
+		Content: fmt.Sprintf(&#34;[context pruned: %d earlier messages omitted to fit %d tokens]&#34;, dropped, budget),
+	})
+}</code></pre>
+<p>A system-role message is used because inserting a second user message changes the shape of the conversation, and a user message in the middle of history is a lie about who said what.</p>
+<p>The number is included so a person reading <code>-events</code> output can see the difference between &#34;one message was enormous&#34; and &#34;thirty messages were trimmed&#34;.</p>
+<h2>Step 5 — the decorator</h2>
+<pre><code class="language-go">func (b *budgetedProvider) Stream(ctx context.Context, req Request, onText func(string)) (Message, Usage, error) {
+	b.calls++
+
+	fitted, pruned := Fit(req.Messages, req.Tools, b.budget)
+	b.emit(Event{
+		Type:   EventBudget,
+		Turn:   b.calls,
+		Tokens: EstimateTokens(fitted, req.Tools),
+		Budget: b.budget,
+		Pruned: pruned,
+	})
+
+	req.Messages = fitted
+	return b.inner.Stream(ctx, req, onText)
+}</code></pre>
+<p><code>req</code> is passed by value, so reassigning <code>req.Messages</code> affects only this call. That matters: the loop keeps its own history and must not be silently truncated by a request that mutated it.</p>
+<p><code>budgetedProvider</code> implements both <code>Chat</code> and <code>Stream</code>, so it satisfies <code>StreamingProvider</code>. <code>Chat</code> delegates to <code>Stream</code>, which means the budget applies to whichever entry point the caller uses.</p>
+<h2>Step 6 — wiring order</h2>
+<pre><code class="language-go">tools := agent.NewRegistry(...)
+
+provider := agent.WithBudget(
+	agent.NewOpenAICompat(baseURL, key, model),
+	tools, *maxContext, emit,
+)</code></pre>
+<p>The decorator needs the tool schemas, so tools are built first. That ordering is the only structural change in <code>main</code>.</p>
+<p><code>WithBudget</code> returns the provider unchanged when <code>budget &lt;= 0</code>, which makes <code>-max-context 0</code> mean &#34;off&#34; rather than &#34;budget of zero tokens&#34;.</p>
+<h2>The diffs</h2>
+<p><strong>1. Counting only messages</strong> — <code>estimate-counts-tools</code></p>
+<pre><code class="language-diff">- for _, m := range msgs { bytes += len(m.Content) }
++ for _, t := range tools { bytes += len(t.Name) + len(t.Description) + len(schema) }</code></pre>
+<p><strong>2. Threshold instead of ceiling</strong> — <code>ceiling-respected</code></p>
+<pre><code class="language-diff">- if EstimateTokens(history) &gt; budget { history = Fit(history) }   // once, at start
++ // inside the provider decorator, on every request</code></pre>
+<p><strong>3. Dividing per message</strong> — <code>estimate-grows-with-history</code></p>
+<pre><code class="language-diff">- total += (len(m.Content) + 4) / 4
++ bytes += len(m.Content) + 4; ... ; return bytes / 4</code></pre>
+<p><strong>4. Ignoring the orphan</strong> — <code>no-orphaned-tool-pairs</code></p>
+<pre><code class="language-diff">- return append(system, kept...)
++ for len(kept) &gt; 0 &amp;&amp; kept[0].Role == RoleTool { kept = kept[1:]; dropped++ }</code></pre>
+<h2>Complete files</h2>
+<table>
+<thead><tr><th>File</th><th>Lines</th><th>What to read it for</th></tr></thead>
+<tbody>
+<tr><td><code>reference/ch07/agent/budget.go</code></td><td>170</td><td>estimate, fit, the decorator</td></tr>
+<tr><td><code>reference/ch07/agent/events.go</code></td><td>75</td><td>the extra fields, and why they are optional</td></tr>
+<tr><td><code>reference/ch07/agent/cmd/agent/main.go</code></td><td>165</td><td>wiring order</td></tr>
+</tbody>
+</table>
+<h2>Comparison checklist</h2>
+<ul>
+<li>[ ] estimate counts messages, tool calls and tool schemas</li>
+<li>[ ] one division by four, at the end</li>
+<li>[ ] system message kept and excluded from the walk</li>
+<li>[ ] newest messages kept, at least one always</li>
+<li>[ ] leading tool results dropped after the cut</li>
+<li>[ ] one marker message naming the count and the budget</li>
+<li>[ ] budget applied per request through a provider decorator</li>
+<li>[ ] <code>budget &lt;= 0</code> disables rather than empties</li>
+<li>[ ] event reports tokens, budget and pruned per request</li>
+</ul>
+<p>Differences outside this list are style.</p>
+<nav class="pager">
+<a class="prev" href="../../chapters/07-context-budget/problem.html">&larr; 07 Context budget · Problem</a>
+<a class="next" href="../../chapters/08-steer-and-abort/index.html">08 Interrupt and steering &rarr;</a>
+</nav>
+</main>
+</body>
+</html>

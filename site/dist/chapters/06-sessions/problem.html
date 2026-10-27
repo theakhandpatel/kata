@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>06 Sessions · Problem · Kata</title>
+<link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+<aside class="nav">
+<a class="brand" href="../../index.html">Kata</a>
+<div class="group">
+<div class="group-title">Start</div>
+<ul>
+<li><a href="../../index.html">Home</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">I. Wire</div>
+<ul>
+<li><a href="../../chapters/01-chat-with-the-model/index.html">01 Talk to the model</a></li>
+<li><a href="../../chapters/02-tool-calling/index.html">02 Tool calling</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">II. Act</div>
+<ul>
+<li><a href="../../chapters/03-tools-that-touch-disk/index.html">03 Tools that touch disk</a></li>
+<li><a href="../../chapters/04-the-agent-loop/index.html">04 The agent loop</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">III. Remember</div>
+<ul>
+<li><a href="../../chapters/05-prompt-assembly/index.html">05 Prompt assembly</a></li>
+<li><a href="../../chapters/06-sessions/index.html">06 Sessions</a></li>
+<li><a href="../../chapters/07-context-budget/index.html">07 Context budget</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">IV. Extend</div>
+<ul>
+<li><a href="../../chapters/08-steer-and-abort/index.html">08 Interrupt and steering</a></li>
+<li><a href="../../chapters/09-skills/index.html">09 Skills</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">V. Compose</div>
+<ul>
+<li><a href="../../chapters/10-subagent/index.html">10 Subagent</a></li>
+<li><a href="../../chapters/11-mcp/index.html">11 MCP</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">Reference</div>
+<ul>
+<li><a href="../../docs/architecture.html">Architecture</a></li>
+<li><a href="../../docs/chapter-format.html">Chapter format</a></li>
+<li><a href="../../docs/writing-style.html">Writing style</a></li>
+<li><a href="../../docs/designs.html">Designs</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">After the course</div>
+<ul>
+<li><a href="../../chapters/where-next.html">Where next</a></li>
+</ul>
+</div>
+</aside>
+<main>
+<nav class="subnav">
+<a href="../../chapters/06-sessions/overview.html">Overview</a>
+<a class="current" href="../../chapters/06-sessions/problem.html">Problem</a>
+<a href="../../chapters/06-sessions/example.html">Example</a>
+</nav>
+<h1>06 — Problem</h1>
+<blockquote><p><strong>Your task:</strong> record the conversation to a JSONL file and resume from it on the  next run, without duplicating what is already there.</p></blockquote>
+<p><strong>You edit:</strong> <code>agent/session.go</code>, <code>agent/cmd/agent/main.go</code> <strong>Given:</strong> <code>agent/loop.go</code>, <code>agent/prompt.go</code>, <code>agent/types.go</code> (now with JSON tags) <strong>Time:</strong> 60 to 90 minutes</p>
+<hr>
+<h2>The contract</h2>
+<pre><code class="language-go">// session.go
+const SessionVersion = 1
+
+type Recorder interface {
+    Load() ([]Message, error)
+    Append(Message) error
+    Close() error
+}
+
+func OpenSession(path string) (*JSONLSession, error)</code></pre>
+<p>File format, one object per line:</p>
+<pre><code>{&#34;type&#34;:&#34;header&#34;,&#34;version&#34;:1,&#34;created&#34;:&#34;...&#34;}
+{&#34;type&#34;:&#34;message&#34;,&#34;message&#34;:{&#34;role&#34;:&#34;user&#34;,&#34;content&#34;:&#34;...&#34;}}
+{&#34;type&#34;:&#34;message&#34;,&#34;message&#34;:{&#34;role&#34;:&#34;assistant&#34;,&#34;content&#34;:&#34;...&#34;}}</code></pre>
+<p>The program gains one flag:</p>
+<pre><code class="language-sh">agent -p &#34;...&#34; -session work.jsonl</code></pre>
+<p>Absent file means a new session, including missing parent directories.</p>
+<h2>What the verifier does</h2>
+<p>It runs the binary <strong>twice</strong> against the same session path with different scripted servers, then inspects the second run&#39;s request and the file itself. Some cases add a tool call on the first run to check that the pairing survives.</p>
+<h2>The verifier will assert that</h2>
+<ul>
+<li><code>creates-session-file</code> — the file exists and is not empty after one run.</li>
+<li><code>session-is-jsonl</code> — every line parses as JSON with a <code>type</code>, and line 1 is a</li>
+</ul>
+<p>header carrying a version.</p>
+<ul>
+<li><code>resumes-history</code> — the second request is <code>system</code>, <code>user</code>, <code>assistant</code>, <code>user</code>,</li>
+</ul>
+<p>in that order, with the first run&#39;s text intact.</p>
+<ul>
+<li><code>appends-not-overwrites</code> — after two runs the file grew, and the first question</li>
+</ul>
+<p>appears exactly once.</p>
+<ul>
+<li><code>no-duplicate-turns</code> — the first run&#39;s answer appears exactly once in the second</li>
+</ul>
+<p>request.</p>
+<ul>
+<li><code>system-not-duplicated</code> — exactly one <code>system</code> message, at index 0, rebuilt from</li>
+</ul>
+<p>the current <code>AGENTS.md</code>.</p>
+<ul>
+<li><code>tool-history-persisted</code> — the resumed request contains both the assistant&#39;s</li>
+</ul>
+<p><code>tool_calls</code> entry and the matching <code>tool</code> result.</p>
+<ul>
+<li><code>missing-session-is-created</code> — a path in a non-existent directory works, and the</li>
+</ul>
+<p>next run resumes it.</p>
+<h2>Notes</h2>
+<ul>
+<li><strong>Store conversation, rebuild policy.</strong> The system message never goes in the</li>
+</ul>
+<p>file. Rebuilding it means <code>AGENTS.md</code> edits take effect on resume.</p>
+<ul>
+<li><strong>Save only what this run added.</strong> <code>res.History[len(prior)+1:]</code> skips the system</li>
+</ul>
+<p>message and the loaded history. Without the slice, every resume doubles the conversation.</p>
+<ul>
+<li><strong>Persist on failure too.</strong> A run that hit the step limit still produced turns</li>
+</ul>
+<p>worth keeping. Record them, then return the error.</p>
+<ul>
+<li><strong>The header is written once.</strong> Only when the file did not exist.</li>
+<li><strong>A malformed line is an error.</strong> Silently skipping corruption turns a broken</li>
+</ul>
+<p>session into a subtly different conversation.</p>
+<h2>Hints</h2>
+<p>&lt;details&gt;&lt;summary&gt;Rung 1 — the mechanism&lt;/summary&gt;</p>
+<p>A session is an append-only log of messages. Loading gives you a prefix; saving must write only the suffix you just created. &lt;/details&gt;</p>
+<p>&lt;details&gt;&lt;summary&gt;Rung 2 — the APIs&lt;/summary&gt;</p>
+<p><code>os.OpenFile</code> with <code>O_CREATE|O_WRONLY|O_APPEND</code>, <code>bufio.Scanner</code> over the file, <code>encoding/json</code> per line, <code>errors.Is(err, os.ErrNotExist)</code> to detect a new file. &lt;/details&gt;</p>
+<p>&lt;details&gt;&lt;summary&gt;Rung 3 — what the code does&lt;/summary&gt;</p>
+<p><code>OpenSession</code> creates parent directories, checks whether the file exists, opens it for append, and writes a header only when it is new. <code>Load</code> scans line by line, unmarshals a probe containing <code>type</code> and <code>version</code>, skips the header, and collects <code>message</code> records. <code>Append</code> marshals one record plus a newline. In <code>main</code>, load prior messages, build <code>[system] + prior + [user]</code>, run the loop, then append <code>res.History[len(prior)+1:]</code> before returning.</p>
+<p><code>kata hint 06 &lt;case-id&gt;</code> prints these same rungs from the CLI. &lt;/details&gt;</p>
+<h2>Done when</h2>
+<p><code>kata submit 06</code> reports 8/8, and:</p>
+<ul>
+<li>a fact told in one run is recalled in the next;</li>
+<li>the session file grows by exactly the new turns, never by the old ones;</li>
+<li>you can explain what the <code>+1</code> in <code>len(prior)+1</code> skips.</li>
+</ul>
+<nav class="pager">
+<a class="prev" href="../../chapters/06-sessions/overview.html">&larr; 06 Sessions · Overview</a>
+<a class="next" href="../../chapters/06-sessions/example.html">06 Sessions · Example &rarr;</a>
+</nav>
+</main>
+</body>
+</html>

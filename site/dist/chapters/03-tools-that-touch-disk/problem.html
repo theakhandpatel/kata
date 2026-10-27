@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>03 Tools that touch disk · Problem · Kata</title>
+<link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+<aside class="nav">
+<a class="brand" href="../../index.html">Kata</a>
+<div class="group">
+<div class="group-title">Start</div>
+<ul>
+<li><a href="../../index.html">Home</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">I. Wire</div>
+<ul>
+<li><a href="../../chapters/01-chat-with-the-model/index.html">01 Talk to the model</a></li>
+<li><a href="../../chapters/02-tool-calling/index.html">02 Tool calling</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">II. Act</div>
+<ul>
+<li><a href="../../chapters/03-tools-that-touch-disk/index.html">03 Tools that touch disk</a></li>
+<li><a href="../../chapters/04-the-agent-loop/index.html">04 The agent loop</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">III. Remember</div>
+<ul>
+<li><a href="../../chapters/05-prompt-assembly/index.html">05 Prompt assembly</a></li>
+<li><a href="../../chapters/06-sessions/index.html">06 Sessions</a></li>
+<li><a href="../../chapters/07-context-budget/index.html">07 Context budget</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">IV. Extend</div>
+<ul>
+<li><a href="../../chapters/08-steer-and-abort/index.html">08 Interrupt and steering</a></li>
+<li><a href="../../chapters/09-skills/index.html">09 Skills</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">V. Compose</div>
+<ul>
+<li><a href="../../chapters/10-subagent/index.html">10 Subagent</a></li>
+<li><a href="../../chapters/11-mcp/index.html">11 MCP</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">Reference</div>
+<ul>
+<li><a href="../../docs/architecture.html">Architecture</a></li>
+<li><a href="../../docs/chapter-format.html">Chapter format</a></li>
+<li><a href="../../docs/writing-style.html">Writing style</a></li>
+<li><a href="../../docs/designs.html">Designs</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">After the course</div>
+<ul>
+<li><a href="../../chapters/where-next.html">Where next</a></li>
+</ul>
+</div>
+</aside>
+<main>
+<nav class="subnav">
+<a href="../../chapters/03-tools-that-touch-disk/overview.html">Overview</a>
+<a class="current" href="../../chapters/03-tools-that-touch-disk/problem.html">Problem</a>
+<a href="../../chapters/03-tools-that-touch-disk/example.html">Example</a>
+</nav>
+<h1>03 — Problem</h1>
+<blockquote><p><strong>Your task:</strong> add <code>write</code> and <code>bash</code> to the agent, and bound what they return  and how long they may take.</p></blockquote>
+<p><strong>You edit:</strong> <code>agent/tools.go</code>, <code>agent/cmd/agent/main.go</code> <strong>Given:</strong> <code>agent/tool.go</code> (the registry from chapter 02), <code>agent/types.go</code> <strong>Time:</strong> 60 to 90 minutes</p>
+<hr>
+<h2>The contract</h2>
+<p>Two new tools, same interface as <code>read</code>:</p>
+<pre><code class="language-go">type WriteTool struct{ Root string }
+
+type BashTool struct {
+    Root     string
+    Timeout  time.Duration // 0 means 10s
+    MaxBytes int           // 0 means 20000
+}</code></pre>
+<p>The program gains one flag, which the checks use:</p>
+<pre><code class="language-sh">agent -p &#34;run the tests&#34; -tool-timeout 300ms</code></pre>
+<p><code>-tool-timeout</code> bounds <strong>one tool execution</strong>. It is separate from <code>-timeout</code>, which bounds <strong>one provider request</strong>.</p>
+<p>Arguments:</p>
+<table>
+<thead><tr><th>Tool</th><th>Arguments</th></tr></thead>
+<tbody>
+<tr><td><code>write</code></td><td><code>{&#34;path&#34;: string, &#34;content&#34;: string}</code>, both required</td></tr>
+<tr><td><code>bash</code></td><td><code>{&#34;command&#34;: string}</code>, run with <code>sh -c</code> in the workspace</td></tr>
+</tbody>
+</table>
+<h2>What the verifier does</h2>
+<p>It builds the binary, creates a temporary workspace, scripts a tool call, runs the program with that directory as its working directory, then checks three things: the request trace, the files on disk, and stdout.</p>
+<p>Disk matters here. A tool result that claims a write is not evidence that the file exists.</p>
+<h2>The verifier will assert that</h2>
+<ul>
+<li><code>advertises-three-tools</code> — the request advertises <code>read</code>, <code>write</code> and <code>bash</code>.</li>
+<li><code>writes-a-file</code> — after the run, the file exists with exactly the requested</li>
+</ul>
+<p>contents.</p>
+<ul>
+<li><code>write-creates-parents</code> — <code>a/b/c/deep.txt</code> is created even though none of those</li>
+</ul>
+<p>directories existed.</p>
+<ul>
+<li><code>write-refuses-escape</code> — <code>../escaped.txt</code> is not created, and the tool result</li>
+</ul>
+<p>names the escape.</p>
+<ul>
+<li><code>bash-runs-a-command</code> — <code>ls &amp;&amp; cat here.txt</code> returns the file contents, proving</li>
+</ul>
+<p>the working directory is the workspace.</p>
+<ul>
+<li><code>bash-reports-exit-code</code> — <code>echo before; exit 3</code> yields a result containing both</li>
+</ul>
+<p>the output and the code, and the program exits 0.</p>
+<ul>
+<li><code>bash-truncates-output</code> — 5000 lines of output yields at most 25 KB of tool</li>
+</ul>
+<p>content, with a marker containing <code>truncated</code>.</p>
+<ul>
+<li><code>bash-timeout-is-a-result</code> — with <code>-tool-timeout 300ms</code>, <code>sleep 5</code> produces a</li>
+</ul>
+<p>result containing <code>timed out</code>, the program exits 0, and the whole run finishes in under three seconds.</p>
+<h2>Notes</h2>
+<ul>
+<li><strong>Order of operations for <code>write</code>:</strong> resolve, refuse, create parents, write. If</li>
+</ul>
+<p>you create the parent before resolving, an escape can leave directories behind.</p>
+<ul>
+<li><strong>Combined output.</strong> Capture stdout and stderr together. A failing command</li>
+</ul>
+<p>usually explains itself on stderr.</p>
+<ul>
+<li><strong>A timeout is not an error.</strong> It is a result. A cancelled run is an error.</li>
+</ul>
+<p>Distinguish <code>runCtx.Err()</code> from <code>ctx.Err()</code>.</p>
+<ul>
+<li><strong>Known limitation:</strong> <code>exec.CommandContext</code> kills the direct child only. Killing</li>
+</ul>
+<p>a process group needs platform-specific code. Do not attempt it here; the overview explains why.</p>
+<ul>
+<li><strong>Deliberate omission:</strong> no parallel tool execution, no permission prompts.</li>
+</ul>
+<p>Chapter 04 adds the loop; chapter 08 adds policy.</p>
+<h2>Hints</h2>
+<p>&lt;details&gt;&lt;summary&gt;Rung 1 — the mechanism&lt;/summary&gt;</p>
+<p>Three edges: whose input, how much output, how long. Each tool answers all three before it does any work. &lt;/details&gt;</p>
+<p>&lt;details&gt;&lt;summary&gt;Rung 2 — the APIs&lt;/summary&gt;</p>
+<p><code>os.MkdirAll</code>, <code>os.WriteFile</code>, <code>exec.CommandContext</code>, <code>cmd.CombinedOutput</code>, <code>errors.As(err, &amp;exitErr)</code>, <code>context.WithTimeout</code>. &lt;/details&gt;</p>
+<p>&lt;details&gt;&lt;summary&gt;Rung 3 — what the code does&lt;/summary&gt;</p>
+<p>Share one <code>resolveInside(root, p)</code> between <code>read</code> and <code>write</code>. <code>write</code> calls <code>MkdirAll(filepath.Dir(full), 0o755)</code> then <code>WriteFile(full, content, 0o644)</code> and returns the byte count. <code>bash</code> wraps the caller&#39;s context with the tool timeout, runs <code>sh -c</code> with <code>cmd.Dir = Root</code>, caps the combined output, and maps the outcome: deadline to a timeout result, <code>*exec.ExitError</code> to an exit-code result, anything else to a Go error.</p>
+<p><code>kata hint 03 &lt;case-id&gt;</code> prints these same rungs from the CLI. &lt;/details&gt;</p>
+<h2>Done when</h2>
+<p><code>kata submit 03</code> reports 8/8, and:</p>
+<ul>
+<li>you can ask the agent to make a file and it appears;</li>
+<li>you can explain why an exit code 3 is not an error;</li>
+<li>you know which of the three edges your first implementation got wrong.</li>
+</ul>
+<nav class="pager">
+<a class="prev" href="../../chapters/03-tools-that-touch-disk/overview.html">&larr; 03 Tools that touch disk · Overview</a>
+<a class="next" href="../../chapters/03-tools-that-touch-disk/example.html">03 Tools that touch disk · Example &rarr;</a>
+</nav>
+</main>
+</body>
+</html>

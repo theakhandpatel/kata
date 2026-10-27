@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Where next · Kata</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<aside class="nav">
+<a class="brand" href="../index.html">Kata</a>
+<div class="group">
+<div class="group-title">Start</div>
+<ul>
+<li><a href="../index.html">Home</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">I. Wire</div>
+<ul>
+<li><a href="../chapters/01-chat-with-the-model/index.html">01 Talk to the model</a></li>
+<li><a href="../chapters/02-tool-calling/index.html">02 Tool calling</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">II. Act</div>
+<ul>
+<li><a href="../chapters/03-tools-that-touch-disk/index.html">03 Tools that touch disk</a></li>
+<li><a href="../chapters/04-the-agent-loop/index.html">04 The agent loop</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">III. Remember</div>
+<ul>
+<li><a href="../chapters/05-prompt-assembly/index.html">05 Prompt assembly</a></li>
+<li><a href="../chapters/06-sessions/index.html">06 Sessions</a></li>
+<li><a href="../chapters/07-context-budget/index.html">07 Context budget</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">IV. Extend</div>
+<ul>
+<li><a href="../chapters/08-steer-and-abort/index.html">08 Interrupt and steering</a></li>
+<li><a href="../chapters/09-skills/index.html">09 Skills</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">V. Compose</div>
+<ul>
+<li><a href="../chapters/10-subagent/index.html">10 Subagent</a></li>
+<li><a href="../chapters/11-mcp/index.html">11 MCP</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">Reference</div>
+<ul>
+<li><a href="../docs/architecture.html">Architecture</a></li>
+<li><a href="../docs/chapter-format.html">Chapter format</a></li>
+<li><a href="../docs/writing-style.html">Writing style</a></li>
+<li><a href="../docs/designs.html">Designs</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">After the course</div>
+<ul>
+<li><a class="current" href="../chapters/where-next.html">Where next</a></li>
+</ul>
+</div>
+</aside>
+<main>
+<h1>Where next</h1>
+<p>You have an agent that talks to a model, runs tools, remembers a session, holds a context budget, accepts steering, reads skills, delegates to a subagent, and calls tools that live in another process.</p>
+<p>This page lists what to build on top of it. Every entry names the seam it attaches to and the claim that proves it works. A claim you cannot test is a wish.</p>
+<h2>The rule</h2>
+<p>Write the case first.</p>
+<p>A feature with no failing case is indistinguishable from a feature that is broken. Every chapter in this course arrived with a suite that failed before the code existed. Keep doing that and the seams will keep holding.</p>
+<h2>Next week</h2>
+<p>Six changes, each a day&#39;s work, each attaching to a seam you already have.</p>
+<table>
+<thead><tr><th>Build</th><th>Seam</th><th>Claim</th><th>Size</th></tr></thead>
+<tbody>
+<tr><td>Recall what was pruned</td><td>new <code>Tool</code> plus the budget decorator</td><td>a pruned message can be fetched by id</td><td>small</td></tr>
+<tr><td>Summarise instead of dropping</td><td>budget decorator</td><td>the request is under budget and contains one summary entry naming the count</td><td>medium</td></tr>
+<tr><td>A schema budget</td><td>budget decorator</td><td>no request advertises more than N tools</td><td>small</td></tr>
+<tr><td>Cache accounting</td><td>provider decorator</td><td>the request prefix is byte-identical across turns, and hits are reported</td><td>small</td></tr>
+<tr><td>Parallel tool calls</td><td>loop</td><td>two calls run concurrently and results keep source order</td><td>medium</td></tr>
+<tr><td>A second wire format</td><td><code>Provider</code></td><td>the same suite passes against two providers</td><td>medium</td></tr>
+</tbody>
+</table>
+<h3>Recall what was pruned</h3>
+<p>Chapter 07 drops old messages and leaves a marker. The content is still in the session file, so make it reachable: give every dropped message an id, and add a <code>recall</code> tool that returns one by id.</p>
+<p>The claim: with a pruned session, a <code>recall</code> call returns text that was absent from the request. This is what pi-condense does with <code>context_tree_query</code>, and it turns pruning from lossy into reversible.</p>
+<h3>Summarise instead of dropping</h3>
+<p>Instead of a marker, insert a summary message that lists what was removed.</p>
+<p>The claim: after compaction the budget holds, and the request contains exactly one summary entry naming how many messages it replaces. The hard part is that a summary needs a model call, which means the thing that trims the request now makes requests. That is a loop, so decide where it lives before you write it.</p>
+<h3>A schema budget</h3>
+<p>Chapter 07 counts tool schemas but never reduces them. Add a ceiling on how many tools a request may advertise, and unmount the least recently used until it fits.</p>
+<p>The claim: with 20 tools registered and a ceiling of 5, the request advertises 5, and a call to an unmounted tool returns a result that says so instead of crashing.</p>
+<p>Two designs exist. Dropping tools is simple. Deferring them, where one meta-tool loads another tool&#39;s schema on demand, is what fx does, and it is the better design for a large catalogue.</p>
+<h3>Cache accounting</h3>
+<p>Providers charge less when the start of a request is unchanged. You already keep the system message stable. Now measure it: hash the serialised prefix on each request, report whether it matched the previous one, and accumulate prompt tokens against cache hits and misses.</p>
+<p>The claim: two turns in a row produce the same prefix hash, and the reported hit count increases.</p>
+<h3>Parallel tool calls</h3>
+<p>Chapter 04 runs a tool batch one call at a time. Run them concurrently instead, and append the results in the order the model asked for them.</p>
+<p>The claim: two calls take roughly one call&#39;s wall time, and the result order still matches the call order. The second half is the part that breaks, because completion order is not source order.</p>
+<h3>A second wire format</h3>
+<p>Add Anthropic&#39;s Messages API beside the OpenAI-compatible one.</p>
+<p>The claim: the chapter 01 to 03 suites pass against both providers without changing a case. If they do not, the provider seam was leaky, and you have found out cheaply.</p>
+<h2>Later</h2>
+<p>Bigger changes. Each one alters a structure rather than adding to it.</p>
+<table>
+<thead><tr><th>Build</th><th>Seam</th><th>What changes</th><th>Size</th></tr></thead>
+<tbody>
+<tr><td>Sessions as a tree</td><td><code>Recorder</code></td><td>a message points at its parent; branching and forking become possible</td><td>large</td></tr>
+<tr><td>Background subagents</td><td><code>ToolSource</code> plus a queue</td><td>a child returns a receipt and delivers later</td><td>large</td></tr>
+<tr><td>MCP resources and prompts</td><td>MCP client</td><td>the protocol grows past <code>tools/</code></td><td>medium</td></tr>
+<tr><td>A terminal UI</td><td>event stream</td><td>the events you emit become a rendered transcript</td><td>large</td></tr>
+<tr><td>An extension API</td><td>every seam</td><td>in-process plugins register tools and contributors</td><td>large</td></tr>
+<tr><td>Evals</td><td>nothing</td><td>a second harness that scores outcomes, not correctness</td><td>large</td></tr>
+</tbody>
+</table>
+<h3>Sessions as a tree</h3>
+<p>Today a session is a line. Make each record point at a parent, and the file becomes a tree: branch from any point, fork a conversation, keep a compaction beside the original instead of over it.</p>
+<p>The claim: forking at message 5 produces a session whose request contains messages 1 to 5 and then the new turn, and the original file still reads back unchanged.</p>
+<p>pi&#39;s session format is the reference. A line-shaped file cannot express this, so the change is structural, not additive.</p>
+<h3>Background subagents</h3>
+<p>Chapter 10 blocks the parent while the child works. The alternative returns a receipt immediately and delivers the answer later as a separate message.</p>
+<p>The claim: a parent that starts a child and then answers something else receives the child&#39;s result in a later turn, exactly once, without a second <code>tool_result</code> for the original call.</p>
+<p>The hard parts are ordering and cancellation: a result can arrive when no call is waiting, and a parent can be interrupted while its child is still running.</p>
+<h3>MCP resources and prompts</h3>
+<p>Your client speaks <code>tools/</code>. MCP also defines resources (readable documents) and prompts (reusable templates). Add <code>resources/list</code> and <code>resources/read</code>, expose them through a skill-like contributor, and keep the tool adapter untouched.</p>
+<p>The claim: a resource appears in the system prompt by name, and reading it returns the server&#39;s text.</p>
+<h3>A terminal UI</h3>
+<p>The event stream is already the right shape: <code>turn_start</code>, <code>text</code>, <code>tool_call</code>, <code>tool_result</code>, <code>turn_end</code>, <code>budget</code>, <code>steer</code>, <code>agent_end</code>. A UI is a renderer over those events plus a way to type steering messages.</p>
+<p>Bubble Tea is the Go default. The claim that matters: the same events render to a terminal and to a text log, so the UI cannot contain logic the log does not have.</p>
+<h3>An extension API</h3>
+<p>Every chapter added a seam. An extension API turns those seams into a public surface: a plugin registers tools, contributors, and event handlers, and receives the registry and the provider.</p>
+<p>This is what pi ships, and the honest version is a large design. Read how pi&#39;s <code>AgentLoopConfig</code> exposes hooks before you invent one.</p>
+<h3>Evals</h3>
+<p>Everything in this course grades correctness: did the request have the right shape, did the result pair with its call. Nothing grades quality: was the answer any good.</p>
+<p>Evals need a real model, money, and judgement, and they cannot gate a run. Build them as a separate tool that scores a transcript after the fact, and never let them decide whether the harness works.</p>
+<h2>What not to build</h2>
+<ul>
+<li><strong>A second pi.</strong> Feature parity is not a goal. The machine is.</li>
+<li><strong>A feature whose only evidence is that the program still runs.</strong> That is what a</li>
+</ul>
+<p>case is for.</p>
+<ul>
+<li><strong>A live-model check inside the graded suite.</strong> It is slow, paid, and random. Keep</li>
+</ul>
+<p>it outside, clearly labelled, and never let it gate progress.</p>
+<ul>
+<li><strong>An abstraction before the second use.</strong> Every seam in this course appeared when</li>
+</ul>
+<p>two chapters needed it, not before.</p>
+<h2>Read these</h2>
+<table>
+<thead><tr><th>Concern</th><th>File</th></tr></thead>
+<tbody>
+<tr><td>Loop shape, event order, result batching</td><td>PiG <code>agent/agent_loop.go</code></td></tr>
+<tr><td>Provider adapters, streaming, caching</td><td>pi <code>packages/ai/src/api/</code></td></tr>
+<tr><td>Permission policy as a service</td><td>crush <code>internal/permission/</code></td></tr>
+<tr><td>MCP over stdio, hand-rolled</td><td>PiG and pi MCP clients</td></tr>
+<tr><td>Session tree and compaction entries</td><td>pi <code>packages/durable/</code>, <code>docs/compaction.md</code></td></tr>
+<tr><td>Pruning with recovery</td><td>pi-condense, <code>context_tree_query</code></td></tr>
+<tr><td>Deferred tool schemas</td><td>toolflow, stage-gated mounting</td></tr>
+<tr><td>A minimal harness in Zig</td><td><code>vercel-labs/fx</code></td></tr>
+</tbody>
+</table>
+<h2>One last thing</h2>
+<p>The harness is not the interesting part. The interesting part is that you can now read a harness and tell what it does, because you have built one and watched it fail in specific, named ways.</p>
+<p>That is what the cases bought you.</p>
+<nav class="pager">
+<a class="prev" href="../docs/designs.html">&larr; How other harnesses are built</a>
+</nav>
+</main>
+</body>
+</html>

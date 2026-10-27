@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>08 Interrupt and steering · Example · Kata</title>
+<link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+<aside class="nav">
+<a class="brand" href="../../index.html">Kata</a>
+<div class="group">
+<div class="group-title">Start</div>
+<ul>
+<li><a href="../../index.html">Home</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">I. Wire</div>
+<ul>
+<li><a href="../../chapters/01-chat-with-the-model/index.html">01 Talk to the model</a></li>
+<li><a href="../../chapters/02-tool-calling/index.html">02 Tool calling</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">II. Act</div>
+<ul>
+<li><a href="../../chapters/03-tools-that-touch-disk/index.html">03 Tools that touch disk</a></li>
+<li><a href="../../chapters/04-the-agent-loop/index.html">04 The agent loop</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">III. Remember</div>
+<ul>
+<li><a href="../../chapters/05-prompt-assembly/index.html">05 Prompt assembly</a></li>
+<li><a href="../../chapters/06-sessions/index.html">06 Sessions</a></li>
+<li><a href="../../chapters/07-context-budget/index.html">07 Context budget</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">IV. Extend</div>
+<ul>
+<li><a href="../../chapters/08-steer-and-abort/index.html">08 Interrupt and steering</a></li>
+<li><a href="../../chapters/09-skills/index.html">09 Skills</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">V. Compose</div>
+<ul>
+<li><a href="../../chapters/10-subagent/index.html">10 Subagent</a></li>
+<li><a href="../../chapters/11-mcp/index.html">11 MCP</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">Reference</div>
+<ul>
+<li><a href="../../docs/architecture.html">Architecture</a></li>
+<li><a href="../../docs/chapter-format.html">Chapter format</a></li>
+<li><a href="../../docs/writing-style.html">Writing style</a></li>
+<li><a href="../../docs/designs.html">Designs</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">After the course</div>
+<ul>
+<li><a href="../../chapters/where-next.html">Where next</a></li>
+</ul>
+</div>
+</aside>
+<main>
+<nav class="subnav">
+<a href="../../chapters/08-steer-and-abort/overview.html">Overview</a>
+<a href="../../chapters/08-steer-and-abort/problem.html">Problem</a>
+<a class="current" href="../../chapters/08-steer-and-abort/example.html">Example</a>
+</nav>
+<h1>08 — Example</h1>
+<p><em>Full, annotated implementation. Read it after <code>kata submit 08</code> passes.</em></p>
+<p>The compilable files are <code>reference/ch08/agent/</code>. This is the first chapter that edits the loop, and the reasoning for that is below.</p>
+<hr>
+<h2>The shape</h2>
+<pre><code>steering.go   StdinSteering: a goroutine, a lock, a drain
+loop.go       a steering hook, the new done condition, the partial on error
+provider      the parser returns the partial message with its error
+main.go       run() returns an exit code; abort prints and exits 130</code></pre>
+<h2>Step 1 — the parser keeps what it read</h2>
+<pre><code class="language-go">if err := scanner.Err(); err != nil {
+	return Message{Role: RoleAssistant, Content: content.String()}, usage,
+		fmt.Errorf(&#34;read stream: %w&#34;, err)
+}</code></pre>
+<p>Before this chapter the same line returned <code>Message{}</code>. That single change is what makes an interruption recoverable: the caller now has both the text and the reason it stopped.</p>
+<p>Note that the error still wraps the original. <code>errors.Is(err, context.Canceled)</code> has to keep working, because that is how <code>main</code> decides between 130 and 1.</p>
+<h2>Step 2 — the loop keeps it too</h2>
+<pre><code class="language-go">if err != nil {
+	if msg.Content != &#34;&#34; {
+		history = append(history, msg)
+	}
+	reason := &#34;error&#34;
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		reason = &#34;aborted&#34;
+	}
+	emit(Event{Type: EventAgentEnd, Turns: turn, Reason: reason})
+	return Result{Message: msg, History: history, Usage: total, Turns: turn}, err
+}</code></pre>
+<p>Three things happen before the return, and each is graded:</p>
+<ul>
+<li>the partial message enters history, so the session can record it;</li>
+<li><code>agent_end</code> is still emitted, so a consumer&#39;s stream terminates properly;</li>
+<li>the reason distinguishes a cancellation from a real error.</li>
+</ul>
+<p>A consumer that only sees <code>agent_end</code> without a reason cannot tell &#34;the user stopped it&#34; from &#34;the network died&#34;, and those want different messages on screen.</p>
+<h2>Step 3 — steering is drained after the turn, not before</h2>
+<pre><code class="language-go">steered := false
+if opts.Steering != nil {
+	for _, m := range opts.Steering() {
+		emit(Event{Type: EventSteer, Turn: turn, Text: m.Content})
+		history = append(history, m)
+		steered = true
+	}
+}
+
+emit(Event{Type: EventTurnEnd, Turn: turn})
+
+if !askedForTools &amp;&amp; !steered {
+	emit(Event{Type: EventAgentEnd, Turns: turn, Reason: &#34;done&#34;})
+	return ...
+}</code></pre>
+<p>The placement is the design. Drain before the reply and the message is part of the prompt being answered. Drain after the tools and before the next request, and it arrives exactly where a person would have spoken.</p>
+<p><code>steered</code> exists because of one case: the model finished, and the person then said something. Without the flag the loop returns a final answer and silently discards the message.</p>
+<h2>Step 4 — Drain takes, clears, and returns immediately</h2>
+<pre><code class="language-go">func (s *StdinSteering) Drain() []Message {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if len(s.queue) == 0 {
+		return nil
+	}
+	out := s.queue
+	s.queue = nil
+	return out
+}</code></pre>
+<p><code>out := s.queue; s.queue = nil</code> is the one-liner that prevents replay. Assigning <code>out := s.queue[:]</code> and leaving the queue intact looks identical in a single-turn test and repeats the instruction forever in a real run.</p>
+<p>The reading goroutine:</p>
+<pre><code class="language-go">go func() {
+	for s.scanner.Scan() {
+		line := strings.TrimSpace(s.scanner.Text())
+		if line == &#34;&#34; {
+			continue
+		}
+		s.mu.Lock()
+		s.queue = append(s.queue, Message{Role: RoleUser, Content: line})
+		s.mu.Unlock()
+	}
+}()</code></pre>
+<p>Empty lines are skipped rather than queued, because a queued empty message makes the model answer nothing and wastes a turn.</p>
+<h2>Step 5 — <code>run</code> returns an exit code</h2>
+<pre><code class="language-go">func main() {
+	code, err := run()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, &#34;agent: %v\n&#34;, err)
+		if code == 0 {
+			code = 1
+		}
+	}
+	os.Exit(code)
+}</code></pre>
+<p><code>os.Exit</code> inside <code>run</code> would skip the deferred <code>rec.Close()</code> and could drop the last session write. Returning a code keeps the cleanup in <code>run</code>, where the defers live.</p>
+<pre><code class="language-go">if errors.Is(err, context.Canceled) {
+	if res.Message.Content != &#34;&#34; {
+		fmt.Println(res.Message.Content)
+	}
+	fmt.Fprintln(os.Stderr, &#34;agent: aborted&#34;)
+	return 130, nil
+}</code></pre>
+<p>130 is 128 + SIGINT. It is conventional, and it means a shell script can tell an interrupted run from a failed one without parsing stderr.</p>
+<p>Note that persistence happens before this branch. The order is: run, persist, report. Reversed, an interrupted run loses its turn.</p>
+<h2>Why the loop is edited here</h2>
+<p>Chapter 07 could wrap the provider, because a budget only rewrites a request on its way out. Steering does something a wrapper cannot: it changes the history the loop owns, and it changes when the loop stops.</p>
+<pre><code>  decorator (ch07):  request in, request out
+  loop hook (ch08):  history in, history plus a message out</code></pre>
+<p>The rule is &#34;touch the loop only for loop state&#34;. This is loop state, and it is the only chapter where the rule is exercised.</p>
+<h2>The diffs</h2>
+<p><strong>1. Returning an empty message on stream failure</strong> — <code>abort-keeps-partial</code></p>
+<pre><code class="language-diff">- return Message{}, Usage{}, fmt.Errorf(&#34;read stream: %w&#34;, err)
++ return Message{Role: RoleAssistant, Content: content.String()}, usage, ...</code></pre>
+<p><strong>2. Merging steering into the prompt</strong> — <code>steer-enters-after-turn</code></p>
+<pre><code class="language-diff">- prompt = prompt + &#34;\n&#34; + strings.Join(lines, &#34;\n&#34;)
++ history = append(history, Message{Role: RoleUser, Content: line})</code></pre>
+<p><strong>3. Draining without clearing</strong> — <code>steer-not-duplicated</code></p>
+<pre><code class="language-diff">- out := s.queue
++ out := s.queue; s.queue = nil</code></pre>
+<p><strong>4. Stopping on the model&#39;s word alone</strong> — <code>steer-continues-after-done</code></p>
+<pre><code class="language-diff">- if len(msg.ToolCalls) == 0 { return }
++ if len(msg.ToolCalls) == 0 &amp;&amp; !steered { return }</code></pre>
+<h2>Complete files</h2>
+<table>
+<thead><tr><th>File</th><th>Lines</th><th>What to read it for</th></tr></thead>
+<tbody>
+<tr><td><code>reference/ch08/agent/loop.go</code></td><td>165</td><td>the new done condition, the abort path</td></tr>
+<tr><td><code>reference/ch08/agent/steering.go</code></td><td>80</td><td>the goroutine, the lock, the clear</td></tr>
+<tr><td><code>reference/ch08/agent/provider_openai.go</code></td><td>300</td><td>partial message beside the error</td></tr>
+<tr><td><code>reference/ch08/agent/cmd/agent/main.go</code></td><td>175</td><td>exit codes and persist-before-report</td></tr>
+</tbody>
+</table>
+<h2>Comparison checklist</h2>
+<ul>
+<li>[ ] parser returns the partial message with the stream error</li>
+<li>[ ] error still wraps the original, so <code>errors.Is</code> works</li>
+<li>[ ] loop appends the partial when non-empty</li>
+<li>[ ] <code>agent_end</code> emitted on abort with reason <code>aborted</code></li>
+<li>[ ] steering drained after tools, before the next request</li>
+<li>[ ] drain clears the queue under a lock and never blocks</li>
+<li>[ ] empty lines skipped</li>
+<li>[ ] done condition is <code>no tool calls &amp;&amp; nothing steered</code></li>
+<li>[ ] session persisted before the abort return</li>
+<li>[ ] exit 130 for SIGINT, 1 for errors</li>
+</ul>
+<p>Differences outside this list are style.</p>
+<nav class="pager">
+<a class="prev" href="../../chapters/08-steer-and-abort/problem.html">&larr; 08 Interrupt and steering · Problem</a>
+<a class="next" href="../../chapters/09-skills/index.html">09 Skills &rarr;</a>
+</nav>
+</main>
+</body>
+</html>

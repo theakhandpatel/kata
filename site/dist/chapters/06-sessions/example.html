@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>06 Sessions · Example · Kata</title>
+<link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+<aside class="nav">
+<a class="brand" href="../../index.html">Kata</a>
+<div class="group">
+<div class="group-title">Start</div>
+<ul>
+<li><a href="../../index.html">Home</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">I. Wire</div>
+<ul>
+<li><a href="../../chapters/01-chat-with-the-model/index.html">01 Talk to the model</a></li>
+<li><a href="../../chapters/02-tool-calling/index.html">02 Tool calling</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">II. Act</div>
+<ul>
+<li><a href="../../chapters/03-tools-that-touch-disk/index.html">03 Tools that touch disk</a></li>
+<li><a href="../../chapters/04-the-agent-loop/index.html">04 The agent loop</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">III. Remember</div>
+<ul>
+<li><a href="../../chapters/05-prompt-assembly/index.html">05 Prompt assembly</a></li>
+<li><a href="../../chapters/06-sessions/index.html">06 Sessions</a></li>
+<li><a href="../../chapters/07-context-budget/index.html">07 Context budget</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">IV. Extend</div>
+<ul>
+<li><a href="../../chapters/08-steer-and-abort/index.html">08 Interrupt and steering</a></li>
+<li><a href="../../chapters/09-skills/index.html">09 Skills</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">V. Compose</div>
+<ul>
+<li><a href="../../chapters/10-subagent/index.html">10 Subagent</a></li>
+<li><a href="../../chapters/11-mcp/index.html">11 MCP</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">Reference</div>
+<ul>
+<li><a href="../../docs/architecture.html">Architecture</a></li>
+<li><a href="../../docs/chapter-format.html">Chapter format</a></li>
+<li><a href="../../docs/writing-style.html">Writing style</a></li>
+<li><a href="../../docs/designs.html">Designs</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">After the course</div>
+<ul>
+<li><a href="../../chapters/where-next.html">Where next</a></li>
+</ul>
+</div>
+</aside>
+<main>
+<nav class="subnav">
+<a href="../../chapters/06-sessions/overview.html">Overview</a>
+<a href="../../chapters/06-sessions/problem.html">Problem</a>
+<a class="current" href="../../chapters/06-sessions/example.html">Example</a>
+</nav>
+<h1>06 — Example</h1>
+<p><em>Full, annotated implementation. Read it after <code>kata submit 06</code> passes.</em></p>
+<p>The compilable files are <code>reference/ch06/agent/session.go</code> and <code>reference/ch06/agent/cmd/agent/main.go</code>. The loop and the provider are unchanged.</p>
+<hr>
+<h2>The shape</h2>
+<pre><code>session.go   Recorder, JSONLSession, OpenSession, Load, Append
+main.go      load prior, prepend system, run, save only the suffix
+loop.go      untouched</code></pre>
+<h2>Step 1 — open, and notice whether the file was new</h2>
+<pre><code class="language-go">_, statErr := os.Stat(path)
+isNew := errors.Is(statErr, os.ErrNotExist)
+
+f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)</code></pre>
+<p><code>O_APPEND</code> is the important flag, not <code>O_CREATE</code>. Two writers with <code>O_APPEND</code> each get their bytes appended atomically; two writers with a seek-and-write can overwrite each other.</p>
+<p>The <code>Stat</code> before the open is how the header is written exactly once. Checking after opening cannot distinguish a new file from an old one.</p>
+<h2>Step 2 — the header carries a version</h2>
+<pre><code class="language-go">header := sessionHeader{Type: recordHeader, Version: SessionVersion, Created: ...}</code></pre>
+<p>A version is cheap and its absence is expensive. When the record shape changes, an old file must be rejected with a message, not parsed into a conversation that is subtly wrong. <code>Load</code> refuses a <code>version</code> higher than the program understands.</p>
+<h2>Step 3 — load is a scanner with a probe</h2>
+<pre><code class="language-go">var probe struct {
+	Type    string `json:&#34;type&#34;`
+	Version int    `json:&#34;version&#34;`
+}
+if err := json.Unmarshal(raw, &amp;probe); err != nil {
+	return nil, fmt.Errorf(&#34;session line %d: %w&#34;, line, err)
+}
+
+switch probe.Type {
+case recordHeader: // version check only
+case recordMessage:
+	var rec sessionMessage
+	if err := json.Unmarshal(raw, &amp;rec); err != nil { ... }
+	out = append(out, rec.Message)
+}</code></pre>
+<p>Two passes of unmarshalling looks wasteful. It is not: the first pass decodes the small envelope, and only message lines pay for the full decode. It also means an unknown record type is skipped rather than misread, which is what makes the format extensible.</p>
+<p><code>line</code> in the error is what turns &#34;invalid character&#34; into a sentence someone can act on.</p>
+<h2>Step 4 — the slice that prevents duplication</h2>
+<pre><code class="language-go">prior := []agent.Message{}
+if *sessionPath != &#34;&#34; {
+	rec, err := agent.OpenSession(*sessionPath)
+	...
+	prior, err = rec.Load()
+}
+
+history := make([]agent.Message, 0, len(prior)+2)
+history = append(history, agent.Message{Role: agent.RoleSystem, Content: system})
+history = append(history, prior...)
+history = append(history, agent.Message{Role: agent.RoleUser, Content: *prompt})
+
+res, err := agent.RunLoop(ctx, provider, tools, history, opts)
+
+if recorder != nil {
+	for _, m := range res.History[len(prior)+1:] {
+		_ = recorder.Append(m)
+	}
+}</code></pre>
+<p>Index by index, with <code>prior</code> of length 2:</p>
+<pre><code>  history:   [0]=system  [1]=prior[0]  [2]=prior[1]  [3]=user  [4]=assistant
+  save from: len(prior)+1 = 3
+  writes:    [3]=user  [4]=assistant</code></pre>
+<p>Take the <code>+1</code> away and you write the system message into the session, which then appears twice on the next resume. Use <code>len(history)</code> and you write nothing.</p>
+<h2>Step 5 — persist before returning the error</h2>
+<pre><code class="language-go">res, err := agent.RunLoop(...)
+
+if recorder != nil {
+	for _, m := range res.History[len(prior)+1:] {
+		if appendErr := recorder.Append(m); appendErr != nil &amp;&amp; err == nil {
+			err = appendErr
+		}
+	}
+}
+if err != nil {
+	return err
+}</code></pre>
+<p>The order matters. A run that hit the step limit produced real turns. Throwing them away means the next run repeats the work that already happened.</p>
+<p>The <code>appendErr != nil &amp;&amp; err == nil</code> guard keeps the original failure: if the loop failed <em>and</em> the disk is full, the loop&#39;s error is the one a user needs.</p>
+<h2>The diffs</h2>
+<p><strong>1. Saving the loaded history too</strong> — <code>no-duplicate-turns</code></p>
+<pre><code class="language-diff">- for _, m := range res.History { rec.Append(m) }
++ for _, m := range res.History[len(prior)+1:] { rec.Append(m) }</code></pre>
+<p><strong>2. Storing the system message</strong> — <code>system-not-duplicated</code></p>
+<pre><code class="language-diff">- rec.Append(agent.Message{Role: agent.RoleSystem, Content: system})
++ // not stored: rebuilt from AGENTS.md on every run</code></pre>
+<p><strong>3. Rewriting the file</strong> — <code>appends-not-overwrites</code></p>
+<pre><code class="language-diff">- os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
++ os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)</code></pre>
+<p><strong>4. Recording results but not calls</strong> — <code>tool-history-persisted</code></p>
+<pre><code class="language-diff">- if m.Role == agent.RoleTool { rec.Append(m) }
++ for _, m := range res.History[len(prior)+1:] { rec.Append(m) }</code></pre>
+<h2>Complete files</h2>
+<table>
+<thead><tr><th>File</th><th>Lines</th><th>What to read it for</th></tr></thead>
+<tbody>
+<tr><td><code>reference/ch06/agent/session.go</code></td><td>185</td><td>format, versioning, the two-pass decode</td></tr>
+<tr><td><code>reference/ch06/agent/cmd/agent/main.go</code></td><td>150</td><td>load, prepend, save the suffix</td></tr>
+</tbody>
+</table>
+<h2>Comparison checklist</h2>
+<ul>
+<li>[ ] append-only file, header written once</li>
+<li>[ ] header carries a version, and a newer version is rejected</li>
+<li>[ ] load skips the header and collects message records only</li>
+<li>[ ] malformed line reports the line number</li>
+<li>[ ] system message rebuilt, never stored</li>
+<li>[ ] save starts at <code>len(prior)+1</code></li>
+<li>[ ] persistence happens before the error return</li>
+<li>[ ] missing file and missing directories both handled</li>
+<li>[ ] assistant tool calls recorded alongside results</li>
+</ul>
+<p>Differences outside this list are style.</p>
+<nav class="pager">
+<a class="prev" href="../../chapters/06-sessions/problem.html">&larr; 06 Sessions · Problem</a>
+<a class="next" href="../../chapters/07-context-budget/index.html">07 Context budget &rarr;</a>
+</nav>
+</main>
+</body>
+</html>

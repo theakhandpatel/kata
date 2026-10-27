@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>06 Sessions · Overview · Kata</title>
+<link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+<aside class="nav">
+<a class="brand" href="../../index.html">Kata</a>
+<div class="group">
+<div class="group-title">Start</div>
+<ul>
+<li><a href="../../index.html">Home</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">I. Wire</div>
+<ul>
+<li><a href="../../chapters/01-chat-with-the-model/index.html">01 Talk to the model</a></li>
+<li><a href="../../chapters/02-tool-calling/index.html">02 Tool calling</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">II. Act</div>
+<ul>
+<li><a href="../../chapters/03-tools-that-touch-disk/index.html">03 Tools that touch disk</a></li>
+<li><a href="../../chapters/04-the-agent-loop/index.html">04 The agent loop</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">III. Remember</div>
+<ul>
+<li><a href="../../chapters/05-prompt-assembly/index.html">05 Prompt assembly</a></li>
+<li><a href="../../chapters/06-sessions/index.html">06 Sessions</a></li>
+<li><a href="../../chapters/07-context-budget/index.html">07 Context budget</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">IV. Extend</div>
+<ul>
+<li><a href="../../chapters/08-steer-and-abort/index.html">08 Interrupt and steering</a></li>
+<li><a href="../../chapters/09-skills/index.html">09 Skills</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">V. Compose</div>
+<ul>
+<li><a href="../../chapters/10-subagent/index.html">10 Subagent</a></li>
+<li><a href="../../chapters/11-mcp/index.html">11 MCP</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">Reference</div>
+<ul>
+<li><a href="../../docs/architecture.html">Architecture</a></li>
+<li><a href="../../docs/chapter-format.html">Chapter format</a></li>
+<li><a href="../../docs/writing-style.html">Writing style</a></li>
+<li><a href="../../docs/designs.html">Designs</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">After the course</div>
+<ul>
+<li><a href="../../chapters/where-next.html">Where next</a></li>
+</ul>
+</div>
+</aside>
+<main>
+<nav class="subnav">
+<a class="current" href="../../chapters/06-sessions/overview.html">Overview</a>
+<a href="../../chapters/06-sessions/problem.html">Problem</a>
+<a href="../../chapters/06-sessions/example.html">Example</a>
+</nav>
+<h1>06 — Overview</h1>
+<p><em>How sessions work, and what belongs in one. Read this before you write code.</em></p>
+<hr>
+<h2>A session is a log, not a snapshot</h2>
+<p>There are two ways to persist a conversation. You can save the current state, or you can save every change that produced it.</p>
+<p>Snapshots are smaller and easier to read. Logs win on two properties that matter here:</p>
+<table>
+<thead><tr><th>Property</th><th>Snapshot</th><th>Append-only log</th></tr></thead>
+<tbody>
+<tr><td>A crash mid-write</td><td>the file is half-written and useless</td><td>the last line is lost, the rest is fine</td></tr>
+<tr><td>Two readers</td><td>must agree on a lock</td><td>both read the same prefix</td></tr>
+<tr><td>History of how you got here</td><td>lost</td><td>kept</td></tr>
+</tbody>
+</table>
+<p>So the format is one JSON object per line:</p>
+<pre><code>{&#34;type&#34;:&#34;header&#34;,&#34;version&#34;:1,&#34;created&#34;:&#34;2026-10-27T10:00:00Z&#34;}
+{&#34;type&#34;:&#34;message&#34;,&#34;message&#34;:{&#34;role&#34;:&#34;user&#34;,&#34;content&#34;:&#34;which branch?&#34;}}
+{&#34;type&#34;:&#34;message&#34;,&#34;message&#34;:{&#34;role&#34;:&#34;assistant&#34;,&#34;content&#34;:&#34;release&#34;}}</code></pre>
+<p>JSONL also means <code>tail -f work.jsonl</code> is a debugging tool, and <code>jq</code> is the query language. Neither needs your program.</p>
+<h2>Store the conversation. Rebuild the policy.</h2>
+<p>The session holds user, assistant and tool messages. It does <strong>not</strong> hold the system message.</p>
+<figure class="diagram"><svg id="my-svg" width="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" class="flowchart" style="max-width: 380.5px; background-color: transparent;" viewBox="4 4 380.5 640" role="graphics-document document" aria-roledescription="flowchart-v2"><style>#my-svg{font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:16px;fill:#000000;}@keyframes edge-animation-frame{from{stroke-dashoffset:0;}}@keyframes dash{to{stroke-dashoffset:0;}}#my-svg .edge-animation-slow{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 50s linear infinite;stroke-linecap:round;}#my-svg .edge-animation-fast{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 20s linear infinite;stroke-linecap:round;}#my-svg .error-icon{fill:#552222;}#my-svg .error-text{fill:#552222;stroke:#552222;}#my-svg .edge-thickness-normal{stroke-width:1px;}#my-svg .edge-thickness-thick{stroke-width:3.5px;}#my-svg .edge-pattern-solid{stroke-dasharray:0;}#my-svg .edge-thickness-invisible{stroke-width:0;fill:none;}#my-svg .edge-pattern-dashed{stroke-dasharray:3;}#my-svg .edge-pattern-dotted{stroke-dasharray:2;}#my-svg .marker{fill:#666;stroke:#666;}#my-svg .marker.cross{stroke:#666;}#my-svg svg{font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:16px;}#my-svg p{margin:0;}#my-svg .label{font-family:"trebuchet ms",verdana,arial,sans-serif;color:#000000;}#my-svg .cluster-label text{fill:#333;}#my-svg .cluster-label span{color:#333;}#my-svg .cluster-label span p{background-color:transparent;}#my-svg .label text,#my-svg span{fill:#000000;color:#000000;}#my-svg .node rect,#my-svg .node circle,#my-svg .node ellipse,#my-svg .node polygon,#my-svg .node path{fill:#eee;stroke:#999;stroke-width:1px;}#my-svg .rough-node .label text,#my-svg .node .label text,#my-svg .image-shape .label,#my-svg .icon-shape .label{text-anchor:middle;}#my-svg .node .katex path{fill:#000;stroke:#000;stroke-width:1px;}#my-svg .rough-node .label,#my-svg .node .label,#my-svg .image-shape .label,#my-svg .icon-shape .label{text-align:center;}#my-svg .node.clickable{cursor:pointer;}#my-svg .root .anchor path{fill:#666!important;stroke-width:0;stroke:#666;}#my-svg .arrowheadPath{fill:#333333;}#my-svg .edgePaths .path{stroke:#666;stroke-width:1px;}#my-svg .flowchart-link{stroke:#666;fill:none;}#my-svg .edgeLabel{background-color:white;text-align:center;}#my-svg .edgeLabel p{background-color:white;}#my-svg .edgeLabel rect{opacity:0.5;background-color:white;fill:white;}#my-svg .labelBkg{background-color:rgba(255, 255, 255, 0.5);}#my-svg .cluster rect{fill:hsl(0, 0%, 98.9215686275%);stroke:#707070;stroke-width:1px;}#my-svg .cluster text{fill:#333;}#my-svg .cluster span{color:#333;}#my-svg .node .collapsed-indicator{fill:#707070;stroke:none;opacity:0.6;}#my-svg .node .collapsed-separator{stroke:#707070;stroke-width:0.75px;}#my-svg div.mermaidTooltip{position:absolute;text-align:center;max-width:200px;padding:2px;font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:12px;background:hsl(-160, 0%, 93.3333333333%);border:1px solid #707070;border-radius:2px;pointer-events:none;z-index:100;}#my-svg .flowchartTitleText{text-anchor:middle;font-size:18px;fill:#000000;}#my-svg rect.text{fill:none;stroke-width:0;}#my-svg .icon-shape,#my-svg .image-shape{background-color:white;text-align:center;}#my-svg .icon-shape p,#my-svg .image-shape p{background-color:white;padding:2px;}#my-svg .icon-shape .label rect,#my-svg .image-shape .label rect{opacity:0.5;background-color:white;fill:white;}#my-svg .label-icon{display:inline-block;height:1em;overflow:visible;vertical-align:-0.125em;}#my-svg .node .label-icon path{fill:currentColor;stroke:revert;stroke-width:revert;}#my-svg .node .neo-node{stroke:#999;}#my-svg [data-look="neo"].node rect,#my-svg [data-look="neo"].cluster rect,#my-svg [data-look="neo"].node polygon{stroke:url(#my-svg-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg [data-look="neo"].swimlane.cluster rect{filter:none;}#my-svg [data-look="neo"].node path{stroke:url(#my-svg-gradient);stroke-width:1px;}#my-svg [data-look="neo"].node .outer-path{filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg [data-look="neo"].node .neo-line path{stroke:#999;filter:none;}#my-svg [data-look="neo"].node circle{stroke:url(#my-svg-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg [data-look="neo"].node circle .state-start{fill:#000000;}#my-svg [data-look="neo"].icon-shape .icon{fill:url(#my-svg-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg [data-look="neo"].icon-shape .icon-neo path{stroke:url(#my-svg-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg :root{--mermaid-font-family:"trebuchet ms",verdana,arial,sans-serif;}</style><g><marker id="my-svg_flowchart-v2-pointEnd" class="marker flowchart-v2" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-pointStart" class="marker flowchart-v2" viewBox="0 0 10 10" refX="4.5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 5 L 10 10 L 10 0 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-pointEnd-margin" class="marker flowchart-v2" viewBox="0 0 11.5 14" refX="11.5" refY="7" markerUnits="userSpaceOnUse" markerWidth="10.5" markerHeight="14" orient="auto"><path d="M 0 0 L 11.5 7 L 0 14 z" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-pointStart-margin" class="marker flowchart-v2" viewBox="0 0 11.5 14" refX="1" refY="7" markerUnits="userSpaceOnUse" markerWidth="11.5" markerHeight="14" orient="auto"><polygon points="0,7 11.5,14 11.5,0" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-circleEnd" class="marker flowchart-v2" viewBox="0 0 10 10" refX="11" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-circleStart" class="marker flowchart-v2" viewBox="0 0 10 10" refX="-1" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-circleEnd-margin" class="marker flowchart-v2" viewBox="0 0 10 10" refY="5" refX="12.25" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-circleStart-margin" class="marker flowchart-v2" viewBox="0 0 10 10" refX="-2" refY="5" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-crossEnd" class="marker cross flowchart-v2" viewBox="0 0 11 11" refX="12" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-crossStart" class="marker cross flowchart-v2" viewBox="0 0 11 11" refX="-1" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-crossEnd-margin" class="marker cross flowchart-v2" viewBox="0 0 15 15" refX="17.7" refY="7.5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto"><path d="M 1,1 L 14,14 M 1,14 L 14,1" class="arrowMarkerPath" style="stroke-width: 2.5;"/></marker><marker id="my-svg_flowchart-v2-crossStart-margin" class="marker cross flowchart-v2" viewBox="0 0 15 15" refX="-3.5" refY="7.5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto"><path d="M 1,1 L 14,14 M 1,14 L 14,1" class="arrowMarkerPath" style="stroke-width: 2.5; stroke-dasharray: 1, 0;"/></marker><g class="root"><g class="clusters"/><g class="edges edgePaths"><path d="M247.875,548L247.875,560.9289321881345Q247.875,568 240.80393218813452,568L228.44606781186548,568Q221.375,568 221.375,575.0710678118655L221.375,584" id="my-svg-L_S_L_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 53.17172622680664 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_S_L_0" data-points="W3sieCI6MjQ3Ljg3NSwieSI6NTQ4fSx7IngiOjI0Ny44NzUsInkiOjU2OH0seyJ4IjoyMjEuMzc1LCJ5Ijo1Njh9LHsieCI6MjIxLjM3NSwieSI6NTg4fV0=" data-look="neo" marker-end="url(#my-svg_flowchart-v2-pointEnd-margin)"/><path d="M98.25,84L98.25,120" id="my-svg-L_A_B_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 32 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_A_B_0" data-points="W3sieCI6OTguMjUsInkiOjg0fSx7IngiOjk4LjI1LCJ5IjoxMjR9XQ==" data-look="neo" marker-end="url(#my-svg_flowchart-v2-pointEnd-margin)"/><path d="M300.5,172L300.5,184.92893218813452Q300.5,192 293.4289321881345,192L228.44606781186548,192Q221.375,192 221.375,199.07106781186548L221.375,208" id="my-svg-L_P_H_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 105.79669189453125 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_P_H_0" data-points="W3sieCI6MzAwLjUsInkiOjE3Mn0seyJ4IjozMDAuNSwieSI6MTkyfSx7IngiOjIyMS4zNzUsInkiOjE5Mn0seyJ4IjoyMjEuMzc1LCJ5IjoyMTJ9XQ==" data-look="neo" marker-end="url(#my-svg_flowchart-v2-pointEnd-margin)"/><path d="M177.375,588L177.375,575.0710678118655Q177.375,568 170.30393218813452,568L157.94606781186548,568Q150.875,568 150.875,560.9289321881345L150.875,500L150.875,400L150.875,324L150.875,287.0710678118655Q150.875,280 157.94606781186548,280L170.30393218813452,280Q177.375,280 177.375,272.9289321881345L177.375,264" id="my-svg-L_L_H_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 362.3434143066406 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_L_H_0" data-points="W3sieCI6MTc3LjM3NSwieSI6NTg4fSx7IngiOjE3Ny4zNzUsInkiOjU2OH0seyJ4IjoxNTAuODc1LCJ5Ijo1Njh9LHsieCI6MTUwLjg3NSwieSI6NTAwfSx7IngiOjE1MC44NzUsInkiOjQwMH0seyJ4IjoxNTAuODc1LCJ5IjozMjR9LHsieCI6MTUwLjg3NSwieSI6MjgwfSx7IngiOjE3Ny4zNzUsInkiOjI4MH0seyJ4IjoxNzcuMzc1LCJ5IjoyNjB9XQ==" data-look="neo" marker-end="url(#my-svg_flowchart-v2-pointEnd-margin)"/><path d="M98.25,172L98.25,184.92893218813452Q98.25,192 105.32106781186548,192L170.30393218813452,192Q177.375,192 177.375,199.07106781186548L177.375,208" id="my-svg-L_B_H_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 105.79666900634766 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_B_H_0" data-points="W3sieCI6OTguMjUsInkiOjE3Mn0seyJ4Ijo5OC4yNSwieSI6MTkyfSx7IngiOjE3Ny4zNzUsInkiOjE5Mn0seyJ4IjoxNzcuMzc1LCJ5IjoyMTJ9XQ==" data-look="neo" marker-end="url(#my-svg_flowchart-v2-pointEnd-margin)"/><path d="M221.375,260L221.375,272.9289321881345Q221.375,280 228.44606781186548,280L240.80393218813452,280Q247.875,280 247.875,287.0710678118655L247.875,296" id="my-svg-L_H_R_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 53.171714782714844 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_H_R_0" data-points="W3sieCI6MjIxLjM3NSwieSI6MjYwfSx7IngiOjIyMS4zNzUsInkiOjI4MH0seyJ4IjoyNDcuODc1LCJ5IjoyODB9LHsieCI6MjQ3Ljg3NSwieSI6MzAwfV0=" data-look="neo" marker-end="url(#my-svg_flowchart-v2-pointEnd-margin)"/><path d="M247.875,348L247.875,448" id="my-svg-L_R_S_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 96 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_R_S_0" data-points="W3sieCI6MjQ3Ljg3NSwieSI6MzQ4fSx7IngiOjI0Ny44NzUsInkiOjQ1Mn1d" data-look="neo" marker-end="url(#my-svg_flowchart-v2-pointEnd-margin)"/></g><g class="edgeLabels"><g class="edgeLabel" transform="translate(247.6328125, 400)"><g class="label" data-id="L_R_S_0" transform="translate(-70.2578125, -12)"><foreignObject width="140.515625" height="24"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"><p>new messages only</p></span></div></foreignObject></g></g></g><g class="nodes"><g class="node default" id="my-svg-flowchart-S-0" data-look="neo" transform="translate(247.875, 500)"><rect class="basic label-container" style="" x="-76" y="-48" width="152" height="96"/><g class="label" style="" transform="translate(-60, -36)"><rect/><foreignObject width="120" height="72"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: break-spaces; line-height: 1.5; max-width: 120px; text-align: center; width: 120px;"><span class="nodeLabel"><p>session file<br />user, assistant, tool</p></span></div></foreignObject></g></g><g class="node default" id="my-svg-flowchart-L-1" data-look="neo" transform="translate(199.375, 612)"><rect class="basic label-container" style="" x="-76" y="-24" width="152" height="48"/><g class="label" style="" transform="translate(-60, -12)"><rect/><foreignObject width="120" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: nowrap; line-height: 1.5; max-width: 120px; text-align: center; width: 120px;"><span class="nodeLabel"><p>Load</p></span></div></foreignObject></g></g><g class="node default" id="my-svg-flowchart-A-2" data-look="neo" transform="translate(98.25, 48)"><rect class="basic label-container" style="" x="-76" y="-36" width="152" height="72"/><g class="label" style="" transform="translate(-60, -24)"><rect/><foreignObject width="120" height="48"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: nowrap; line-height: 1.5; max-width: 120px; text-align: center; width: 120px;"><span class="nodeLabel"><p>AGENTS.md<br />current contents</p></span></div></foreignObject></g></g><g class="node default" id="my-svg-flowchart-B-3" data-look="neo" transform="translate(98.25, 148)"><rect class="basic label-container" style="" x="-86.25" y="-24" width="172.5" height="48"/><g class="label" style="" transform="translate(-70.25, -12)"><rect/><foreignObject width="140.5" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: break-spaces; line-height: 1.5; max-width: 120px; text-align: center; width: 120px;"><span class="nodeLabel"><p>BuildSystemPrompt</p></span></div></foreignObject></g></g><g class="node default" id="my-svg-flowchart-P-4" data-look="neo" transform="translate(300.5, 148)"><rect class="basic label-container" style="" x="-76" y="-24" width="152" height="48"/><g class="label" style="" transform="translate(-60, -12)"><rect/><foreignObject width="120" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: nowrap; line-height: 1.5; max-width: 120px; text-align: center; width: 120px;"><span class="nodeLabel"><p>new prompt</p></span></div></foreignObject></g></g><g class="node default" id="my-svg-flowchart-H-5" data-look="neo" transform="translate(199.375, 236)"><rect class="basic label-container" style="" x="-76" y="-24" width="152" height="48"/><g class="label" style="" transform="translate(-60, -12)"><rect/><foreignObject width="120" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: nowrap; line-height: 1.5; max-width: 120px; text-align: center; width: 120px;"><span class="nodeLabel"><p>history</p></span></div></foreignObject></g></g><g class="node default" id="my-svg-flowchart-R-11" data-look="neo" transform="translate(247.875, 324)"><rect class="basic label-container" style="" x="-76" y="-24" width="152" height="48"/><g class="label" style="" transform="translate(-60, -12)"><rect/><foreignObject width="120" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: nowrap; line-height: 1.5; max-width: 120px; text-align: center; width: 120px;"><span class="nodeLabel"><p>RunLoop</p></span></div></foreignObject></g></g></g></g></g><defs><filter id="my-svg-drop-shadow" height="130%" width="130%"><feDropShadow dx="4" dy="4" stdDeviation="0" flood-opacity="0.06" flood-color="#000000"/></filter></defs><defs><filter id="my-svg-drop-shadow-small" height="150%" width="150%"><feDropShadow dx="2" dy="2" stdDeviation="0" flood-opacity="0.06" flood-color="#000000"/></filter></defs><linearGradient id="my-svg-gradient" gradientUnits="objectBoundingBox" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="hsl(0, 0%, 83.3333333333%)" stop-opacity="1"/><stop offset="100%" stop-color="hsl(0, 0%, 88.9215686275%)" stop-opacity="1"/></linearGradient></svg></figure>
+<p>Two reasons the system message stays out:</p>
+<ol>
+<li><strong>It is policy for this run.</strong> If <code>AGENTS.md</code> changed since yesterday, the agent</li>
+</ol>
+<p>should follow the new rules, not replay the old ones.</p>
+<ol>
+<li><strong>It must appear once.</strong> A program that both stores it and rebuilds it sends</li>
+</ol>
+<p>two on resume, and the second contradicts the first.</p>
+<p>The rule generalises: <strong>store facts, rebuild decisions.</strong></p>
+<h2>Resume is a slice, and the slice is where the bug is</h2>
+<p>The obvious implementation loads the history, appends it to the new request, and then records &#34;everything&#34; afterwards. That records the loaded history a second time:</p>
+<pre><code>  turn 1:  file = [u1, a1]
+  resume:  history = [system, u1, a1, u2]
+  save:    history[1:] = [u1, a1, u2]      ← u1 and a1 written again
+  file =   [u1, a1, u1, a1, u2]</code></pre>
+<p>The next run sends <code>u1, a1, u1, a1, u2</code>, so the model sees the conversation twice, the context fills twice as fast, and nothing looks obviously wrong.</p>
+<p>The fix is one number. Remember how many messages were loaded, and save only what comes after them:</p>
+<pre><code class="language-go">prior := rec.Load()
+history := append([]Message{{Role: RoleSystem, Content: system}}, prior...)
+history = append(history, userMessage)
+// ...
+for _, m := range res.History[len(prior)+1:] {
+	rec.Append(m)
+}</code></pre>
+<p><code>len(prior)+1</code> skips the system message and the loaded history in one expression. That <code>+1</code> is the chapter.</p>
+<h2>Tool pairs cross run boundaries too</h2>
+<p>A conversation with a tool call and no result is invalid: providers reject it. A resumed conversation is no different, which means the session must record <strong>assistant messages with their tool calls</strong>, not only the results.</p>
+<pre><code>{&#34;role&#34;:&#34;assistant&#34;,&#34;toolCalls&#34;:[{&#34;id&#34;:&#34;call_1&#34;,&#34;name&#34;:&#34;read&#34;,&#34;arguments&#34;:&#34;...&#34;}]}
+{&#34;role&#34;:&#34;tool&#34;,&#34;toolCallId&#34;:&#34;call_1&#34;,&#34;content&#34;:&#34;alpha&#34;}</code></pre>
+<p>Record one and not the other, and the next run fails with a message about orphaned tool calls, three chapters after the bug was introduced.</p>
+<h2>Why a Recorder interface</h2>
+<p>The loop does not know where history lives. It is handed a history and returns a longer one. Sessions are a layer around the loop, which is why this chapter adds one file and edits <code>main</code>, and touches neither the loop nor the provider.</p>
+<table>
+<thead><tr><th>Layer</th><th>Knows about</th><th>Does not know about</th></tr></thead>
+<tbody>
+<tr><td>loop</td><td>messages, tools, providers</td><td>files, paths, formats</td></tr>
+<tr><td>session</td><td>a file, append, load</td><td>the loop, the model, tools</td></tr>
+<tr><td>main</td><td>flags, wiring</td><td>neither implementation detail</td></tr>
+</tbody>
+</table>
+<h2>What this chapter does not do</h2>
+<ul>
+<li>No branching. One file is one linear conversation.</li>
+<li>No compaction. The file grows forever; chapter 07 starts deleting from the</li>
+</ul>
+<p><em>request</em> while keeping the file intact.</p>
+<ul>
+<li>No concurrency. Two processes appending to one session interleave, and nothing</li>
+</ul>
+<p>here prevents it.</p>
+<p>That last gap is worth naming rather than hiding. It is why pi locks its session files (<code>proper-lockfile</code> in its dependency list) and why this course defers it.</p>
+<h2>Where the real implementations go further</h2>
+<table>
+<thead><tr><th>Concern</th><th>pi</th><th>PiG</th></tr></thead>
+<tbody>
+<tr><td>Session shape</td><td>tree, every entry has a parent</td><td>ported tree</td></tr>
+<tr><td>Branching and forking</td><td>copy a subtree into a new file</td><td>ported</td></tr>
+<tr><td>Compaction</td><td>a summary entry replaces older messages <em>in the request</em></td><td>ported</td></tr>
+<tr><td>Locking</td><td><code>proper-lockfile</code></td><td>ported</td></tr>
+</tbody>
+</table>
+<p>The tree is what makes branching and compaction cheap. This chapter uses a line, which is the honest minimum and enough for eleven chapters.</p>
+<h2>Self-check</h2>
+<ol>
+<li>Why does an append-only log beat a snapshot after a crash? *(A session is a log,</li>
+</ol>
+<p>not a snapshot)*</p>
+<ol>
+<li>Name the two reasons the system message is not stored. *(Store the</li>
+</ol>
+<p>conversation. Rebuild the policy.)*</p>
+<ol>
+<li>What exactly does <code>len(prior)+1</code> skip? *(Resume is a slice, and the slice is</li>
+</ol>
+<p>where the bug is)*</p>
+<ol>
+<li>Which two records must both be written for a tool call, and what happens if one</li>
+</ol>
+<p>is missing? <em>(Tool pairs cross run boundaries too)</em></p>
+<ol>
+<li>What does this chapter deliberately not handle? *(What this chapter does not</li>
+</ol>
+<p>do)*</p>
+<nav class="pager">
+<a class="prev" href="../../chapters/06-sessions/index.html">&larr; 06 Sessions</a>
+<a class="next" href="../../chapters/06-sessions/problem.html">06 Sessions · Problem &rarr;</a>
+</nav>
+</main>
+</body>
+</html>

@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kata</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<aside class="nav">
+<a class="brand" href="index.html">Kata</a>
+<div class="group">
+<div class="group-title">Start</div>
+<ul>
+<li><a class="current" href="index.html">Home</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">I. Wire</div>
+<ul>
+<li><a href="chapters/01-chat-with-the-model/index.html">01 Talk to the model</a></li>
+<li><a href="chapters/02-tool-calling/index.html">02 Tool calling</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">II. Act</div>
+<ul>
+<li><a href="chapters/03-tools-that-touch-disk/index.html">03 Tools that touch disk</a></li>
+<li><a href="chapters/04-the-agent-loop/index.html">04 The agent loop</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">III. Remember</div>
+<ul>
+<li><a href="chapters/05-prompt-assembly/index.html">05 Prompt assembly</a></li>
+<li><a href="chapters/06-sessions/index.html">06 Sessions</a></li>
+<li><a href="chapters/07-context-budget/index.html">07 Context budget</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">IV. Extend</div>
+<ul>
+<li><a href="chapters/08-steer-and-abort/index.html">08 Interrupt and steering</a></li>
+<li><a href="chapters/09-skills/index.html">09 Skills</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">V. Compose</div>
+<ul>
+<li><a href="chapters/10-subagent/index.html">10 Subagent</a></li>
+<li><a href="chapters/11-mcp/index.html">11 MCP</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">Reference</div>
+<ul>
+<li><a href="docs/architecture.html">Architecture</a></li>
+<li><a href="docs/chapter-format.html">Chapter format</a></li>
+<li><a href="docs/writing-style.html">Writing style</a></li>
+<li><a href="docs/designs.html">Designs</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">After the course</div>
+<ul>
+<li><a href="chapters/where-next.html">Where next</a></li>
+</ul>
+</div>
+</aside>
+<main>
+<h1>Kata</h1>
+<p>Build a coding-agent harness in Go, with a grader that tells you what is broken.</p>
+<p>Kata is a course of eleven chapters and one local tool. You write the harness: the provider client, the tools, the loop, sessions, the context budget, steering, skills, subagents, and an MCP client. The tool runs your code against a scripted model and reports which claim failed and why.</p>
+<pre><code class="language-sh">git clone &lt;this repo&gt; &amp;&amp; cd kata
+go build -o kata ./cmd/kata
+
+./kata                 # where you are, what to do next
+./kata read 01         # the task for chapter 01
+./kata submit 01       # compile, grade, report</code></pre>
+<p>No account, no API key, no Docker, no network after the clone.</p>
+<h2>Why a grader</h2>
+<p>A harness sits around a model that is random, slow, and paid for. That makes the obvious teaching method, &#34;run it and see&#34;, useless: the answer changes each time and a failure costs money.</p>
+<p>Kata replaces the model with a scripted HTTP server and keeps the wire. You speak real Server-Sent Events to a real socket. Only the reply is fixed. So every check is instant, offline, and byte-precise, and a failure names the mechanism rather than showing a diff of prose.</p>
+<pre><code>  FAIL 04 surfaces a non-2xx response as *agent.HTTPError
+        why: A 429 is not a parse failure. Wrapping it in a typed error is
+             what lets the loop later retry with backoff.
+        field: error type
+        expected: &#34;*agent.HTTPError&#34;
+        actual:   provider: HTTP 429: {&#34;error&#34;:&#34;slow down&#34;}
+        hint: Check resp.StatusCode before you touch the body.
+        more: kata hint 01 http-error</code></pre>
+<h2>The arc</h2>
+<table>
+<thead><tr><th>#</th><th>Chapter</th><th>You prove</th></tr></thead>
+<tbody>
+<tr><td>01</td><td>Talk to the model</td><td>request shape, SSE reassembly, framing, errors, cancellation</td></tr>
+<tr><td>02</td><td>Tool calling</td><td>tool-call fragments folded by index, ids omitted on continuations</td></tr>
+<tr><td>03</td><td>Tools that touch disk</td><td><code>read</code>, <code>write</code>, <code>bash</code> honour the schema, errors, truncation</td></tr>
+<tr><td>04</td><td>The agent loop</td><td>event order, one result per call, clean termination</td></tr>
+<tr><td>05</td><td>Prompt assembly</td><td><code>AGENTS.md</code> discovery and attribution</td></tr>
+<tr><td>06</td><td>Sessions</td><td>JSONL append, replay, resume, idempotence</td></tr>
+<tr><td>07</td><td>Context budget</td><td>a hard ceiling, no orphaned pairs, marked pruning, recall</td></tr>
+<tr><td>08</td><td>Steer and abort</td><td>abort mid-stream, a queued message entering at the seam</td></tr>
+<tr><td>09</td><td>Skills</td><td>frontmatter, lazy body load, arguments, stacking</td></tr>
+<tr><td>10</td><td>Subagent</td><td>fresh context, scoped tools, exactly one result</td></tr>
+<tr><td>11</td><td>MCP (advanced)</td><td>stdio JSON-RPC, initialize, <code>tools/list</code>, <code>tools/call</code></td></tr>
+</tbody>
+</table>
+<p>Chapter 11 is optional. Chapters 01 to 04 give you a working agent you can point at Ollama or any OpenAI-compatible endpoint.</p>
+<p>When the arc is done, <a href="chapters/where-next.html">chapters/where-next.md</a> lists what to build on top: recovery of pruned context, a schema budget, parallel tool calls, a second wire format, and the bigger structural changes after those.</p>
+<h2>What each chapter contains</h2>
+<table>
+<thead><tr><th>File</th><th>Read when</th><th>Contains</th></tr></thead>
+<tbody>
+<tr><td><code>overview.md</code></td><td>before you start</td><td>how the mechanism works, with diagrams</td></tr>
+<tr><td><code>problem.md</code></td><td>at the keyboard</td><td>the task, the graded claims, the hint ladder</td></tr>
+<tr><td><code>example.md</code></td><td>after an attempt</td><td>a full annotated implementation</td></tr>
+</tbody>
+</table>
+<p><code>problem.md</code> states every claim the verifier makes, by case id. If a claim and a case ever disagree, the case is correct and the page is a bug.</p>
+<h2>Commands</h2>
+<pre><code class="language-sh">kata                      status: current chapter, next action
+kata submit [NN]          compile, grade, record
+kata submit NN --solution grade the reference instead of your code
+kata read [NN] [doc]      problem (default), overview, example
+kata hint NN &lt;case-id&gt;    three rungs, from nudge to answer
+kata list                 the arc, grouped into parts
+kata progress             what passed, and when
+kata verify               prove each chapter rejects its starter and accepts its reference
+kata reset [NN]           restore agent/ to the state before a chapter
+kata read where-next      what to build after the course
+kata site                 render the course as a static website in site/dist
+kata ui                   terminal interface: pick a chapter, grade it
+kata watch [NN]           re-grade on every save
+kata doctor               check the environment</code></pre>
+<p><code>kata site</code> writes plain HTML and one stylesheet. Open <code>site/dist/index.html</code> directly, or serve the directory. Diagrams load from a CDN; offline, the diagram source stays readable in place.</p>
+<h2>How it works</h2>
+<p>Every chapter leaves you with a program you can run. Chapter 01 gives you an application that answers a prompt; chapter 04 gives you one that completes a multi-step task; chapter 09 one that follows skills you write.</p>
+<p>The checks build <code>./agent/cmd/agent</code>, start a scripted server, point <code>OPENAI_BASE_URL</code> at it, and run your binary. They assert on stdout, stderr, exit codes, and the requests your program sent. Nothing imports your package, so the internal design is yours.</p>
+<pre><code class="language-sh">OPENAI_BASE_URL=http://localhost:11434/v1 ./agent -p &#34;list the files here&#34;</code></pre>
+<p>Design notes, diagrams, and the grading pipeline are in <a href="docs/architecture.html">docs/architecture.md</a>. The chapter file contract is in <a href="docs/chapter-format.html">docs/chapter-format.md</a>.</p>
+<h2>Requirements</h2>
+<p>Go 1.26 or newer.</p>
+<p>The agent you build uses only the standard library, and keeps doing so through all eleven chapters. The <code>kata</code> tool itself depends on Bubble Tea and Lip Gloss for the terminal interface. That is the whole dependency list, and it belongs to the tool, not to your code.</p>
+<h2>What Kata is not</h2>
+<p>Kata teaches the machine, not every attachment. It does not ship a terminal UI, an extension runtime, an LSP client, provider authentication, image input, or a cloud runner. Chapter 11 covers MCP because the client is small enough to teach. For a full harness, read <a href="https://github.com/earendil-works/pi">pi</a>, <a href="https://github.com/charmbracelet/crush">crush</a>, and <a href="https://github.com/MichaelKinsy/PiG">PiG</a>.</p>
+<h2>Publishing</h2>
+<p>The site is committed, so a deploy never needs Go or a browser on the build machine.</p>
+<pre><code class="language-sh">kata site --diagrams=render   # writes site/dist, pre-renders every diagram
+git add site/dist &amp;&amp; git commit -m &#34;site: rebuild&#34;</code></pre>
+<p>Netlify serves <code>site/dist</code> through <code>netlify.toml</code>. To deploy by hand:</p>
+<pre><code class="language-sh">netlify deploy --prod --dir site/dist</code></pre>
+<h2>Contributing</h2>
+<p>A chapter is done when <code>kata verify</code> is clean: its reference passes every case and its starter fails at least one. Hints are validated in both directions, so a case without a ladder fails the test suite. Prose follows <a href="docs/writing-style.html">docs/writing-style.md</a>.</p>
+<h2>License</h2>
+<p>MIT. See <a href="LICENSE">LICENSE</a>.</p>
+<nav class="pager">
+<span></span><a class="next" href="chapters/01-chat-with-the-model/index.html">01 Talk to the model &rarr;</a>
+</nav>
+</main>
+</body>
+</html>

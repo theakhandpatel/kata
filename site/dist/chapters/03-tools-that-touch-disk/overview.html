@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>03 Tools that touch disk · Overview · Kata</title>
+<link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+<aside class="nav">
+<a class="brand" href="../../index.html">Kata</a>
+<div class="group">
+<div class="group-title">Start</div>
+<ul>
+<li><a href="../../index.html">Home</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">I. Wire</div>
+<ul>
+<li><a href="../../chapters/01-chat-with-the-model/index.html">01 Talk to the model</a></li>
+<li><a href="../../chapters/02-tool-calling/index.html">02 Tool calling</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">II. Act</div>
+<ul>
+<li><a href="../../chapters/03-tools-that-touch-disk/index.html">03 Tools that touch disk</a></li>
+<li><a href="../../chapters/04-the-agent-loop/index.html">04 The agent loop</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">III. Remember</div>
+<ul>
+<li><a href="../../chapters/05-prompt-assembly/index.html">05 Prompt assembly</a></li>
+<li><a href="../../chapters/06-sessions/index.html">06 Sessions</a></li>
+<li><a href="../../chapters/07-context-budget/index.html">07 Context budget</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">IV. Extend</div>
+<ul>
+<li><a href="../../chapters/08-steer-and-abort/index.html">08 Interrupt and steering</a></li>
+<li><a href="../../chapters/09-skills/index.html">09 Skills</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">V. Compose</div>
+<ul>
+<li><a href="../../chapters/10-subagent/index.html">10 Subagent</a></li>
+<li><a href="../../chapters/11-mcp/index.html">11 MCP</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">Reference</div>
+<ul>
+<li><a href="../../docs/architecture.html">Architecture</a></li>
+<li><a href="../../docs/chapter-format.html">Chapter format</a></li>
+<li><a href="../../docs/writing-style.html">Writing style</a></li>
+<li><a href="../../docs/designs.html">Designs</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">After the course</div>
+<ul>
+<li><a href="../../chapters/where-next.html">Where next</a></li>
+</ul>
+</div>
+</aside>
+<main>
+<nav class="subnav">
+<a class="current" href="../../chapters/03-tools-that-touch-disk/overview.html">Overview</a>
+<a href="../../chapters/03-tools-that-touch-disk/problem.html">Problem</a>
+<a href="../../chapters/03-tools-that-touch-disk/example.html">Example</a>
+</nav>
+<h1>03 — Overview</h1>
+<p><em>How tools that touch disk work, and what can go wrong. Read this before you write code.</em></p>
+<hr>
+<h2>A tool is a capability, and capabilities have edges</h2>
+<p><code>read</code> takes a path and returns text. <code>write</code> takes a path and text. <code>bash</code> takes a command line. Each looks like a function call. Each has three edges you have to decide about before you write it:</p>
+<table>
+<thead><tr><th>Edge</th><th>Question</th><th>Wrong answer</th></tr></thead>
+<tbody>
+<tr><td>Arguments</td><td>whose input is this?</td><td>treat it as trusted</td></tr>
+<tr><td>Output</td><td>how much can come back?</td><td>return all of it</td></tr>
+<tr><td>Time</td><td>how long can it take?</td><td>wait forever</td></tr>
+</tbody>
+</table>
+<p>The model writes the arguments, so they are attacker-controlled input from your program&#39;s point of view. The machine writes the output, so it can be larger than the context window. The command decides the duration, so it can outlive the conversation.</p>
+<figure class="diagram"><svg id="my-svg" width="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" class="flowchart" style="max-width: 793.438px; background-color: transparent;" viewBox="4 4 793.4375 360" role="graphics-document document" aria-roledescription="flowchart-v2"><style>#my-svg{font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:16px;fill:#000000;}@keyframes edge-animation-frame{from{stroke-dashoffset:0;}}@keyframes dash{to{stroke-dashoffset:0;}}#my-svg .edge-animation-slow{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 50s linear infinite;stroke-linecap:round;}#my-svg .edge-animation-fast{stroke-dasharray:9,5!important;stroke-dashoffset:900;animation:dash 20s linear infinite;stroke-linecap:round;}#my-svg .error-icon{fill:#552222;}#my-svg .error-text{fill:#552222;stroke:#552222;}#my-svg .edge-thickness-normal{stroke-width:1px;}#my-svg .edge-thickness-thick{stroke-width:3.5px;}#my-svg .edge-pattern-solid{stroke-dasharray:0;}#my-svg .edge-thickness-invisible{stroke-width:0;fill:none;}#my-svg .edge-pattern-dashed{stroke-dasharray:3;}#my-svg .edge-pattern-dotted{stroke-dasharray:2;}#my-svg .marker{fill:#666;stroke:#666;}#my-svg .marker.cross{stroke:#666;}#my-svg svg{font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:16px;}#my-svg p{margin:0;}#my-svg .label{font-family:"trebuchet ms",verdana,arial,sans-serif;color:#000000;}#my-svg .cluster-label text{fill:#333;}#my-svg .cluster-label span{color:#333;}#my-svg .cluster-label span p{background-color:transparent;}#my-svg .label text,#my-svg span{fill:#000000;color:#000000;}#my-svg .node rect,#my-svg .node circle,#my-svg .node ellipse,#my-svg .node polygon,#my-svg .node path{fill:#eee;stroke:#999;stroke-width:1px;}#my-svg .rough-node .label text,#my-svg .node .label text,#my-svg .image-shape .label,#my-svg .icon-shape .label{text-anchor:middle;}#my-svg .node .katex path{fill:#000;stroke:#000;stroke-width:1px;}#my-svg .rough-node .label,#my-svg .node .label,#my-svg .image-shape .label,#my-svg .icon-shape .label{text-align:center;}#my-svg .node.clickable{cursor:pointer;}#my-svg .root .anchor path{fill:#666!important;stroke-width:0;stroke:#666;}#my-svg .arrowheadPath{fill:#333333;}#my-svg .edgePaths .path{stroke:#666;stroke-width:1px;}#my-svg .flowchart-link{stroke:#666;fill:none;}#my-svg .edgeLabel{background-color:white;text-align:center;}#my-svg .edgeLabel p{background-color:white;}#my-svg .edgeLabel rect{opacity:0.5;background-color:white;fill:white;}#my-svg .labelBkg{background-color:rgba(255, 255, 255, 0.5);}#my-svg .cluster rect{fill:hsl(0, 0%, 98.9215686275%);stroke:#707070;stroke-width:1px;}#my-svg .cluster text{fill:#333;}#my-svg .cluster span{color:#333;}#my-svg .node .collapsed-indicator{fill:#707070;stroke:none;opacity:0.6;}#my-svg .node .collapsed-separator{stroke:#707070;stroke-width:0.75px;}#my-svg div.mermaidTooltip{position:absolute;text-align:center;max-width:200px;padding:2px;font-family:"trebuchet ms",verdana,arial,sans-serif;font-size:12px;background:hsl(-160, 0%, 93.3333333333%);border:1px solid #707070;border-radius:2px;pointer-events:none;z-index:100;}#my-svg .flowchartTitleText{text-anchor:middle;font-size:18px;fill:#000000;}#my-svg rect.text{fill:none;stroke-width:0;}#my-svg .icon-shape,#my-svg .image-shape{background-color:white;text-align:center;}#my-svg .icon-shape p,#my-svg .image-shape p{background-color:white;padding:2px;}#my-svg .icon-shape .label rect,#my-svg .image-shape .label rect{opacity:0.5;background-color:white;fill:white;}#my-svg .label-icon{display:inline-block;height:1em;overflow:visible;vertical-align:-0.125em;}#my-svg .node .label-icon path{fill:currentColor;stroke:revert;stroke-width:revert;}#my-svg .node .neo-node{stroke:#999;}#my-svg [data-look="neo"].node rect,#my-svg [data-look="neo"].cluster rect,#my-svg [data-look="neo"].node polygon{stroke:url(#my-svg-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg [data-look="neo"].swimlane.cluster rect{filter:none;}#my-svg [data-look="neo"].node path{stroke:url(#my-svg-gradient);stroke-width:1px;}#my-svg [data-look="neo"].node .outer-path{filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg [data-look="neo"].node .neo-line path{stroke:#999;filter:none;}#my-svg [data-look="neo"].node circle{stroke:url(#my-svg-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg [data-look="neo"].node circle .state-start{fill:#000000;}#my-svg [data-look="neo"].icon-shape .icon{fill:url(#my-svg-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg [data-look="neo"].icon-shape .icon-neo path{stroke:url(#my-svg-gradient);filter:drop-shadow( 1px 2px 2px rgba(185,185,185,1));}#my-svg :root{--mermaid-font-family:"trebuchet ms",verdana,arial,sans-serif;}</style><g><marker id="my-svg_flowchart-v2-pointEnd" class="marker flowchart-v2" viewBox="0 0 10 10" refX="5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-pointStart" class="marker flowchart-v2" viewBox="0 0 10 10" refX="4.5" refY="5" markerUnits="userSpaceOnUse" markerWidth="8" markerHeight="8" orient="auto"><path d="M 0 5 L 10 10 L 10 0 z" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-pointEnd-margin" class="marker flowchart-v2" viewBox="0 0 11.5 14" refX="11.5" refY="7" markerUnits="userSpaceOnUse" markerWidth="10.5" markerHeight="14" orient="auto"><path d="M 0 0 L 11.5 7 L 0 14 z" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-pointStart-margin" class="marker flowchart-v2" viewBox="0 0 11.5 14" refX="1" refY="7" markerUnits="userSpaceOnUse" markerWidth="11.5" markerHeight="14" orient="auto"><polygon points="0,7 11.5,14 11.5,0" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-circleEnd" class="marker flowchart-v2" viewBox="0 0 10 10" refX="11" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-circleStart" class="marker flowchart-v2" viewBox="0 0 10 10" refX="-1" refY="5" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 1; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-circleEnd-margin" class="marker flowchart-v2" viewBox="0 0 10 10" refY="5" refX="12.25" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-circleStart-margin" class="marker flowchart-v2" viewBox="0 0 10 10" refX="-2" refY="5" markerUnits="userSpaceOnUse" markerWidth="14" markerHeight="14" orient="auto"><circle cx="5" cy="5" r="5" class="arrowMarkerPath" style="stroke-width: 0; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-crossEnd" class="marker cross flowchart-v2" viewBox="0 0 11 11" refX="12" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-crossStart" class="marker cross flowchart-v2" viewBox="0 0 11 11" refX="-1" refY="5.2" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto"><path d="M 1,1 l 9,9 M 10,1 l -9,9" class="arrowMarkerPath" style="stroke-width: 2; stroke-dasharray: 1, 0;"/></marker><marker id="my-svg_flowchart-v2-crossEnd-margin" class="marker cross flowchart-v2" viewBox="0 0 15 15" refX="17.7" refY="7.5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto"><path d="M 1,1 L 14,14 M 1,14 L 14,1" class="arrowMarkerPath" style="stroke-width: 2.5;"/></marker><marker id="my-svg_flowchart-v2-crossStart-margin" class="marker cross flowchart-v2" viewBox="0 0 15 15" refX="-3.5" refY="7.5" markerUnits="userSpaceOnUse" markerWidth="12" markerHeight="12" orient="auto"><path d="M 1,1 L 14,14 M 1,14 L 14,1" class="arrowMarkerPath" style="stroke-width: 2.5; stroke-dasharray: 1, 0;"/></marker><g class="root"><g class="clusters"/><g class="edges edgePaths"><path d="M637.4375,147L624.5085678118655,147Q617.4375,147 617.4375,154.07106781186548L617.4375,157.76226552146787Q617.4375,164.83333333333334 610.3664321881345,164.83333333333334L403.0710678118655,164.83333333333334Q396,164.83333333333334 396,171.90440114519882L396,176.92893218813452Q396,184 388.9289321881345,184L360,184" id="my-svg-L_M_T_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 299.7809753417969 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_M_T_0" data-points="W3sieCI6NjM3LjQzNzUsInkiOjE0N30seyJ4Ijo2MTcuNDM3NSwieSI6MTQ3fSx7IngiOjYxNy40Mzc1LCJ5IjoxNjQuODMzMzMzMzMzMzMzMzR9LHsieCI6Mzk2LCJ5IjoxNjQuODMzMzMzMzMzMzMzMzR9LHsieCI6Mzk2LCJ5IjoxODR9LHsieCI6MzU2LCJ5IjoxODR9XQ==" data-look="neo" marker-end="url(#my-svg_flowchart-v2-pointEnd-margin)"/><path d="M356,177L368.9289321881345,177Q376,177 376,169.92893218813452L376,126.90440114519882Q376,119.83333333333334 383.0710678118655,119.83333333333334L610.3664321881345,119.83333333333334Q617.4375,119.83333333333334 617.4375,126.90440114519882L617.4375,130.59559885480118Q617.4375,137.66666666666666 624.5085678118655,137.66666666666666L633.4375,137.66666666666666" id="my-svg-L_T_M_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 337.78094482421875 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_T_M_0" data-points="W3sieCI6MzU2LCJ5IjoxNzd9LHsieCI6Mzc2LCJ5IjoxNzd9LHsieCI6Mzc2LCJ5IjoxMTkuODMzMzMzMzMzMzMzMzR9LHsieCI6NjE3LjQzNzUsInkiOjExOS44MzMzMzMzMzMzMzMzNH0seyJ4Ijo2MTcuNDM3NSwieSI6MTM3LjY2NjY2NjY2NjY2NjY2fSx7IngiOjYzNy40Mzc1LCJ5IjoxMzcuNjY2NjY2NjY2NjY2NjZ9XQ==" data-look="neo" marker-end="url(#my-svg_flowchart-v2-pointEnd-margin)"/><path d="M360,191L368.9289321881345,191Q376,191 376,198.07106781186548L376,223.26226552146784Q376,230.33333333333331 383.0710678118655,230.33333333333331L633.4375,230.33333333333331" id="my-svg-L_T_W_0" class="edge-thickness-normal edge-pattern-solid edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 4 299.44256591796875 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_T_W_0" data-points="W3sieCI6MzU2LCJ5IjoxOTF9LHsieCI6Mzc2LCJ5IjoxOTF9LHsieCI6Mzc2LCJ5IjoyMzAuMzMzMzMzMzMzMzMzMzF9LHsieCI6NjM3LjQzNzUsInkiOjIzMC4zMzMzMzMzMzMzMzMzMX1d" data-look="neo" marker-start="url(#my-svg_flowchart-v2-pointStart-margin)" marker-end="url(#my-svg_flowchart-v2-pointEnd-margin)"/><path d="M164,60L176.92893218813452,60Q184,60 184,67.07106781186548L184,169.92893218813452Q184,177 191.07106781186548,177L200,177" id="my-svg-L_A_T_0" class="edge-thickness-normal edge-pattern-dotted edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_A_T_0" data-points="W3sieCI6MTY0LCJ5Ijo2MH0seyJ4IjoxODQsInkiOjYwfSx7IngiOjE4NCwieSI6MTc3fSx7IngiOjIwNCwieSI6MTc3fV0=" data-look="neo" marker-end="url(#my-svg_flowchart-v2-pointEnd-margin)"/><path d="M164,184L200,184" id="my-svg-L_B_T_0" class="edge-thickness-normal edge-pattern-dotted edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_B_T_0" data-points="W3sieCI6MTY0LCJ5IjoxODR9LHsieCI6MjA0LCJ5IjoxODR9XQ==" data-look="neo" marker-end="url(#my-svg_flowchart-v2-pointEnd-margin)"/><path d="M164,308L176.92893218813452,308Q184,308 184,300.9289321881345L184,198.07106781186548Q184,191 191.07106781186548,191L200,191" id="my-svg-L_C_T_0" class="edge-thickness-normal edge-pattern-dotted edge-thickness-normal edge-pattern-solid flowchart-link" style="stroke-dasharray: 0 0 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 2 4; stroke-dashoffset: 0;;" data-edge="true" data-et="edge" data-id="L_C_T_0" data-points="W3sieCI6MTY0LCJ5IjozMDh9LHsieCI6MTg0LCJ5IjozMDh9LHsieCI6MTg0LCJ5IjoxOTF9LHsieCI6MjA0LCJ5IjoxOTF9XQ==" data-look="neo" marker-end="url(#my-svg_flowchart-v2-pointEnd-margin)"/></g><g class="edgeLabels"><g class="edgeLabel" transform="translate(506.71875, 164.33333333333334)"><g class="label" data-id="L_M_T_0" transform="translate(-90.71875, -12)"><foreignObject width="181.4375" height="24"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"><p>arguments: untrusted text</p></span></div></foreignObject></g></g><g class="edgeLabel" transform="translate(506.71875, 119.33333333333334)"><g class="label" data-id="L_T_M_0" transform="translate(-46.265625, -12)"><foreignObject width="92.53125" height="24"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"><p>bounded text</p></span></div></foreignObject></g></g><g class="edgeLabel" transform="translate(506.71875, 229.83333333333331)"><g class="label" data-id="L_T_W_0" transform="translate(-55.1328125, -12)"><foreignObject width="110.265625" height="24"><div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="display: table-cell; white-space: nowrap; line-height: 1.5; max-width: 200px; text-align: center;"><span class="edgeLabel"><p>files, processes</p></span></div></foreignObject></g></g></g><g class="nodes"><g class="node default" id="my-svg-flowchart-M-0" data-look="neo" transform="translate(713.4375, 142.33333333333331)"><rect class="basic label-container" style="" x="-76" y="-24" width="152" height="48"/><g class="label" style="" transform="translate(-60, -12)"><rect/><foreignObject width="120" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: nowrap; line-height: 1.5; max-width: 120px; text-align: center; width: 120px;"><span class="nodeLabel"><p>model</p></span></div></foreignObject></g></g><g class="node default" id="my-svg-flowchart-T-1" data-look="neo" transform="translate(280, 184)"><rect class="basic label-container" style="" x="-76" y="-24" width="152" height="48"/><g class="label" style="" transform="translate(-60, -12)"><rect/><foreignObject width="120" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: nowrap; line-height: 1.5; max-width: 120px; text-align: center; width: 120px;"><span class="nodeLabel"><p>tool</p></span></div></foreignObject></g></g><g class="node default" id="my-svg-flowchart-W-5" data-look="neo" transform="translate(713.4375, 230.33333333333331)"><rect class="basic label-container" style="" x="-76" y="-24" width="152" height="48"/><g class="label" style="" transform="translate(-60, -12)"><rect/><foreignObject width="120" height="24"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: nowrap; line-height: 1.5; max-width: 120px; text-align: center; width: 120px;"><span class="nodeLabel"><p>workspace</p></span></div></foreignObject></g></g><g class="node default" id="my-svg-flowchart-A-6" data-look="neo" transform="translate(88, 60)"><rect class="basic label-container" style="" x="-76" y="-48" width="152" height="96"/><g class="label" style="" transform="translate(-60, -36)"><rect/><foreignObject width="120" height="72"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: break-spaces; line-height: 1.5; max-width: 120px; text-align: center; width: 120px;"><span class="nodeLabel"><p>argument edge:<br />resolve, refuse escapes</p></span></div></foreignObject></g></g><g class="node default" id="my-svg-flowchart-B-7" data-look="neo" transform="translate(88, 184)"><rect class="basic label-container" style="" x="-76" y="-36" width="152" height="72"/><g class="label" style="" transform="translate(-60, -24)"><rect/><foreignObject width="120" height="48"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: nowrap; line-height: 1.5; max-width: 120px; text-align: center; width: 120px;"><span class="nodeLabel"><p>output edge:<br />cap and mark</p></span></div></foreignObject></g></g><g class="node default" id="my-svg-flowchart-C-8" data-look="neo" transform="translate(88, 308)"><rect class="basic label-container" style="" x="-76" y="-48" width="152" height="96"/><g class="label" style="" transform="translate(-60, -36)"><rect/><foreignObject width="120" height="72"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table; white-space: break-spaces; line-height: 1.5; max-width: 120px; text-align: center; width: 120px;"><span class="nodeLabel"><p>time edge:<br />bound and report</p></span></div></foreignObject></g></g></g></g></g><defs><filter id="my-svg-drop-shadow" height="130%" width="130%"><feDropShadow dx="4" dy="4" stdDeviation="0" flood-opacity="0.06" flood-color="#000000"/></filter></defs><defs><filter id="my-svg-drop-shadow-small" height="150%" width="150%"><feDropShadow dx="2" dy="2" stdDeviation="0" flood-opacity="0.06" flood-color="#000000"/></filter></defs><linearGradient id="my-svg-gradient" gradientUnits="objectBoundingBox" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="hsl(0, 0%, 83.3333333333%)" stop-opacity="1"/><stop offset="100%" stop-color="hsl(0, 0%, 88.9215686275%)" stop-opacity="1"/></linearGradient></svg></figure>
+<h2>The workspace boundary</h2>
+<p>Every path is resolved against a workspace root and refused if it escapes. Two rules make it hold:</p>
+<ol>
+<li>Resolve first, then check. <code>a/../../etc/passwd</code> contains <code>..</code>, but so do</li>
+</ol>
+<p>legitimate names, and a symlink defeats any string check.</p>
+<ol>
+<li>Refuse absolute paths outright. The model has no reason to name one, and</li>
+</ol>
+<p>allowing it makes the check conditional on the machine.</p>
+<pre><code>  requested:  ../../etc/passwd
+  joined:     /workspace/../../etc/passwd
+  resolved:   /etc/passwd
+  relative:   ../../etc/passwd          ← starts with .., refused</code></pre>
+<p>The same helper serves <code>read</code> and <code>write</code>. A write escape is worse than a read escape: it changes the machine.</p>
+<h2>Exit codes are results</h2>
+<p>A shell command that exits 3 has done something normal. The model asked for an operation, the operation reported failure, and the model can now decide what to do about it.</p>
+<p>So <code>bash</code> returns text:</p>
+<pre><code>exit code: 3
+before</code></pre>
+<p>and the program keeps going. Only two things are errors: the process could not start, and the user cancelled. Both mean the conversation cannot continue meaningfully.</p>
+<table>
+<thead><tr><th>Outcome</th><th>Result</th><th>Go error</th></tr></thead>
+<tbody>
+<tr><td>exit 0</td><td><code>exit code: 0</code> plus output</td><td>none</td></tr>
+<tr><td>exit 3</td><td><code>exit code: 3</code> plus output</td><td>none</td></tr>
+<tr><td>output too long</td><td>capped plus marker</td><td>none</td></tr>
+<tr><td>tool timeout</td><td><code>command timed out after 10s</code></td><td>none</td></tr>
+<tr><td>user pressed Ctrl-C</td><td>—</td><td><code>context.Canceled</code></td></tr>
+<tr><td><code>sh</code> not found</td><td>—</td><td>start error</td></tr>
+</tbody>
+</table>
+<h2>Two bounds, and they are not the same</h2>
+<pre><code>  -timeout        bounds one provider request      (chapter 01)
+  -tool-timeout   bounds one tool execution        (this chapter)</code></pre>
+<p>They are separate because they fail differently. A slow model should not consume the budget for running a test suite, and a long test suite should not look like a slow model. Both arrive through a context, so both are cancellable, but one is the caller&#39;s decision and the other is the tool&#39;s.</p>
+<h2>The truncation rule</h2>
+<p>An unbounded output does not just cost tokens. It costs the model&#39;s understanding of position: with 200 KB of log in the middle of the conversation, the important instruction from the first message is proportionally invisible.</p>
+<p>So cap, and say what you capped:</p>
+<pre><code>... [truncated: 20000 of 184320 bytes shown]</code></pre>
+<p>A silent cap is worse than no cap, because the model will reason about the part it thinks it saw.</p>
+<h2>A known limitation, stated plainly</h2>
+<p><code>exec.CommandContext</code> kills the process it started. It does not reliably kill that process&#39;s children. A command like <code>sh -c &#34;sleep 100 &amp;&#34;</code> can leave a background process behind.</p>
+<p>Fixing it properly means process groups, which is platform-specific: on Unix, <code>Setpgid</code> plus a negative-pid kill; on Windows, a job object. That is a chapter of its own, so this course states the limitation and moves on. Chapter 08 adds cancellation for the request; the process-group gap stays documented in &#34;where next&#34;.</p>
+<h2>Where the real implementations go further</h2>
+<table>
+<thead><tr><th>Concern</th><th>pi</th><th>crush</th></tr></thead>
+<tbody>
+<tr><td>Permission policy before a tool runs</td><td><code>beforeToolCall</code> hook</td><td><code>internal/permission/</code></td></tr>
+<tr><td>Process groups and sandboxing</td><td>platform-specific</td><td><code>internal/shell/</code></td></tr>
+<tr><td>Output handling</td><td>truncation with handles</td><td><code>internal/fsext/</code></td></tr>
+</tbody>
+</table>
+<p>The three edges are the same everywhere. What they add is policy, and policy gets a seam in chapter 08.</p>
+<h2>Self-check</h2>
+<ol>
+<li>Why is resolving before checking safer than scanning the string for <code>..</code>?</li>
+</ol>
+<p><em>(The workspace boundary)</em></p>
+<ol>
+<li>A command exits 3. What does the model receive, and what does the program</li>
+</ol>
+<p>return? <em>(Exit codes are results)</em></p>
+<ol>
+<li>Why are the request timeout and the tool timeout separate?</li>
+</ol>
+<p><em>(Two bounds, and they are not the same)</em></p>
+<ol>
+<li>Why is a silent truncation worse than a visible one?</li>
+</ol>
+<p><em>(The truncation rule)</em></p>
+<ol>
+<li>Name the case that would break if you killed only the direct child process,</li>
+</ol>
+<p>and explain why this chapter does not grade it. <em>(A known limitation, stated plainly)</em></p>
+<nav class="pager">
+<a class="prev" href="../../chapters/03-tools-that-touch-disk/index.html">&larr; 03 Tools that touch disk</a>
+<a class="next" href="../../chapters/03-tools-that-touch-disk/problem.html">03 Tools that touch disk · Problem &rarr;</a>
+</nav>
+</main>
+</body>
+</html>

@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>02 Tool calling · Problem · Kata</title>
+<link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+<aside class="nav">
+<a class="brand" href="../../index.html">Kata</a>
+<div class="group">
+<div class="group-title">Start</div>
+<ul>
+<li><a href="../../index.html">Home</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">I. Wire</div>
+<ul>
+<li><a href="../../chapters/01-chat-with-the-model/index.html">01 Talk to the model</a></li>
+<li><a href="../../chapters/02-tool-calling/index.html">02 Tool calling</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">II. Act</div>
+<ul>
+<li><a href="../../chapters/03-tools-that-touch-disk/index.html">03 Tools that touch disk</a></li>
+<li><a href="../../chapters/04-the-agent-loop/index.html">04 The agent loop</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">III. Remember</div>
+<ul>
+<li><a href="../../chapters/05-prompt-assembly/index.html">05 Prompt assembly</a></li>
+<li><a href="../../chapters/06-sessions/index.html">06 Sessions</a></li>
+<li><a href="../../chapters/07-context-budget/index.html">07 Context budget</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">IV. Extend</div>
+<ul>
+<li><a href="../../chapters/08-steer-and-abort/index.html">08 Interrupt and steering</a></li>
+<li><a href="../../chapters/09-skills/index.html">09 Skills</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">V. Compose</div>
+<ul>
+<li><a href="../../chapters/10-subagent/index.html">10 Subagent</a></li>
+<li><a href="../../chapters/11-mcp/index.html">11 MCP</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">Reference</div>
+<ul>
+<li><a href="../../docs/architecture.html">Architecture</a></li>
+<li><a href="../../docs/chapter-format.html">Chapter format</a></li>
+<li><a href="../../docs/writing-style.html">Writing style</a></li>
+<li><a href="../../docs/designs.html">Designs</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">After the course</div>
+<ul>
+<li><a href="../../chapters/where-next.html">Where next</a></li>
+</ul>
+</div>
+</aside>
+<main>
+<nav class="subnav">
+<a href="../../chapters/02-tool-calling/overview.html">Overview</a>
+<a class="current" href="../../chapters/02-tool-calling/problem.html">Problem</a>
+<a href="../../chapters/02-tool-calling/example.html">Example</a>
+</nav>
+<h1>02 — Problem</h1>
+<blockquote><p><strong>Your task:</strong> let the agent run a tool. Advertise <code>read</code>, execute it when the  model asks, and send the result back so the model can answer.</p></blockquote>
+<p><strong>You edit:</strong> <code>agent/provider_openai.go</code>, <code>agent/tool.go</code>, <code>agent/tools.go</code>, <code>agent/cmd/agent/main.go</code> <strong>Given:</strong> <code>agent/types.go</code> (the <code>Tool</code> interface and <code>ToolResult</code>) <strong>Time:</strong> 60 to 90 minutes</p>
+<hr>
+<h2>The contract</h2>
+<p>Four pieces, all in the <code>agent</code> package:</p>
+<pre><code class="language-go">// tool.go -- the registry
+func NewRegistry(tools ...Tool) *Registry
+func (r *Registry) Lookup(name string) (Tool, bool)
+func (r *Registry) Defs() []ToolDef
+func (r *Registry) Run(ctx context.Context, call ToolCall) ToolResult
+
+// tools.go -- one tool
+type ReadTool struct {
+    Root     string // workspace root, absolute
+    MaxBytes int    // 0 means 20000
+}</code></pre>
+<p><code>Tool</code> is already declared in <code>agent/types.go</code>. The program in <code>agent/cmd/agent/main.go</code> currently sends no tools; wire the registry into it.</p>
+<p>The provider must also learn one thing: when a message contains tool calls, or is a tool result, that has to be serialised in the wire format.</p>
+<h2>What the verifier does</h2>
+<p>It builds <code>./agent/cmd/agent</code>, creates a temporary workspace, starts a scripted server that asks for a tool on the first turn, and runs your binary with that directory as its working directory. Then it inspects:</p>
+<ol>
+<li>the <strong>first</strong> request: does it advertise <code>read</code> with a <code>path</code> parameter;</li>
+<li>the <strong>second</strong> request: is there a <code>tool</code> message whose content is the file,</li>
+</ol>
+<p>paired with the call id;</p>
+<ol>
+<li>stdout, stderr and the exit code.</li>
+</ol>
+<h2>The verifier will assert that</h2>
+<ul>
+<li><code>advertises-read</code> — the first request carries a tool named <code>read</code> whose</li>
+</ul>
+<p>parameters declare a <code>path</code> property.</p>
+<ul>
+<li><code>reads-a-file</code> — the second request contains a <code>tool</code> message with the file</li>
+</ul>
+<p>contents and <code>tool_call_id</code> equal to the call id, and stdout is the model&#39;s follow-up answer.</p>
+<ul>
+<li><code>folds-arguments</code> — arguments split across four fragments, with the id present</li>
+</ul>
+<p>only on the first, still resolve to the right file.</p>
+<ul>
+<li><code>missing-file</code> — the tool result says <code>no such file</code>, and the program exits 0</li>
+</ul>
+<p>after printing the model&#39;s answer.</p>
+<ul>
+<li><code>refuses-escape</code> — <code>../../etc/passwd</code> produces a refusal naming the escape, and</li>
+</ul>
+<p>no file contents appear in the result.</p>
+<ul>
+<li><code>truncates-large-file</code> — a 50 KB file yields at most 25 KB of tool content and</li>
+</ul>
+<p>a marker containing <code>truncated</code>.</p>
+<ul>
+<li><code>invalid-arguments</code> — malformed JSON produces a result saying the arguments are</li>
+</ul>
+<p>not valid JSON; the program exits 0.</p>
+<ul>
+<li><code>text-only-single-request</code> — a plain reply costs exactly one request.</li>
+</ul>
+<h2>Notes</h2>
+<ul>
+<li><strong>Order matters.</strong> Tool results go back in the same order as the calls, and</li>
+</ul>
+<p>each carries its call id. Providers validate this pairing.</p>
+<ul>
+<li><strong>The workspace root is the process working directory.</strong> The checks start the</li>
+</ul>
+<p>binary inside a temp dir; do not resolve paths against the source tree.</p>
+<ul>
+<li><strong>Absolute paths are refused.</strong> So are <code>..</code> segments that escape after</li>
+</ul>
+<p>resolution. Check the resolved path, not the string.</p>
+<ul>
+<li><strong>Deliberate omission:</strong> no <code>write</code>, no <code>bash</code>, no parallel execution. Chapter</li>
+</ul>
+<p>03 adds the other tools; chapter 04 adds the loop.</p>
+<ul>
+<li><strong>Output contract:</strong> the answer on stdout, diagnostics on stderr, exit 0 unless</li>
+</ul>
+<p>the provider request itself fails.</p>
+<h2>Hints</h2>
+<p>&lt;details&gt;&lt;summary&gt;Rung 1 — the mechanism&lt;/summary&gt;</p>
+<p>A call and its result are two halves of one message pair. The id is what ties them together, and the index is what ties the streamed fragments together. &lt;/details&gt;</p>
+<p>&lt;details&gt;&lt;summary&gt;Rung 2 — the APIs&lt;/summary&gt;</p>
+<p><code>json.Valid</code> before <code>json.Unmarshal</code> on model-supplied argument text. <code>filepath.Abs</code> and <code>filepath.Rel</code> for the workspace check. <code>os.Stat</code> to tell a missing file from a directory. <code>f.Read</code> with <code>limit+1</code> bytes to detect an overflow. &lt;/details&gt;</p>
+<p>&lt;details&gt;&lt;summary&gt;Rung 3 — what the code does&lt;/summary&gt;</p>
+<p>Fold tool-call fragments into a map keyed by <code>index</code>, appending <code>function.arguments</code>; emit the calls sorted by index. Serialise an assistant message with <code>tool_calls</code>, and a tool message with <code>role: &#34;tool&#34;</code>, <code>tool_call_id</code> and <code>content</code>. <code>Registry.Run</code> returns an <code>IsError</code> result for an unknown tool, invalid JSON, or a tool error. <code>ReadTool</code> resolves the path inside <code>Root</code>, rejects escapes, reads <code>limit+1</code> bytes, and appends a truncation marker when the extra byte exists.</p>
+<p><code>kata hint 02 &lt;case-id&gt;</code> prints these same rungs from the CLI. &lt;/details&gt;</p>
+<h2>Done when</h2>
+<p><code>kata submit 02</code> reports 8/8, and:</p>
+<ul>
+<li>a real endpoint reads a real file for you;</li>
+<li>you can explain why folding by id fails and folding by index does not;</li>
+<li>you know why a missing file must not exit the program.</li>
+</ul>
+<nav class="pager">
+<a class="prev" href="../../chapters/02-tool-calling/overview.html">&larr; 02 Tool calling · Overview</a>
+<a class="next" href="../../chapters/02-tool-calling/example.html">02 Tool calling · Example &rarr;</a>
+</nav>
+</main>
+</body>
+</html>

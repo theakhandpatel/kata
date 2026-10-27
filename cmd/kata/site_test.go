@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"strings"
 	"testing"
 )
@@ -68,5 +69,35 @@ func TestRelativePrefixByDepth(t *testing.T) {
 	}
 	if got := strings.Repeat("../", strings.Count("chapters/04-the-agent-loop/problem.html", "/")); got != "../../" {
 		t.Fatalf("chapter prefix = %q", got)
+	}
+}
+
+func TestInlineDiagrams(t *testing.T) {
+	content := "<p>x</p><pre class=\"mermaid\">flowchart LR\n  a --&gt; b</pre><p>y</p>"
+	render := func(src string) (string, error) {
+		return "<?xml version=\"1.0\"?><svg id=\"d\">" + src + "</svg>", nil
+	}
+
+	got := inlineDiagrams(content, render)
+	if strings.Contains(got, `class="mermaid"`) {
+		t.Fatalf("source block survived:\n%s", got)
+	}
+	if !strings.Contains(got, `<figure class="diagram"><svg`) {
+		t.Fatalf("no figure wrapper:\n%s", got)
+	}
+	if !strings.Contains(got, "a --> b") {
+		t.Fatalf("entities were not decoded before rendering:\n%s", got)
+	}
+}
+
+func TestInlineDiagramsFallsBack(t *testing.T) {
+	content := `<pre class="mermaid">flowchart LR</pre>`
+
+	failing := func(string) (string, error) { return "", errors.New("no browser") }
+	if got := inlineDiagrams(content, failing); got != content {
+		t.Fatalf("a failed render must leave the source in place:\n%s", got)
+	}
+	if got := inlineDiagrams(content, nil); got != content {
+		t.Fatalf("no renderer must leave the source in place:\n%s", got)
 	}
 }

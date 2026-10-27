@@ -1,9 +1,12 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"html"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -25,8 +28,14 @@ func cmdSite(args []string) error {
 
 	out := "site/dist"
 	title := "Kata"
+	diagramMode := "auto"
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
+		case "--diagrams", "-d":
+			if i+1 < len(args) {
+				diagramMode = args[i+1]
+				i++
+			}
 		case "--out", "-o":
 			if i+1 < len(args) {
 				out = args[i+1]
@@ -49,6 +58,14 @@ func cmdSite(args []string) error {
 		return err
 	}
 
+	var render diagramRenderer
+	if diagramMode != "cdn" && diagramMode != "none" {
+		render, err = mermaidRenderer(root)
+		if err != nil && diagramMode == "render" {
+			return fmt.Errorf("diagram rendering was requested but is unavailable: %w", err)
+		}
+	}
+
 	pages, err := sitePages(root)
 	if err != nil {
 		return err
@@ -68,6 +85,8 @@ func cmdSite(args []string) error {
 
 		content := renderMarkdown(string(body))
 		content = rewriteLinks(content)
+		content = inlineDiagrams(content, render)
+		needsCDN := strings.Contains(content, `class="mermaid"`)
 
 		var prev, next *sitePage
 		if i > 0 {
@@ -89,6 +108,7 @@ func cmdSite(args []string) error {
 			SubNav:    p.SubNav,
 			Prev:      prev,
 			Next:      next,
+			UseCDN:    needsCDN,
 		})
 
 		dest := filepath.Join(out, p.Out)
@@ -104,7 +124,11 @@ func cmdSite(args []string) error {
 		return err
 	}
 
-	fmt.Printf("\n  wrote %d pages and one stylesheet to %s\n", len(pages), out)
+	mode := "pre-rendered diagrams"
+	if render == nil {
+		mode = "diagrams render in the browser (npx unavailable, or --diagrams=cdn)"
+	}
+	fmt.Printf("\n  wrote %d pages and one stylesheet to %s\n  %s\n", len(pages), out, mode)
 	fmt.Printf("  open %s\n\n", filepath.Join(out, "index.html"))
 	return nil
 }
@@ -168,6 +192,7 @@ func sitePages(root string) ([]sitePage, error) {
 		{"docs/architecture.md", "docs/architecture.html", "Architecture"},
 		{"docs/chapter-format.md", "docs/chapter-format.html", "Chapter format"},
 		{"docs/writing-style.md", "docs/writing-style.html", "Writing style"},
+		{"docs/designs.md", "docs/designs.html", "How other harnesses are built"},
 		{"chapters/where-next.md", "chapters/where-next.html", "Where next"},
 	} {
 		if _, err := os.Stat(filepath.Join(root, doc.source)); err != nil {
@@ -203,6 +228,7 @@ func siteNav(root string) []navGroup {
 			{Title: "Architecture", Href: "docs/architecture.html"},
 			{Title: "Chapter format", Href: "docs/chapter-format.html"},
 			{Title: "Writing style", Href: "docs/writing-style.html"},
+			{Title: "Designs", Href: "docs/designs.html"},
 		}},
 		navGroup{Title: "After the course", Items: []navLink{
 			{Title: "Where next", Href: "chapters/where-next.html"},
@@ -221,6 +247,7 @@ type layoutInput struct {
 	SubNav    []navLink
 	Prev      *sitePage
 	Next      *sitePage
+	UseCDN    bool // include the browser mermaid loader
 }
 
 func layout(in layoutInput) string {
@@ -235,14 +262,19 @@ func layout(in layoutInput) string {
 		fmt.Fprintf(&b, "<title>%s · %s</title>\n", html.EscapeString(in.Title), html.EscapeString(in.SiteTitle))
 	}
 	fmt.Fprintf(&b, "<link rel=\"stylesheet\" href=\"%sstyle.css\">\n", in.Prefix)
-	// Mermaid renders diagrams in the browser. If it cannot load, the source stays
-	// visible as a code block rather than leaving an empty box.
-	b.WriteString("<script type=\"module\">\ntry {\n")
-	b.WriteString("  const m = (await import('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs')).default;\n")
-	b.WriteString("  m.initialize({ startOnLoad: false, theme: 'neutral' });\n")
-	b.WriteString("  await m.run({ nodes: Array.from(document.querySelectorAll('pre.mermaid')) });\n")
-	b.WriteString("} catch (e) { /* offline: the diagram source stays readable */ }\n")
-	b.WriteString("</script>\n")
+
+	// Diagrams are pre-rendered at build time. The loader is only needed when a
+	// renderer was unavailable, and even then the source stays readable if the CDN
+	// cannot be reached.
+	if in.UseCDN {
+		b.WriteString("<script type=\"module\">\ntry {\n")
+		b.WriteString("  const m = (await import('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs')).default;\n")
+		b.WriteString("  m.initialize({ startOnLoad: false, theme: 'neutral' });\n")
+		b.WriteString("  await m.run({ nodes: Array.from(document.querySelectorAll('pre.mermaid')) });\n")
+		b.WriteString("} catch (e) { /* offline: the diagram source stays readable */ }\n")
+		b.WriteString("</script>\n")
+	}
+
 	b.WriteString("</head>\n<body>\n")
 
 	b.WriteString("<aside class=\"nav\">\n")
@@ -294,6 +326,130 @@ func layout(in layoutInput) string {
 	return b.String()
 }
 
+// --- diagrams ---
+
+// diagramRenderer turns one mermaid block into an SVG.
+type diagramRenderer func(source string) (string, error)
+
+var mermaidBlock = regexp.MustCompile(`(?s)<pre class="mermaid">(.*?)</pre>`)
+
+// inlineDiagrams replaces mermaid source blocks with rendered SVGs.
+//
+// Blocks that fail to render are left as source, and the caller then still includes
+// the browser loader, so a broken diagram degrades instead of disappearing.
+func inlineDiagrams(content string, render diagramRenderer) string {
+	if render == nil {
+		return content
+	}
+	return mermaidBlock.ReplaceAllStringFunc(content, func(block string) string {
+		m := mermaidBlock.FindStringSubmatch(block)
+		if m == nil {
+			return block
+		}
+		source := html.UnescapeString(m[1])
+		svg, err := render(source)
+		if err != nil {
+			return block
+		}
+		return `<figure class="diagram">` + stripXMLHeader(svg) + `</figure>`
+	})
+}
+
+func stripXMLHeader(svg string) string {
+	if i := strings.Index(svg, "<svg"); i > 0 {
+		return svg[i:]
+	}
+	return svg
+}
+
+// mermaidRenderer returns a renderer backed by mermaid-cli, with a content-addressed
+// cache so a rebuild only shells out for diagrams that changed.
+func mermaidRenderer(root string) (diagramRenderer, error) {
+	if _, err := exec.LookPath("npx"); err != nil {
+		return nil, fmt.Errorf("npx not found: %w", err)
+	}
+	cacheDir := filepath.Join(root, ".kata", "mermaid")
+	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
+		return nil, err
+	}
+
+	return func(source string) (string, error) {
+		sum := sha256.Sum256([]byte(source))
+		out := filepath.Join(cacheDir, hex.EncodeToString(sum[:8])+".svg")
+		if cached, err := os.ReadFile(out); err == nil {
+			return string(cached), nil
+		}
+
+		dir, err := os.MkdirTemp(cacheDir, "run-*")
+		if err != nil {
+			return "", err
+		}
+		defer os.RemoveAll(dir)
+
+		in := filepath.Join(dir, "diagram.mmd")
+		if err := os.WriteFile(in, []byte(source), 0o644); err != nil {
+			return "", err
+		}
+
+		cmd := exec.Command("npx", "--yes", "@mermaid-js/mermaid-cli",
+			"-i", in, "-o", out, "-b", "transparent", "-t", "neutral")
+		cmd.Dir = root
+		if browser := findBrowser(); browser != "" {
+			cmd.Env = append(os.Environ(), "PUPPETEER_EXECUTABLE_PATH="+browser)
+		}
+		if combined, err := cmd.CombinedOutput(); err != nil {
+			return "", fmt.Errorf("mermaid-cli: %w: %s", err, lastLines(string(combined), 3))
+		}
+		svg, err := os.ReadFile(out)
+		if err != nil {
+			return "", err
+		}
+		return string(svg), nil
+	}, nil
+}
+
+// findBrowser returns a Chromium binary for mermaid-cli.
+//
+// Respects an explicit PUPPETEER_EXECUTABLE_PATH, then looks in the places a browser
+// is usually already installed. Using an existing binary avoids a 150 MB download just
+// to draw a diagram.
+func findBrowser() string {
+	if p := os.Getenv("PUPPETEER_EXECUTABLE_PATH"); p != "" {
+		return p
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	patterns := []string{
+		filepath.Join(home, ".agent-browser", "browsers", "chrome-*", "chrome"),
+		filepath.Join(home, ".t3", "tools", "chrome-headless-shell", "*", "*", "chrome-headless-shell"),
+		filepath.Join(home, ".cache", "puppeteer", "chrome-headless-shell", "*", "chrome-headless-shell-*", "chrome-headless-shell"),
+		filepath.Join(home, ".cache", "ms-playwright", "chromium-*", "chrome-linux", "chrome"),
+	}
+	for _, pattern := range patterns {
+		matches, err := filepath.Glob(pattern)
+		if err != nil {
+			continue
+		}
+		for _, m := range matches {
+			if info, err := os.Stat(m); err == nil && !info.IsDir() {
+				return m
+			}
+		}
+	}
+	return ""
+}
+
+func lastLines(s string, n int) string {
+	lines := strings.Split(strings.TrimSpace(s), "\n")
+	if len(lines) > n {
+		lines = lines[len(lines)-n:]
+	}
+	return strings.Join(lines, " | ")
+}
+
+// --- markdown ---
 // --- markdown ---
 
 var (
@@ -608,6 +764,8 @@ pre {
 }
 pre code { background: none; padding: 0; font-size: 0.86rem; }
 pre.mermaid { background: var(--soft); text-align: center; }
+figure.diagram { margin: 1.4rem 0; text-align: center; }
+figure.diagram svg { max-width: 100%; height: auto; }
 blockquote {
   margin: 1.2rem 0;
   padding: 0.2rem 1rem;

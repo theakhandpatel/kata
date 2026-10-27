@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>11 MCP · Example · Kata</title>
+<link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+<aside class="nav">
+<a class="brand" href="../../index.html">Kata</a>
+<div class="group">
+<div class="group-title">Start</div>
+<ul>
+<li><a href="../../index.html">Home</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">I. Wire</div>
+<ul>
+<li><a href="../../chapters/01-chat-with-the-model/index.html">01 Talk to the model</a></li>
+<li><a href="../../chapters/02-tool-calling/index.html">02 Tool calling</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">II. Act</div>
+<ul>
+<li><a href="../../chapters/03-tools-that-touch-disk/index.html">03 Tools that touch disk</a></li>
+<li><a href="../../chapters/04-the-agent-loop/index.html">04 The agent loop</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">III. Remember</div>
+<ul>
+<li><a href="../../chapters/05-prompt-assembly/index.html">05 Prompt assembly</a></li>
+<li><a href="../../chapters/06-sessions/index.html">06 Sessions</a></li>
+<li><a href="../../chapters/07-context-budget/index.html">07 Context budget</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">IV. Extend</div>
+<ul>
+<li><a href="../../chapters/08-steer-and-abort/index.html">08 Interrupt and steering</a></li>
+<li><a href="../../chapters/09-skills/index.html">09 Skills</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">V. Compose</div>
+<ul>
+<li><a href="../../chapters/10-subagent/index.html">10 Subagent</a></li>
+<li><a href="../../chapters/11-mcp/index.html">11 MCP</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">Reference</div>
+<ul>
+<li><a href="../../docs/architecture.html">Architecture</a></li>
+<li><a href="../../docs/chapter-format.html">Chapter format</a></li>
+<li><a href="../../docs/writing-style.html">Writing style</a></li>
+<li><a href="../../docs/designs.html">Designs</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">After the course</div>
+<ul>
+<li><a href="../../chapters/where-next.html">Where next</a></li>
+</ul>
+</div>
+</aside>
+<main>
+<nav class="subnav">
+<a href="../../chapters/11-mcp/overview.html">Overview</a>
+<a href="../../chapters/11-mcp/problem.html">Problem</a>
+<a class="current" href="../../chapters/11-mcp/example.html">Example</a>
+</nav>
+<h1>11 — Example</h1>
+<p><em>Full, annotated implementation. Read it after <code>kata submit 11</code> passes.</em></p>
+<p>The compilable files are <code>reference/ch11/agent/mcp.go</code> and <code>reference/ch11/agent/cmd/agent/main.go</code>. The loop, the prompt and the registry are unchanged.</p>
+<hr>
+<h2>The shape</h2>
+<pre><code>mcp.go      StartMCP, call, Initialize, ListTools, CallTool, mcpTool
+main.go     spawn, handshake, merge tools, warn and continue on failure</code></pre>
+<h2>Step 1 — a process, and two pipes</h2>
+<pre><code class="language-go">cmd := exec.CommandContext(ctx, &#34;sh&#34;, &#34;-c&#34;, command)
+stdin, _ := cmd.StdinPipe()
+stdout, _ := cmd.StdoutPipe()
+cmd.Start()</code></pre>
+<p><code>sh -c</code> lets the flag carry arguments, which is how people actually write these commands (<code>npx -y some-server</code>). The server&#39;s stderr is not attached: stdout is the protocol, and mixing diagnostics into it breaks the framing on the first warning.</p>
+<h2>Step 2 — one request, one matching response</h2>
+<pre><code class="language-go">func (c *MCPClient) call(ctx context.Context, method string, params any) (json.RawMessage, error) {
+	id := nextMCPID()
+	// ... write {&#34;jsonrpc&#34;:&#34;2.0&#34;,&#34;id&#34;:id,&#34;method&#34;:method,&#34;params&#34;:params}\n
+
+	for {
+		line, err := c.stdout.ReadBytes(&#39;\n&#39;)
+		if err != nil {
+			return nil, err
+		}
+		var resp mcpResponse
+		if json.Unmarshal(line, &amp;resp) != nil {
+			continue
+		}
+		if resp.ID == nil || *resp.ID != id {
+			continue   // a notification, or an answer to an abandoned request
+		}
+		if resp.Error != nil {
+			return nil, fmt.Errorf(&#34;mcp %s: %s (%d)&#34;, method, resp.Error.Message, resp.Error.Code)
+		}
+		return resp.Result, nil
+	}
+}</code></pre>
+<p>The <code>continue</code> on a mismatched id is the line that makes this robust. Servers send notifications for progress and logging, and a client that assumes &#34;the next line is my answer&#34; deadlocks the first time one arrives.</p>
+<p>The read runs in a goroutine so <code>ctx</code> can interrupt it. A timed-out request leaves the connection unusable; the chapter says so instead of pretending otherwise.</p>
+<h2>Step 3 — the handshake, including the silent part</h2>
+<pre><code class="language-go">result, err := c.call(ctx, &#34;initialize&#34;, map[string]any{
+	&#34;protocolVersion&#34;: MCPProtocolVersion,
+	&#34;capabilities&#34;:    map[string]any{},
+	&#34;clientInfo&#34;:      map[string]any{&#34;name&#34;: &#34;kata-agent&#34;, &#34;version&#34;: &#34;1.0&#34;},
+})
+// ... record serverInfo.name ...
+
+return c.notify(&#34;notifications/initialized&#34;, nil)</code></pre>
+<p>The notification is the part people skip, because nothing visibly fails when you do: a lenient server answers <code>tools/list</code> anyway. A strict one does not, and the failure looks like a hang.</p>
+<p>The server name is taken from the response rather than the command line, because the name in the command is often <code>npx</code> or a path.</p>
+<h2>Step 4 — namespacing is derived, not hardcoded</h2>
+<pre><code class="language-go">func (t *mcpTool) Name() string { return t.server + &#34;.&#34; + t.info.Name }</code></pre>
+<p><code>t.server</code> comes from <code>sanitizeName(init.ServerInfo.Name)</code>, which lowercases and replaces anything outside <code>[a-z0-9-]</code>. Nothing is hardcoded to <code>demo</code>, so two servers that both expose <code>read</code> produce <code>alpha.read</code> and <code>beta.read</code>.</p>
+<p>Without the prefix, <code>read</code> from the server replaces the built-in <code>read</code>, and the model&#39;s &#34;I read the file&#34; refers to a file on another machine.</p>
+<h2>Step 5 — content is a list</h2>
+<pre><code class="language-go">var parts []string
+for _, block := range call.Content {
+	if block.Type == &#34;text&#34; &amp;&amp; block.Text != &#34;&#34; {
+		parts = append(parts, block.Text)
+	}
+}
+text := strings.Join(parts, &#34;\n&#34;)</code></pre>
+<p>Two decisions:</p>
+<ul>
+<li><strong>join, do not take the first.</strong> A server that answers with a summary and a detail</li>
+</ul>
+<p>block expects both to arrive.</p>
+<ul>
+<li><strong>filter by type.</strong> An image block is base64. Passing it through spends context on</li>
+</ul>
+<p>something the model cannot use.</p>
+<p><code>call.IsError</code> is honoured by returning an error, which the registry turns into an <code>IsError</code> result. That distinction matters: a tool that ran and failed is not the same as a transport that broke, but both end up as readable text for the model.</p>
+<h2>Step 6 — startup failure is a warning</h2>
+<pre><code class="language-go">client, err := agent.StartMCP(ctx, *mcpCommand)
+if err != nil {
+	fmt.Fprintf(os.Stderr, &#34;agent: mcp unavailable: %v\n&#34;, err)
+} else {
+	defer client.Close()
+	if err := client.Initialize(ctx); err != nil {
+		fmt.Fprintf(os.Stderr, &#34;agent: mcp handshake failed: %v\n&#34;, err)
+	} else if err := client.ListTools(ctx); err != nil {
+		fmt.Fprintf(os.Stderr, &#34;agent: mcp tools/list failed: %v\n&#34;, err)
+	} else {
+		allTools = append(allTools, client.Tools()...)
+	}
+}</code></pre>
+<p>The nesting is deliberate: each step can fail without taking the run with it, and the agent degrades to its built-in tools. The exit code stays 0, because the person&#39;s question was answered.</p>
+<p>The child registry is built from <code>baseTools</code> only, so a subagent does not inherit MCP tools. That keeps the child&#39;s schema list small and keeps the dependency order simple.</p>
+<h2>The diffs</h2>
+<p><strong>1. Skipping the initialized notification</strong> — <code>mcp-initialize-handshake</code></p>
+<pre><code class="language-diff">  c.call(ctx, &#34;initialize&#34;, ...)
++ c.notify(&#34;notifications/initialized&#34;, nil)
+  c.call(ctx, &#34;tools/list&#34;, nil)</code></pre>
+<p><strong>2. Using the server&#39;s tool name unchanged</strong> — <code>mcp-name-collision</code></p>
+<pre><code class="language-diff">- func (t *mcpTool) Name() string { return t.info.Name }
++ func (t *mcpTool) Name() string { return t.server + &#34;.&#34; + t.info.Name }</code></pre>
+<p><strong>3. Taking only the first content block</strong> — <code>mcp-content-blocks-joined</code></p>
+<pre><code class="language-diff">- return call.Content[0].Text, nil
++ // join every text block</code></pre>
+<p><strong>4. Exiting when the server is missing</strong> — <code>mcp-unavailable-is-survivable</code></p>
+<pre><code class="language-diff">- if err != nil { return 1, err }
++ fmt.Fprintf(os.Stderr, &#34;agent: mcp unavailable: %v\n&#34;, err)</code></pre>
+<h2>Complete files</h2>
+<table>
+<thead><tr><th>File</th><th>Lines</th><th>What to read it for</th></tr></thead>
+<tbody>
+<tr><td><code>reference/ch11/agent/mcp.go</code></td><td>300</td><td>framing, handshake, adapter, namespacing</td></tr>
+<tr><td><code>reference/ch11/agent/cmd/agent/main.go</code></td><td>215</td><td>degrade instead of failing</td></tr>
+<tr><td><code>internal/fake/mcpserver/main.go</code></td><td>150</td><td>the other side of the protocol</td></tr>
+</tbody>
+</table>
+<h2>Comparison checklist</h2>
+<ul>
+<li>[ ] server spawned with <code>sh -c</code>, stdout reserved for the protocol</li>
+<li>[ ] requests carry an id, notifications do not</li>
+<li>[ ] responses with a foreign id are skipped</li>
+<li>[ ] <code>initialize</code> then <code>notifications/initialized</code> then <code>tools/list</code></li>
+<li>[ ] server name taken from the response and sanitised</li>
+<li>[ ] tool names namespaced, built-ins untouched</li>
+<li>[ ] text blocks joined, other types ignored</li>
+<li>[ ] JSON-RPC error becomes a Go error, then an <code>IsError</code> result</li>
+<li>[ ] startup failure warns and continues</li>
+<li>[ ] no <code>tools/call</code> when the model asked for nothing</li>
+</ul>
+<p>Differences outside this list are style.</p>
+<nav class="pager">
+<a class="prev" href="../../chapters/11-mcp/problem.html">&larr; 11 MCP · Problem</a>
+<a class="next" href="../../docs/architecture.html">Architecture &rarr;</a>
+</nav>
+</main>
+</body>
+</html>

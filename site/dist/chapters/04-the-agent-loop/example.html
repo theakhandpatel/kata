@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>04 The agent loop · Example · Kata</title>
+<link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+<aside class="nav">
+<a class="brand" href="../../index.html">Kata</a>
+<div class="group">
+<div class="group-title">Start</div>
+<ul>
+<li><a href="../../index.html">Home</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">I. Wire</div>
+<ul>
+<li><a href="../../chapters/01-chat-with-the-model/index.html">01 Talk to the model</a></li>
+<li><a href="../../chapters/02-tool-calling/index.html">02 Tool calling</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">II. Act</div>
+<ul>
+<li><a href="../../chapters/03-tools-that-touch-disk/index.html">03 Tools that touch disk</a></li>
+<li><a href="../../chapters/04-the-agent-loop/index.html">04 The agent loop</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">III. Remember</div>
+<ul>
+<li><a href="../../chapters/05-prompt-assembly/index.html">05 Prompt assembly</a></li>
+<li><a href="../../chapters/06-sessions/index.html">06 Sessions</a></li>
+<li><a href="../../chapters/07-context-budget/index.html">07 Context budget</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">IV. Extend</div>
+<ul>
+<li><a href="../../chapters/08-steer-and-abort/index.html">08 Interrupt and steering</a></li>
+<li><a href="../../chapters/09-skills/index.html">09 Skills</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">V. Compose</div>
+<ul>
+<li><a href="../../chapters/10-subagent/index.html">10 Subagent</a></li>
+<li><a href="../../chapters/11-mcp/index.html">11 MCP</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">Reference</div>
+<ul>
+<li><a href="../../docs/architecture.html">Architecture</a></li>
+<li><a href="../../docs/chapter-format.html">Chapter format</a></li>
+<li><a href="../../docs/writing-style.html">Writing style</a></li>
+<li><a href="../../docs/designs.html">Designs</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">After the course</div>
+<ul>
+<li><a href="../../chapters/where-next.html">Where next</a></li>
+</ul>
+</div>
+</aside>
+<main>
+<nav class="subnav">
+<a href="../../chapters/04-the-agent-loop/overview.html">Overview</a>
+<a href="../../chapters/04-the-agent-loop/problem.html">Problem</a>
+<a class="current" href="../../chapters/04-the-agent-loop/example.html">Example</a>
+</nav>
+<h1>04 — Example</h1>
+<p><em>Full, annotated implementation. Read it after <code>kata submit 04</code> passes.</em></p>
+<p>The compilable files are <code>reference/ch04/agent/</code>. This document takes them apart in the order the thinking happens.</p>
+<hr>
+<h2>The shape</h2>
+<pre><code>events.go    Event, the six type constants, Emitter, JSONEmitter
+loop.go      RunLoop: the state machine, the cap, the accounting
+provider     Chat becomes Stream(ctx, req, nil); readSSE gains a callback
+main.go      -max-steps and -events, one call to RunLoop</code></pre>
+<p><code>RunLoop</code> is the only function that knows the order. Everything it calls knows only its own job, which is why chapter 08 can add cancellation without touching the registry or the parser.</p>
+<h2>Step 1 — the loop is a state machine with one exit</h2>
+<pre><code class="language-go">for turn := 1; turn &lt;= max; turn++ {
+	emit(Event{Type: EventTurnStart, Turn: turn})
+
+	msg, usage, err := provider.Stream(ctx, req, func(text string) {
+		emit(Event{Type: EventText, Turn: turn, Text: text})
+	})
+	if err != nil {
+		return Result{...}, err
+	}
+	history = append(history, msg)
+
+	if len(msg.ToolCalls) == 0 {
+		emit(Event{Type: EventTurnEnd, Turn: turn})
+		emit(Event{Type: EventAgentEnd, Turns: turn, Reason: &#34;done&#34;})
+		return Result{Message: msg, History: history, Turns: turn}, nil
+	}
+
+	// ... announce, run, append results, turn_end
+}</code></pre>
+<p>The <code>for</code> bound and the <code>if</code> exit are both present and they mean different things. The <code>if</code> is the program working. The bound is the program refusing to work forever. Deleting either one breaks a different case.</p>
+<h2>Step 2 — announce the batch, then run it</h2>
+<pre><code class="language-go">for _, call := range msg.ToolCalls {
+	emit(Event{Type: EventToolCall, Turn: turn, ID: call.ID, Name: call.Name})
+}
+
+for _, call := range msg.ToolCalls {
+	res := tools.Run(ctx, call)
+	emit(Event{Type: EventToolResult, Turn: turn, ID: call.ID, Name: call.Name,
+		IsError: res.IsError, Bytes: len(res.Content)})
+	history = append(history, Message{
+		Role: RoleTool, Content: res.Content, ToolCallID: call.ID, Name: call.Name,
+	})
+}</code></pre>
+<p>Two loops over the same slice, and that is not an accident.</p>
+<p>The first publishes intent: this is what we are about to do. The second publishes outcome. A UI needs the first one, because otherwise a call that takes four seconds looks like a program that has hung, and a call that crashes leaves no trace of what it was.</p>
+<p><code>Bytes</code> rather than the content in the event is deliberate: the event stream is a log, not a second copy of the conversation. Chapter 07 uses those byte counts.</p>
+<h2>Step 3 — the cap is a distinct failure</h2>
+<pre><code class="language-go">emit(Event{Type: EventAgentEnd, Turns: max, Reason: &#34;step_limit&#34;})
+return Result{History: history, Usage: total, Turns: max},
+	fmt.Errorf(&#34;%w after %d turns; the model kept asking for tools&#34;, ErrStepLimit, max)</code></pre>
+<p>Three details:</p>
+<ul>
+<li><code>agent_end</code> is still emitted, with a reason that is not <code>done</code>. A consumer</li>
+</ul>
+<p>should not have to infer the outcome from an absent event.</p>
+<ul>
+<li>The error wraps a sentinel, so a caller can distinguish &#34;the model gave up&#34; from</li>
+</ul>
+<p>&#34;the network died&#34;. <code>main</code> prints it and exits 1.</p>
+<ul>
+<li>The result still carries the history, because the caller may want to resume or</li>
+</ul>
+<p>inspect it.</p>
+<h2>Step 4 — the accounting</h2>
+<pre><code class="language-go">total = addUsage(total, usage)</code></pre>
+<p><code>Chat</code> returned usage per request. A run makes several, and the number a user cares about is the total. Summing in the loop is the only place that has them all.</p>
+<h2>Step 5 — the provider grows a seam without breaking anyone</h2>
+<pre><code class="language-go">func (p *OpenAICompat) Chat(ctx context.Context, req Request) (Message, Usage, error) {
+	return p.Stream(ctx, req, nil)
+}
+
+func (p *OpenAICompat) Stream(ctx context.Context, req Request, onText func(string)) (Message, Usage, error) {
+	// ... same request, same parser, one extra callback
+}</code></pre>
+<p>Inside the parser, one line:</p>
+<pre><code class="language-go">if choice.Delta.Content != &#34;&#34; &amp;&amp; onText != nil {
+	onText(choice.Delta.Content)
+}
+content.WriteString(choice.Delta.Content)</code></pre>
+<p>Note what did <strong>not</strong> change: the wire format, the error handling, the truncation guard. The seam opened and the rest stayed still. That is the difference between a refactor and a rewrite, and it is why <code>Provider</code> was left alone and a wider interface was declared beside it:</p>
+<pre><code class="language-go">type StreamingProvider interface {
+	Provider
+	Stream(ctx context.Context, req Request, onText func(string)) (Message, Usage, error)
+}</code></pre>
+<p>Chapters 01 to 03 satisfy <code>Provider</code> and keep compiling.</p>
+<h2>Step 6 — events as JSON lines</h2>
+<pre><code class="language-go">func JSONEmitter(w io.Writer) Emitter {
+	enc := json.NewEncoder(w)
+	return func(e Event) { _ = enc.Encode(e) }
+}</code></pre>
+<p><code>Encoder.Encode</code> writes a newline and flushes through the writer, which is what makes a long run followable with <code>tail -f</code>. One object per line also means a reader can ignore lines it does not understand, which is how the checks tolerate a program that also logs to stderr.</p>
+<h2>The diffs</h2>
+<p><strong>1. Continuing after the last tool instead of on the reply</strong> — <code>single-turn-no-tools</code></p>
+<pre><code class="language-diff">- for i := 0; i &lt; max; i++ { doTurn() }        // exactly N turns
++ if len(msg.ToolCalls) == 0 { finish() }      // until the model is done</code></pre>
+<p><strong>2. Collecting results out of order</strong> — <code>preserves-result-order</code></p>
+<pre><code class="language-diff">- for _, call := range calls { go func(){ results = append(results, run(call)) }() }
++ for _, call := range calls { results = append(results, run(call)) }</code></pre>
+<p><strong>3. Ending without saying why</strong> — <code>step-cap-stops</code></p>
+<pre><code class="language-diff">- return Result{}, errors.New(&#34;too many turns&#34;)
++ emit(Event{Type: EventAgentEnd, Turns: max, Reason: &#34;step_limit&#34;})
++ return Result{...}, fmt.Errorf(&#34;%w after %d turns&#34;, ErrStepLimit, max)</code></pre>
+<p><strong>4. Two parsers</strong> — <code>events-text-deltas</code></p>
+<pre><code class="language-diff">- func readSSE(r io.Reader) (Message, Usage, error)
+- func readSSEStreaming(r io.Reader, cb func(string)) (Message, Usage, error)
++ func readSSE(r io.Reader, onText func(string)) (Message, Usage, error)</code></pre>
+<h2>Complete files</h2>
+<table>
+<thead><tr><th>File</th><th>Lines</th><th>What to read it for</th></tr></thead>
+<tbody>
+<tr><td><code>reference/ch04/agent/loop.go</code></td><td>130</td><td>state machine, cap, accounting</td></tr>
+<tr><td><code>reference/ch04/agent/events.go</code></td><td>60</td><td>the event shape and the grammar</td></tr>
+<tr><td><code>reference/ch04/agent/provider_openai.go</code></td><td>290</td><td>the seam opening</td></tr>
+<tr><td><code>reference/ch04/agent/cmd/agent/main.go</code></td><td>100</td><td>wiring flags to options</td></tr>
+</tbody>
+</table>
+<h2>Comparison checklist</h2>
+<ul>
+<li>[ ] exit condition is the model&#39;s reply, not the counter</li>
+<li>[ ] cap is positive, configurable, and reports a reason</li>
+<li>[ ] <code>agent_end</code> emitted once, last, on both success and cap</li>
+<li>[ ] results appended in source order with matching ids</li>
+<li>[ ] <code>turn_end</code> per turn, <code>agent_end</code> per run</li>
+<li>[ ] text deltas emitted from the parser, not reconstructed afterwards</li>
+<li>[ ] <code>Chat</code> delegates to <code>Stream</code>; one parser</li>
+<li>[ ] usage summed across turns</li>
+<li>[ ] step limit is a distinct, testable error</li>
+</ul>
+<p>Differences outside this list are style.</p>
+<nav class="pager">
+<a class="prev" href="../../chapters/04-the-agent-loop/problem.html">&larr; 04 The agent loop · Problem</a>
+<a class="next" href="../../chapters/05-prompt-assembly/index.html">05 Prompt assembly &rarr;</a>
+</nav>
+</main>
+</body>
+</html>

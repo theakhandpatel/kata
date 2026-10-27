@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>02 Tool calling · Example · Kata</title>
+<link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+<aside class="nav">
+<a class="brand" href="../../index.html">Kata</a>
+<div class="group">
+<div class="group-title">Start</div>
+<ul>
+<li><a href="../../index.html">Home</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">I. Wire</div>
+<ul>
+<li><a href="../../chapters/01-chat-with-the-model/index.html">01 Talk to the model</a></li>
+<li><a href="../../chapters/02-tool-calling/index.html">02 Tool calling</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">II. Act</div>
+<ul>
+<li><a href="../../chapters/03-tools-that-touch-disk/index.html">03 Tools that touch disk</a></li>
+<li><a href="../../chapters/04-the-agent-loop/index.html">04 The agent loop</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">III. Remember</div>
+<ul>
+<li><a href="../../chapters/05-prompt-assembly/index.html">05 Prompt assembly</a></li>
+<li><a href="../../chapters/06-sessions/index.html">06 Sessions</a></li>
+<li><a href="../../chapters/07-context-budget/index.html">07 Context budget</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">IV. Extend</div>
+<ul>
+<li><a href="../../chapters/08-steer-and-abort/index.html">08 Interrupt and steering</a></li>
+<li><a href="../../chapters/09-skills/index.html">09 Skills</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">V. Compose</div>
+<ul>
+<li><a href="../../chapters/10-subagent/index.html">10 Subagent</a></li>
+<li><a href="../../chapters/11-mcp/index.html">11 MCP</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">Reference</div>
+<ul>
+<li><a href="../../docs/architecture.html">Architecture</a></li>
+<li><a href="../../docs/chapter-format.html">Chapter format</a></li>
+<li><a href="../../docs/writing-style.html">Writing style</a></li>
+<li><a href="../../docs/designs.html">Designs</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">After the course</div>
+<ul>
+<li><a href="../../chapters/where-next.html">Where next</a></li>
+</ul>
+</div>
+</aside>
+<main>
+<nav class="subnav">
+<a href="../../chapters/02-tool-calling/overview.html">Overview</a>
+<a href="../../chapters/02-tool-calling/problem.html">Problem</a>
+<a class="current" href="../../chapters/02-tool-calling/example.html">Example</a>
+</nav>
+<h1>02 — Example</h1>
+<p><em>Full, annotated implementation. Read it after <code>kata submit 02</code> passes, then compare.</em></p>
+<p>The compilable files are <code>reference/ch02/agent/</code>. This document takes them apart in the order the thinking happens.</p>
+<hr>
+<h2>The shape</h2>
+<p>Three new pieces and one change:</p>
+<pre><code>agent/tool.go     Registry: name -&gt; Tool, and Tool -&gt; ToolDef
+agent/tools.go    ReadTool: resolve, check, read, truncate
+agent/provider_openai.go   learn tool_calls on the way out and in
+agent/cmd/agent/main.go    one hop: call, run tools, call again</code></pre>
+<p>The registry is the only place that knows the set of tools. The provider knows the wire format. <code>main</code> knows the sequence. Keeping those three apart is what makes chapter 03 a two-file change.</p>
+<h2>Step 1 — the registry is a lookup, not a switch</h2>
+<pre><code class="language-go">type Registry struct {
+	byName map[string]Tool
+	order  []string // declaration order
+}
+
+func (r *Registry) Defs() []ToolDef {
+	out := make([]ToolDef, 0, len(r.order))
+	for _, name := range r.order {
+		t := r.byName[name]
+		out = append(out, ToolDef{
+			Name:        t.Name(),
+			Description: t.Description(),
+			Parameters:  t.Parameters(),
+		})
+	}
+	return out
+}</code></pre>
+<p><code>order</code> is not decoration. The schema list sits at the start of every request, and a stable prefix is what lets a provider cache it. A map iteration order would change the bytes on every call.</p>
+<h2>Step 2 — a call can fail in four ways, and all four are results</h2>
+<pre><code class="language-go">func (r *Registry) Run(ctx context.Context, call ToolCall) ToolResult {
+	t, ok := r.Lookup(call.Name)
+	if !ok {
+		return ToolResult{Content: &#34;no such tool: &#34; + call.Name, IsError: true}
+	}
+	if !json.Valid([]byte(call.Arguments)) {
+		return ToolResult{Content: &#34;arguments are not valid JSON: &#34; + call.Arguments, IsError: true}
+	}
+	out, err := t.Execute(ctx, json.RawMessage(call.Arguments))
+	if err != nil {
+		return ToolResult{Content: t.Name() + &#34;: &#34; + err.Error(), IsError: true}
+	}
+	return ToolResult{Content: out}
+}</code></pre>
+<p>The <code>json.Valid</code> check is not defensive padding. The arguments are text the model wrote. Without it, <code>json.Unmarshal</code> inside the tool fails, the error propagates, and the program exits on a model mistake. The model never learns what went wrong, which is the one thing it can fix.</p>
+<p>Note what is <strong>not</strong> here: no logging, no retry, no permission prompt. Those are policy, and chapter 08 is where policy gets a seam.</p>
+<h2>Step 3 — the workspace check is on the resolved path</h2>
+<pre><code class="language-go">func (t *ReadTool) resolve(p string) (string, error) {
+	if filepath.IsAbs(p) {
+		return &#34;&#34;, fmt.Errorf(&#34;absolute paths are not allowed: %s&#34;, p)
+	}
+	full, _ := filepath.Abs(filepath.Join(t.Root, p))
+	rel, _ := filepath.Rel(t.Root, full)
+	if rel == &#34;..&#34; || strings.HasPrefix(rel, &#34;..&#34;+string(filepath.Separator)) {
+		return &#34;&#34;, fmt.Errorf(&#34;path escapes the workspace: %s&#34;, p)
+	}
+	return full, nil
+}</code></pre>
+<p>Checking the string for <code>..</code> is not enough: <code>a/../../etc/passwd</code> contains <code>..</code> but so do legitimate names, and a symlink defeats a string check entirely. Resolve first, then ask whether the result is still inside the root.</p>
+<h2>Step 4 — truncation must be visible</h2>
+<pre><code class="language-go">buf := make([]byte, limit+1)
+n, err := f.Read(buf)
+if err != nil &amp;&amp; n == 0 {
+	return &#34;&#34;, err
+}
+if n &gt; limit {
+	return string(buf[:limit]) + fmt.Sprintf(
+		&#34;\n... [truncated: %d of %d bytes shown]&#34;, limit, info.Size()), nil
+}</code></pre>
+<p>Reading <code>limit+1</code> bytes is how you learn there was more. Two consequences:</p>
+<ul>
+<li>the model is told it did not see everything, so it can ask for a specific</li>
+</ul>
+<p>range instead of guessing;</p>
+<ul>
+<li>the result has a hard ceiling, so one large file cannot consume the context</li>
+</ul>
+<p>budget that chapter 07 will enforce.</p>
+<h2>Step 5 — the one hop, stated plainly</h2>
+<pre><code class="language-go">msg, usage, err := provider.Chat(ctx, agent.Request{Messages: history, Tools: tools.Defs()})
+history = append(history, msg)
+
+if len(msg.ToolCalls) &gt; 0 {
+	history = append(history, runTools(ctx, tools, msg.ToolCalls)...)
+	msg, usage, err = provider.Chat(ctx, agent.Request{Messages: history, Tools: tools.Defs()})
+	history = append(history, msg)
+}
+
+fmt.Println(msg.Content)</code></pre>
+<p><code>runTools</code> returns one message per call, in order:</p>
+<pre><code class="language-go">out = append(out, agent.Message{
+	Role:       agent.RoleTool,
+	Content:    res.Content,
+	ToolCallID: call.ID,
+	Name:       call.Name,
+})</code></pre>
+<p><code>ToolCallID</code> is the field that makes the conversation valid. Lose it and the next request is rejected with a message about orphaned tool calls.</p>
+<p>The hop is visible on purpose. Chapter 04 turns the <code>if</code> into a <code>for</code> and adds a step cap.</p>
+<h2>Step 6 — folding by index</h2>
+<pre><code class="language-go">acc := calls[tc.Index]
+if acc == nil {
+	acc = &amp;callAccumulator{}
+	calls[tc.Index] = acc
+}
+if tc.ID != &#34;&#34; { acc.id = tc.ID }        // only the first fragment has it
+if tc.Function.Name != &#34;&#34; { acc.name = tc.Function.Name }
+acc.args.WriteString(tc.Function.Arguments)  // always append</code></pre>
+<p>Three rules, each with a failing case:</p>
+<table>
+<thead><tr><th>Rule</th><th>Wrong version</th><th>Case</th></tr></thead>
+<tbody>
+<tr><td>key by index</td><td>key by id</td><td><code>folds-arguments</code></td></tr>
+<tr><td>set id only when present</td><td>overwrite with the empty id</td><td><code>folds-arguments</code></td></tr>
+<tr><td>append arguments</td><td>assign the last fragment</td><td><code>folds-arguments</code></td></tr>
+</tbody>
+</table>
+<p>Then emit in index order, because the assistant message&#39;s tool call order is what the results must match.</p>
+<h2>The diffs</h2>
+<p><strong>1. Fold by id instead of index</strong> — <code>folds-arguments</code></p>
+<pre><code class="language-diff">- acc := calls[tc.ID]           // &#34;&#34; on continuation fragments
++ acc := calls[tc.Index]</code></pre>
+<p><strong>2. Return the error instead of a result</strong> — <code>missing-file</code></p>
+<pre><code class="language-diff">- if err != nil { return &#34;&#34;, err }        // becomes a fatal error upstream
++ return ToolResult{Content: &#34;no such file: &#34; + args.Path, IsError: true}</code></pre>
+<p><strong>3. String check for path escape</strong> — <code>refuses-escape</code></p>
+<pre><code class="language-diff">- if strings.Contains(p, &#34;..&#34;) { reject }
++ full, _ := filepath.Abs(filepath.Join(root, p))
++ rel, _ := filepath.Rel(root, full)
++ if rel == &#34;..&#34; || strings.HasPrefix(rel, &#34;../&#34;) { reject }</code></pre>
+<p><strong>4. Unbounded read</strong> — <code>truncates-large-file</code></p>
+<pre><code class="language-diff">- data, _ := os.ReadFile(full)
++ buf := make([]byte, limit+1)
++ n, _ := f.Read(buf)
++ if n &gt; limit { return string(buf[:limit]) + marker }</code></pre>
+<h2>Complete files</h2>
+<table>
+<thead><tr><th>File</th><th>Lines</th><th>What to read it for</th></tr></thead>
+<tbody>
+<tr><td><code>reference/ch02/agent/tool.go</code></td><td>95</td><td>registry, result conversion</td></tr>
+<tr><td><code>reference/ch02/agent/tools.go</code></td><td>140</td><td>path resolution, truncation</td></tr>
+<tr><td><code>reference/ch02/agent/provider_openai.go</code></td><td>284</td><td>tool_calls in both directions</td></tr>
+<tr><td><code>reference/ch02/agent/cmd/agent/main.go</code></td><td>150</td><td>the hop</td></tr>
+</tbody>
+</table>
+<h2>Comparison checklist</h2>
+<ul>
+<li>[ ] registry preserves declaration order</li>
+<li>[ ] unknown tool, bad JSON and tool errors all become <code>IsError</code> results</li>
+<li>[ ] path check on the resolved path, absolute paths refused</li>
+<li>[ ] read is bounded, and the cut is marked</li>
+<li>[ ] tool results carry <code>tool_call_id</code> and keep call order</li>
+<li>[ ] arguments folded by index, appended not assigned</li>
+<li>[ ] one request when there are no tool calls</li>
+</ul>
+<p>Differences outside this list are style.</p>
+<nav class="pager">
+<a class="prev" href="../../chapters/02-tool-calling/problem.html">&larr; 02 Tool calling · Problem</a>
+<a class="next" href="../../chapters/03-tools-that-touch-disk/index.html">03 Tools that touch disk &rarr;</a>
+</nav>
+</main>
+</body>
+</html>

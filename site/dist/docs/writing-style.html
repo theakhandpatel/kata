@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Writing style · Kata</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<aside class="nav">
+<a class="brand" href="../index.html">Kata</a>
+<div class="group">
+<div class="group-title">Start</div>
+<ul>
+<li><a href="../index.html">Home</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">I. Wire</div>
+<ul>
+<li><a href="../chapters/01-chat-with-the-model/index.html">01 Talk to the model</a></li>
+<li><a href="../chapters/02-tool-calling/index.html">02 Tool calling</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">II. Act</div>
+<ul>
+<li><a href="../chapters/03-tools-that-touch-disk/index.html">03 Tools that touch disk</a></li>
+<li><a href="../chapters/04-the-agent-loop/index.html">04 The agent loop</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">III. Remember</div>
+<ul>
+<li><a href="../chapters/05-prompt-assembly/index.html">05 Prompt assembly</a></li>
+<li><a href="../chapters/06-sessions/index.html">06 Sessions</a></li>
+<li><a href="../chapters/07-context-budget/index.html">07 Context budget</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">IV. Extend</div>
+<ul>
+<li><a href="../chapters/08-steer-and-abort/index.html">08 Interrupt and steering</a></li>
+<li><a href="../chapters/09-skills/index.html">09 Skills</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">V. Compose</div>
+<ul>
+<li><a href="../chapters/10-subagent/index.html">10 Subagent</a></li>
+<li><a href="../chapters/11-mcp/index.html">11 MCP</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">Reference</div>
+<ul>
+<li><a href="../docs/architecture.html">Architecture</a></li>
+<li><a href="../docs/chapter-format.html">Chapter format</a></li>
+<li><a class="current" href="../docs/writing-style.html">Writing style</a></li>
+<li><a href="../docs/designs.html">Designs</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">After the course</div>
+<ul>
+<li><a href="../chapters/where-next.html">Where next</a></li>
+</ul>
+</div>
+</aside>
+<main>
+<h1>Writing style</h1>
+<p>Every page in this repository follows these rules. They come from the Querykata house style, which applies three published standards together: Diátaxis for structure, Vercel&#39;s writing guidelines for sentences, and the <code>unslop</code> catalogue for AI tells. The rules below are the operative subset and stand on their own.</p>
+<h2>Sentences</h2>
+<ul>
+<li>Keep a sentence under 25 words. One idea per sentence.</li>
+<li>Use the active voice and the present tense. Append &#34;by monkeys&#34; to a sentence;</li>
+</ul>
+<p>if it still parses, it is passive, so rewrite it.</p>
+<ul>
+<li>Address the reader as <code>you</code>. Use the imperative for a step.</li>
+<li>Use the short everyday word: use, help, do. Not utilize, facilitate, perform.</li>
+<li>Cut every word that does no work. &#34;In order to&#34; is &#34;to&#34;.</li>
+<li>Name the real symbol, file, flag, or command. The codebase is the word list.</li>
+<li>Do not use an em dash. Use a comma, a colon, or a new sentence.</li>
+<li>Do not say &#34;is&#34; the long way. &#34;Serves as&#34;, &#34;stands as&#34;, and &#34;boasts&#34; are &#34;is&#34;.</li>
+<li>Do not write &#34;not just X, but Y&#34;. State the point.</li>
+<li>Do not force ideas into groups of three. Do not cycle synonyms for one thing.</li>
+</ul>
+<p>Pick one term and repeat it.</p>
+<ul>
+<li>Do not open a section with a slogan. Do not restate the heading.</li>
+<li>State what a thing does, then point at the file that proves it.</li>
+<li>Prefer a measured number, or a test, over an adjective.</li>
+</ul>
+<h2>Vocabulary</h2>
+<p>Do not use: additionally, crucial, delve, leverage, robust, seamless, showcase, underscore, vibrant, comprehensive, powerful, effortless, unlock, elevate, landscape, realm, journey, testamount, pivotal, meticulous, intricate, ever-evolving, game-changer, best-in-class, cutting-edge, paradigm, synergy, streamline, harness (as a verb), utilize, numerous, myriads.</p>
+<h2>Structure</h2>
+<ul>
+<li>No emoji. No title case in headings. No rhetorical questions.</li>
+<li>A table only when the reader compares values across rows.</li>
+<li>Do not start a list item with a bold label and a dash.</li>
+<li>Say what is unfinished in the same document, in its own section.</li>
+<li>Depth comes from explaining the mechanism and the consequence, not from adding</li>
+</ul>
+<p>edge cases or repeating the point in new words.</p>
+<h2>For this course specifically</h2>
+<ul>
+<li><code>overview.md</code> explains the mechanism. It may not contain a working</li>
+</ul>
+<p>implementation.</p>
+<ul>
+<li><code>problem.md</code> states the task and the graded claims. It may not teach the</li>
+</ul>
+<p>concept; it points at the overview for that.</p>
+<ul>
+<li><code>example.md</code> shows a full annotated implementation. It may not introduce a</li>
+</ul>
+<p>concept that the overview did not already cover.</p>
+<ul>
+<li>Every claim in <code>problem.md</code> names the case id that grades it. If a claim has no</li>
+</ul>
+<p>case, either the claim is prose or the case is missing. Both are bugs.</p>
+<ul>
+<li>A trap in the prose names the case that catches it. That link is what stops the</li>
+</ul>
+<p>teaching and the grading from drifting apart.</p>
+<nav class="pager">
+<a class="prev" href="../docs/chapter-format.html">&larr; Chapter format</a>
+<a class="next" href="../docs/designs.html">How other harnesses are built &rarr;</a>
+</nav>
+</main>
+</body>
+</html>

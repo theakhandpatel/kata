@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>03 Tools that touch disk · Example · Kata</title>
+<link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+<aside class="nav">
+<a class="brand" href="../../index.html">Kata</a>
+<div class="group">
+<div class="group-title">Start</div>
+<ul>
+<li><a href="../../index.html">Home</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">I. Wire</div>
+<ul>
+<li><a href="../../chapters/01-chat-with-the-model/index.html">01 Talk to the model</a></li>
+<li><a href="../../chapters/02-tool-calling/index.html">02 Tool calling</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">II. Act</div>
+<ul>
+<li><a href="../../chapters/03-tools-that-touch-disk/index.html">03 Tools that touch disk</a></li>
+<li><a href="../../chapters/04-the-agent-loop/index.html">04 The agent loop</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">III. Remember</div>
+<ul>
+<li><a href="../../chapters/05-prompt-assembly/index.html">05 Prompt assembly</a></li>
+<li><a href="../../chapters/06-sessions/index.html">06 Sessions</a></li>
+<li><a href="../../chapters/07-context-budget/index.html">07 Context budget</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">IV. Extend</div>
+<ul>
+<li><a href="../../chapters/08-steer-and-abort/index.html">08 Interrupt and steering</a></li>
+<li><a href="../../chapters/09-skills/index.html">09 Skills</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">V. Compose</div>
+<ul>
+<li><a href="../../chapters/10-subagent/index.html">10 Subagent</a></li>
+<li><a href="../../chapters/11-mcp/index.html">11 MCP</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">Reference</div>
+<ul>
+<li><a href="../../docs/architecture.html">Architecture</a></li>
+<li><a href="../../docs/chapter-format.html">Chapter format</a></li>
+<li><a href="../../docs/writing-style.html">Writing style</a></li>
+<li><a href="../../docs/designs.html">Designs</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">After the course</div>
+<ul>
+<li><a href="../../chapters/where-next.html">Where next</a></li>
+</ul>
+</div>
+</aside>
+<main>
+<nav class="subnav">
+<a href="../../chapters/03-tools-that-touch-disk/overview.html">Overview</a>
+<a href="../../chapters/03-tools-that-touch-disk/problem.html">Problem</a>
+<a class="current" href="../../chapters/03-tools-that-touch-disk/example.html">Example</a>
+</nav>
+<h1>03 — Example</h1>
+<p><em>Full, annotated implementation. Read it after <code>kata submit 03</code> passes.</em></p>
+<p>The compilable files are <code>reference/ch03/agent/tools.go</code> and <code>reference/ch03/agent/cmd/agent/main.go</code>. This document takes them apart in the order the thinking happens.</p>
+<hr>
+<h2>The shape</h2>
+<p><code>tools.go</code> holds three tools and one shared helper. The helper is the important part, because it is the only place the workspace rule lives.</p>
+<pre><code>resolveInside(root, p)   ← one rule, used by read and write
+ReadTool                 ← read, capped
+WriteTool                ← resolve, parents, write
+BashTool                 ← bound, run, cap, classify</code></pre>
+<h2>Step 1 — one boundary check, two tools</h2>
+<pre><code class="language-go">func resolveInside(root, p string) (string, error) {
+	if filepath.IsAbs(p) {
+		return &#34;&#34;, fmt.Errorf(&#34;absolute paths are not allowed: %s&#34;, p)
+	}
+	full, _ := filepath.Abs(filepath.Join(root, p))
+	rel, _ := filepath.Rel(root, full)
+	if rel == &#34;..&#34; || strings.HasPrefix(rel, &#34;..&#34;+string(filepath.Separator)) {
+		return &#34;&#34;, fmt.Errorf(&#34;path escapes the workspace: %s&#34;, p)
+	}
+	return full, nil
+}</code></pre>
+<p>Putting it here rather than in each tool means <code>write</code> cannot drift from <code>read</code>. That matters more than it looks: a write escape creates files on the host, so the two tools failing differently is a real bug class.</p>
+<h2>Step 2 — write creates parents after it resolves</h2>
+<pre><code class="language-go">full, err := resolveInside(t.Root, args.Path)
+if err != nil {
+	return &#34;&#34;, err
+}
+if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+	return &#34;&#34;, err
+}
+if err := os.WriteFile(full, []byte(args.Content), 0o644); err != nil {
+	return &#34;&#34;, err
+}
+return fmt.Sprintf(&#34;wrote %d bytes to %s&#34;, len(args.Content), args.Path), nil</code></pre>
+<p>Order matters. Resolve, then create. Reversed, a refused path can still leave an empty directory tree outside the workspace, which is a small bug with a large blast radius.</p>
+<p>The result reports the byte count. The model can confirm the write without calling <code>read</code> to check, which would spend the same context twice.</p>
+<h2>Step 3 — bash classifies four outcomes</h2>
+<pre><code class="language-go">runCtx, cancel := context.WithTimeout(ctx, wait)
+defer cancel()
+
+cmd := exec.CommandContext(runCtx, &#34;sh&#34;, &#34;-c&#34;, args.Command)
+cmd.Dir = t.Root
+cmd.WaitDelay = time.Second
+
+out, err := cmd.CombinedOutput()
+
+if err != nil {
+	if ctx.Err() != nil {                       // the user cancelled
+		return &#34;&#34;, ctx.Err()
+	}
+	if errors.Is(runCtx.Err(), context.DeadlineExceeded) {   // the tool&#39;s own bound
+		return fmt.Sprintf(&#34;command timed out after %s\n%s&#34;, wait, body), nil
+	}
+	var exit *exec.ExitError
+	if errors.As(err, &amp;exit) {                  // the command failed normally
+		return fmt.Sprintf(&#34;exit code: %d\n%s&#34;, exit.ExitCode(), body), nil
+	}
+	return &#34;&#34;, err                              // the process could not start
+}
+return &#34;exit code: 0\n&#34; + body, nil</code></pre>
+<p>The order of those four checks is the lesson.</p>
+<p><code>ctx.Err()</code> first, because a cancelled parent must not be reported as a tool failure. <code>runCtx</code> second, because the timeout belongs to this tool and becomes a result. <code>*exec.ExitError</code> third, because a failing command is information. Everything else is a genuine error.</p>
+<p>Get the order wrong and one of two things happens: cancelling the agent looks like a broken command, or a hung command looks like a crash.</p>
+<h2>Step 4 — cap the output, mark the cap</h2>
+<pre><code class="language-go">func (t *BashTool) cap(s string) string {
+	limit := t.MaxBytes
+	if limit &lt;= 0 {
+		limit = DefaultBashLimit
+	}
+	if len(s) &lt;= limit {
+		return s
+	}
+	return s[:limit] + fmt.Sprintf(&#34;\n... [truncated: %d of %d bytes shown]&#34;, limit, len(s))
+}</code></pre>
+<p>This is a byte cap, not a line cap, and it can cut a multi-byte UTF-8 sequence in half. That is a real bug with a real fix (<code>utf8.DecodeLastRune</code>), and it is left out on purpose: the course grades the cap and the marker, not the rune boundary. Say so in a comment if you fix it.</p>
+<h2>Step 5 — the flag is the contract</h2>
+<pre><code class="language-go">toolTTL = flag.Duration(&#34;tool-timeout&#34;, 10*time.Second, &#34;cancel one tool call after this long&#34;)
+...
+&amp;agent.BashTool{Root: root, Timeout: *toolTTL},</code></pre>
+<p>Without a way to shorten it, the timeout case either takes ten seconds or cannot be tested at all. A bound you cannot exercise is a bound you cannot trust, and this chapter&#39;s own first draft proved it: the case passed a command that finished before the default fired, so it graded nothing.</p>
+<p>That is worth keeping in mind for your own work. A test that cannot fail is not a test.</p>
+<h2>The diffs</h2>
+<p><strong>1. Trusting the path</strong> — <code>write-refuses-escape</code></p>
+<pre><code class="language-diff">- full := filepath.Join(t.Root, args.Path)
++ full, err := resolveInside(t.Root, args.Path)</code></pre>
+<p><strong>2. Creating parents before resolving</strong> — <code>write-refuses-escape</code></p>
+<pre><code class="language-diff">- os.MkdirAll(filepath.Dir(filepath.Join(t.Root, p)), 0o755)
+- full, err := resolveInside(t.Root, p)
++ full, err := resolveInside(t.Root, p)
++ os.MkdirAll(filepath.Dir(full), 0o755)</code></pre>
+<p><strong>3. Treating a non-zero exit as an error</strong> — <code>bash-reports-exit-code</code></p>
+<pre><code class="language-diff">- if err != nil { return &#34;&#34;, err }
++ if errors.As(err, &amp;exit) {
++     return fmt.Sprintf(&#34;exit code: %d\n%s&#34;, exit.ExitCode(), body), nil
++ }</code></pre>
+<p><strong>4. Passing the tool timeout to the caller&#39;s context</strong> — <code>bash-timeout-is-a-result</code></p>
+<pre><code class="language-diff">- cmd := exec.CommandContext(ctx, &#34;sh&#34;, &#34;-c&#34;, command)   // uses the request bound
++ runCtx, cancel := context.WithTimeout(ctx, t.Timeout)
++ cmd := exec.CommandContext(runCtx, &#34;sh&#34;, &#34;-c&#34;, command)</code></pre>
+<h2>Complete files</h2>
+<table>
+<thead><tr><th>File</th><th>What to read it for</th></tr></thead>
+<tbody>
+<tr><td><code>reference/ch03/agent/tools.go</code></td><td>the shared boundary helper, the four-way classification</td></tr>
+<tr><td><code>reference/ch03/agent/cmd/agent/main.go</code></td><td>the <code>-tool-timeout</code> flag and the three-tool registry</td></tr>
+</tbody>
+</table>
+<h2>Comparison checklist</h2>
+<ul>
+<li>[ ] <code>read</code> and <code>write</code> share one path check</li>
+<li>[ ] absolute paths refused, escapes refused after resolution</li>
+<li>[ ] parents created only after the path is accepted</li>
+<li>[ ] <code>bash</code> runs <code>sh -c</code> with the workspace as its working directory</li>
+<li>[ ] combined output captured</li>
+<li>[ ] exit codes returned as results, not errors</li>
+<li>[ ] tool timeout distinct from request timeout</li>
+<li>[ ] timeout is a result, cancellation is an error</li>
+<li>[ ] output capped with a visible marker</li>
+</ul>
+<p>Differences outside this list are style.</p>
+<nav class="pager">
+<a class="prev" href="../../chapters/03-tools-that-touch-disk/problem.html">&larr; 03 Tools that touch disk · Problem</a>
+<a class="next" href="../../chapters/04-the-agent-loop/index.html">04 The agent loop &rarr;</a>
+</nav>
+</main>
+</body>
+</html>

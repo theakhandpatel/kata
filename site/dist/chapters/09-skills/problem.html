@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>09 Skills · Problem · Kata</title>
+<link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+<aside class="nav">
+<a class="brand" href="../../index.html">Kata</a>
+<div class="group">
+<div class="group-title">Start</div>
+<ul>
+<li><a href="../../index.html">Home</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">I. Wire</div>
+<ul>
+<li><a href="../../chapters/01-chat-with-the-model/index.html">01 Talk to the model</a></li>
+<li><a href="../../chapters/02-tool-calling/index.html">02 Tool calling</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">II. Act</div>
+<ul>
+<li><a href="../../chapters/03-tools-that-touch-disk/index.html">03 Tools that touch disk</a></li>
+<li><a href="../../chapters/04-the-agent-loop/index.html">04 The agent loop</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">III. Remember</div>
+<ul>
+<li><a href="../../chapters/05-prompt-assembly/index.html">05 Prompt assembly</a></li>
+<li><a href="../../chapters/06-sessions/index.html">06 Sessions</a></li>
+<li><a href="../../chapters/07-context-budget/index.html">07 Context budget</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">IV. Extend</div>
+<ul>
+<li><a href="../../chapters/08-steer-and-abort/index.html">08 Interrupt and steering</a></li>
+<li><a href="../../chapters/09-skills/index.html">09 Skills</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">V. Compose</div>
+<ul>
+<li><a href="../../chapters/10-subagent/index.html">10 Subagent</a></li>
+<li><a href="../../chapters/11-mcp/index.html">11 MCP</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">Reference</div>
+<ul>
+<li><a href="../../docs/architecture.html">Architecture</a></li>
+<li><a href="../../docs/chapter-format.html">Chapter format</a></li>
+<li><a href="../../docs/writing-style.html">Writing style</a></li>
+<li><a href="../../docs/designs.html">Designs</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">After the course</div>
+<ul>
+<li><a href="../../chapters/where-next.html">Where next</a></li>
+</ul>
+</div>
+</aside>
+<main>
+<nav class="subnav">
+<a href="../../chapters/09-skills/overview.html">Overview</a>
+<a class="current" href="../../chapters/09-skills/problem.html">Problem</a>
+<a href="../../chapters/09-skills/example.html">Example</a>
+</nav>
+<h1>09 — Problem</h1>
+<blockquote><p><strong>Your task:</strong> discover skills in the workspace, advertise their names and  descriptions, and expand <code>/name args</code> into the skill&#39;s body when invoked.</p></blockquote>
+<p><strong>You edit:</strong> <code>agent/skill.go</code>, <code>agent/cmd/agent/main.go</code> <strong>Given:</strong> <code>agent/prompt.go</code> (the <code>Contributor</code> seam), <code>agent/loop.go</code> <strong>Time:</strong> 75 to 100 minutes</p>
+<hr>
+<h2>The contract</h2>
+<pre><code class="language-go">// skill.go
+type Skill struct {
+    Name        string
+    Description string
+    Body        string
+    Path        string
+}
+
+func LoadSkills(root string) ([]Skill, error)
+func ParseSkill(path string, data []byte) (Skill, error)
+
+type Catalog struct{ /* ... */ }
+func NewCatalog(skills []Skill) *Catalog
+func (c *Catalog) Contribute(ctx context.Context) (string, error)  // Contributor
+func (c *Catalog) Expand(prompt string) (string, []Expansion)</code></pre>
+<p>File layout, one directory per skill:</p>
+<pre><code>skills/deploy/SKILL.md
+---
+name: deploy
+description: Deploy the app to a region.
+---
+Check the tests pass, then deploy to $0 in $1.
+Full request: $ARGUMENTS</code></pre>
+<h2>What the verifier does</h2>
+<p>It builds the binary, writes a temporary workspace containing <code>skills/</code>, runs the program with a prompt, and inspects the <strong>system message</strong> and the <strong>user message</strong> of the recorded request. No skill file is ever read by the checks directly.</p>
+<h2>The verifier will assert that</h2>
+<ul>
+<li><code>advertises-skills</code> — the system message names <code>deploy</code> and <code>review</code> with their</li>
+</ul>
+<p>descriptions.</p>
+<ul>
+<li><code>body-not-advertised</code> — with the catalogue present, no uninvoked body appears</li>
+</ul>
+<p>anywhere in the request.</p>
+<ul>
+<li><code>loads-body-on-invoke</code> — <code>/deploy staging eu-west</code> puts the body in the user</li>
+</ul>
+<p>message.</p>
+<ul>
+<li><code>substitutes-arguments</code> — <code>$0</code>, <code>$1</code> and <code>$ARGUMENTS</code> are replaced, and no</li>
+</ul>
+<p>placeholder survives.</p>
+<ul>
+<li><code>stacks-skills</code> — <code>/review /deploy production eu-west</code> expands both, review</li>
+</ul>
+<p>first, with deploy&#39;s own arguments applied.</p>
+<ul>
+<li><code>no-invocation-no-body</code> — a plain prompt arrives byte-identical and no body is</li>
+</ul>
+<p>sent.</p>
+<ul>
+<li><code>unknown-skill-preserved</code> — <code>/nosuch please help</code> keeps the original text and the</li>
+</ul>
+<p>program still answers.</p>
+<ul>
+<li><code>frontmatter-not-leaked</code> — the expanded body is present, and neither <code>---</code> nor</li>
+</ul>
+<p><code>description:</code> appears in it.</p>
+<h2>Notes</h2>
+<ul>
+<li><strong>Two audiences.</strong> Description goes in the system message; body goes in the user</li>
+</ul>
+<p>message, only on invocation.</p>
+<ul>
+<li><strong>Replace <code>$ARGUMENTS</code> before <code>$0</code>.</strong> Both start with <code>$</code>.</li>
+<li><strong>Arguments end at the next slash command</strong>, so several skills share a prompt.</li>
+<li><strong>Preserve unknown commands verbatim.</strong> A typo must not delete the person&#39;s words.</li>
+<li><strong>Expand before recording the turn.</strong> The session should hold what was sent.</li>
+<li><strong>Skip malformed skills.</strong> One bad file must not stop the agent from starting.</li>
+<li><strong>Deliberate omission:</strong> no scripts, no named arguments, no model-chosen</li>
+</ul>
+<p>invocation, no skill events.</p>
+<h2>Hints</h2>
+<p>&lt;details&gt;&lt;summary&gt;Rung 1 — the mechanism&lt;/summary&gt;</p>
+<p>A skill is a file with a small header and a body. The header is advertised everywhere; the body is substituted in when the person types its name. &lt;/details&gt;</p>
+<p>&lt;details&gt;&lt;summary&gt;Rung 2 — the APIs&lt;/summary&gt;</p>
+<p><code>os.ReadDir</code> on <code>skills/</code>, <code>strings.Cut</code> for <code>key: value</code>, <code>strings.Index</code> for the closing fence, <code>regexp</code> for slash commands and positional placeholders, <code>strings.Fields</code> for arguments. &lt;/details&gt;</p>
+<p>&lt;details&gt;&lt;summary&gt;Rung 3 — what the code does&lt;/summary&gt;</p>
+<p><code>ParseSkill</code> requires a leading <code>---</code>, finds the next <code>\n---</code>, reads <code>key: value</code> lines into a map, and takes the rest as the body. <code>LoadSkills</code> reads each <code>skills/*/SKILL.md</code>, skipping any parse error and sorting by name. <code>Contribute</code> renders <code># Skills</code>, one line of instructions, then <code>- name: description</code> per skill. <code>Expand</code> walks slash-command matches, takes arguments up to the next match, and writes either the expanded body or the original text. <code>expandBody</code> replaces <code>$ARGUMENTS</code> then <code>\$(\d+)</code> against the whitespace-split arguments. <code>main</code> builds the catalogue, passes it to <code>BuildSystemPrompt</code>, and expands the prompt before it becomes history.</p>
+<p><code>kata hint 09 &lt;case-id&gt;</code> prints these same rungs from the CLI. &lt;/details&gt;</p>
+<h2>Done when</h2>
+<p><code>kata submit 09</code> reports 8/8, and:</p>
+<ul>
+<li><code>/deploy staging eu-west</code> sends the skill body with the arguments applied;</li>
+<li>a project with no <code>skills/</code> directory still runs;</li>
+<li>you can explain why the body is not in the system message.</li>
+</ul>
+<nav class="pager">
+<a class="prev" href="../../chapters/09-skills/overview.html">&larr; 09 Skills · Overview</a>
+<a class="next" href="../../chapters/09-skills/example.html">09 Skills · Example &rarr;</a>
+</nav>
+</main>
+</body>
+</html>

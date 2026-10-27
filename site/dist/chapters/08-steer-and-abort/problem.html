@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>08 Interrupt and steering · Problem · Kata</title>
+<link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+<aside class="nav">
+<a class="brand" href="../../index.html">Kata</a>
+<div class="group">
+<div class="group-title">Start</div>
+<ul>
+<li><a href="../../index.html">Home</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">I. Wire</div>
+<ul>
+<li><a href="../../chapters/01-chat-with-the-model/index.html">01 Talk to the model</a></li>
+<li><a href="../../chapters/02-tool-calling/index.html">02 Tool calling</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">II. Act</div>
+<ul>
+<li><a href="../../chapters/03-tools-that-touch-disk/index.html">03 Tools that touch disk</a></li>
+<li><a href="../../chapters/04-the-agent-loop/index.html">04 The agent loop</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">III. Remember</div>
+<ul>
+<li><a href="../../chapters/05-prompt-assembly/index.html">05 Prompt assembly</a></li>
+<li><a href="../../chapters/06-sessions/index.html">06 Sessions</a></li>
+<li><a href="../../chapters/07-context-budget/index.html">07 Context budget</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">IV. Extend</div>
+<ul>
+<li><a href="../../chapters/08-steer-and-abort/index.html">08 Interrupt and steering</a></li>
+<li><a href="../../chapters/09-skills/index.html">09 Skills</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">V. Compose</div>
+<ul>
+<li><a href="../../chapters/10-subagent/index.html">10 Subagent</a></li>
+<li><a href="../../chapters/11-mcp/index.html">11 MCP</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">Reference</div>
+<ul>
+<li><a href="../../docs/architecture.html">Architecture</a></li>
+<li><a href="../../docs/chapter-format.html">Chapter format</a></li>
+<li><a href="../../docs/writing-style.html">Writing style</a></li>
+<li><a href="../../docs/designs.html">Designs</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">After the course</div>
+<ul>
+<li><a href="../../chapters/where-next.html">Where next</a></li>
+</ul>
+</div>
+</aside>
+<main>
+<nav class="subnav">
+<a href="../../chapters/08-steer-and-abort/overview.html">Overview</a>
+<a class="current" href="../../chapters/08-steer-and-abort/problem.html">Problem</a>
+<a href="../../chapters/08-steer-and-abort/example.html">Example</a>
+</nav>
+<h1>08 — Problem</h1>
+<blockquote><p><strong>Your task:</strong> keep the partial answer when a run is interrupted, and let lines  typed during a run join it at the next turn boundary.</p></blockquote>
+<p><strong>You edit:</strong> <code>agent/loop.go</code>, <code>agent/steering.go</code>, <code>agent/provider_openai.go</code>, <code>agent/events.go</code>, <code>agent/cmd/agent/main.go</code> <strong>Given:</strong> <code>agent/budget.go</code>, <code>agent/session.go</code>, <code>agent/prompt.go</code> <strong>Time:</strong> 75 to 100 minutes</p>
+<hr>
+<h2>The contract</h2>
+<pre><code class="language-go">// loop.go
+type LoopOptions struct {
+    MaxSteps int
+    Emit     Emitter
+    Steering func() []Message   // drained at every turn boundary
+}
+
+// steering.go
+func NewStdinSteering(r io.Reader) *StdinSteering
+func (s *StdinSteering) Start()
+func (s *StdinSteering) Drain() []Message
+
+// events.go
+const EventSteer = &#34;steer&#34;</code></pre>
+<p>One flag:</p>
+<pre><code class="language-sh">printf &#39;also check the tests\n&#39; | agent -p &#34;add a flag&#34; -steer-stdin</code></pre>
+<p>Exit codes: <code>0</code> success, <code>1</code> error, <strong><code>130</code> interrupted</strong>.</p>
+<h2>What the verifier does</h2>
+<p>It runs the real binary. For steering it supplies stdin and inspects every recorded request. For abort it starts the process, waits 250 ms, sends SIGINT while the scripted server is still streaming, then reads stdout, the exit code, the events and the session file.</p>
+<h2>The verifier will assert that</h2>
+<ul>
+<li><code>steer-continues-after-done</code> — a run whose model answered, then received a</li>
+</ul>
+<p>steered line, makes two requests and prints the second answer.</p>
+<ul>
+<li><code>steer-enters-after-turn</code> — request 1 contains no steering text; request 2 is</li>
+</ul>
+<p><code>system, user, assistant, user(steer)</code>, in that order.</p>
+<ul>
+<li><code>steer-not-duplicated</code> — one steered line appears exactly once across all</li>
+</ul>
+<p>requests.</p>
+<ul>
+<li><code>no-steer-single-request</code> — with empty stdin the run costs one request.</li>
+<li><code>steer-event-reported</code> — exactly one <code>steer</code> event, carrying the text.</li>
+<li><code>abort-keeps-partial</code> — exit code 130, and stdout is a non-empty prefix of the</li>
+</ul>
+<p>streamed reply.</p>
+<ul>
+<li><code>abort-emits-event</code> — the event stream ends with <code>agent_end</code> whose reason is</li>
+</ul>
+<p><code>aborted</code>.</p>
+<ul>
+<li><code>abort-persists-session</code> — the session file contains the user message and an</li>
+</ul>
+<p>assistant record with the beginning of the interrupted reply.</p>
+<h2>Notes</h2>
+<ul>
+<li><strong>The parser returns the partial message with the error.</strong> Not an empty message.</li>
+</ul>
+<p>This is the difference between interruption and data loss.</p>
+<ul>
+<li><strong><code>agent_end</code> is emitted on every path</strong>, including abort. The reason field is</li>
+</ul>
+<p>what distinguishes outcomes.</p>
+<ul>
+<li><strong>Drain clears.</strong> Take the slice, set it to nil, release the lock.</li>
+<li><strong>Drain never blocks.</strong> Reading happens on its own goroutine; the loop only</li>
+</ul>
+<p>inspects what has already arrived.</p>
+<ul>
+<li><strong>The done condition changes</strong>: no tool calls <em>and</em> nothing steered.</li>
+<li><strong>Persist before returning.</strong> A cancelled run still produced turns, and the</li>
+</ul>
+<p>session must match what the person saw.</p>
+<ul>
+<li><strong>Deliberate omission:</strong> no interactive terminal, no queue persistence, no</li>
+</ul>
+<p>process-group teardown.</p>
+<h2>Hints</h2>
+<p>&lt;details&gt;&lt;summary&gt;Rung 1 — the mechanism&lt;/summary&gt;</p>
+<p>Interruption is a normal outcome with its own exit code and its own event reason. Steering is a queued message that enters at the end of a turn, never inside the prompt being answered. &lt;/details&gt;</p>
+<p>&lt;details&gt;&lt;summary&gt;Rung 2 — the APIs&lt;/summary&gt;</p>
+<p><code>context.Canceled</code>, <code>errors.Is</code>, <code>signal.NotifyContext</code>, <code>bufio.Scanner</code> on a goroutine, <code>sync.Mutex</code>, <code>os.Exit</code> avoided by returning an exit code from <code>run</code>. &lt;/details&gt;</p>
+<p>&lt;details&gt;&lt;summary&gt;Rung 3 — what the code does&lt;/summary&gt;</p>
+<p>In the parser, return <code>Message{Role: RoleAssistant, Content: content.String()}</code> beside the stream error. In the loop, on error append that partial message when it is non-empty, emit <code>agent_end</code> with reason <code>aborted</code> when the error is a cancellation, and return. After the tool batch, drain steering: emit a <code>steer</code> event per message and append each as a user message. Stop only when the reply had no tool calls and nothing was steered. In <code>main</code>, persist the session, then on <code>context.Canceled</code> print the partial answer, write <code>agent: aborted</code> to stderr, and return exit code 130.</p>
+<p><code>kata hint 08 &lt;case-id&gt;</code> prints these same rungs from the CLI. &lt;/details&gt;</p>
+<h2>Done when</h2>
+<p><code>kata submit 08</code> reports 8/8, and:</p>
+<ul>
+<li>Ctrl-C during a long answer leaves the text you already read on screen;</li>
+<li>a line typed mid-run lands in the next request as its own message;</li>
+<li>you can explain why the done condition gained an <code>and</code>.</li>
+</ul>
+<nav class="pager">
+<a class="prev" href="../../chapters/08-steer-and-abort/overview.html">&larr; 08 Interrupt and steering · Overview</a>
+<a class="next" href="../../chapters/08-steer-and-abort/example.html">08 Interrupt and steering · Example &rarr;</a>
+</nav>
+</main>
+</body>
+</html>

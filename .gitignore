@@ -9,7 +9,6 @@ BUILD-STATE.md
 # build output
 /kata
 /craft
-/site/dist/
 *.test
 
 # learner progress

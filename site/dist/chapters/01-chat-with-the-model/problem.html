@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>01 Talk to the model · Problem · Kata</title>
+<link rel="stylesheet" href="../../style.css">
+</head>
+<body>
+<aside class="nav">
+<a class="brand" href="../../index.html">Kata</a>
+<div class="group">
+<div class="group-title">Start</div>
+<ul>
+<li><a href="../../index.html">Home</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">I. Wire</div>
+<ul>
+<li><a href="../../chapters/01-chat-with-the-model/index.html">01 Talk to the model</a></li>
+<li><a href="../../chapters/02-tool-calling/index.html">02 Tool calling</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">II. Act</div>
+<ul>
+<li><a href="../../chapters/03-tools-that-touch-disk/index.html">03 Tools that touch disk</a></li>
+<li><a href="../../chapters/04-the-agent-loop/index.html">04 The agent loop</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">III. Remember</div>
+<ul>
+<li><a href="../../chapters/05-prompt-assembly/index.html">05 Prompt assembly</a></li>
+<li><a href="../../chapters/06-sessions/index.html">06 Sessions</a></li>
+<li><a href="../../chapters/07-context-budget/index.html">07 Context budget</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">IV. Extend</div>
+<ul>
+<li><a href="../../chapters/08-steer-and-abort/index.html">08 Interrupt and steering</a></li>
+<li><a href="../../chapters/09-skills/index.html">09 Skills</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">V. Compose</div>
+<ul>
+<li><a href="../../chapters/10-subagent/index.html">10 Subagent</a></li>
+<li><a href="../../chapters/11-mcp/index.html">11 MCP</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">Reference</div>
+<ul>
+<li><a href="../../docs/architecture.html">Architecture</a></li>
+<li><a href="../../docs/chapter-format.html">Chapter format</a></li>
+<li><a href="../../docs/writing-style.html">Writing style</a></li>
+<li><a href="../../docs/designs.html">Designs</a></li>
+</ul>
+</div>
+<div class="group">
+<div class="group-title">After the course</div>
+<ul>
+<li><a href="../../chapters/where-next.html">Where next</a></li>
+</ul>
+</div>
+</aside>
+<main>
+<nav class="subnav">
+<a href="../../chapters/01-chat-with-the-model/overview.html">Overview</a>
+<a class="current" href="../../chapters/01-chat-with-the-model/problem.html">Problem</a>
+<a href="../../chapters/01-chat-with-the-model/example.html">Example</a>
+</nav>
+<h1>01 — Problem</h1>
+<blockquote><p><strong>Your task:</strong> make the program answer a prompt. <code>agent -p &#34;hello&#34;</code> should  print the model&#39;s reply on stdout.</p></blockquote>
+<p>You are not writing a library for a test to call. You are writing the first version of an application: a program a person runs in a terminal. Later chapters add tools, loops and sessions to this same program.</p>
+<p><strong>You edit:</strong> <code>agent/provider_openai.go</code> <strong>Given:</strong> <code>agent/cmd/agent/main.go</code> (the program), <code>agent/types.go</code> <strong>Do not edit:</strong> <code>internal/</code>, <code>chapters/</code> <strong>Time:</strong> 30 to 50 minutes</p>
+<hr>
+<h2>The contract</h2>
+<p>The program is already written. It reads three inputs and prints one output:</p>
+<pre><code class="language-sh">agent -p &#34;say something&#34;          # the answer goes to stdout
+agent -p &#34;hi&#34; -m gpt-4o-mini      # model override
+agent -p &#34;hi&#34; -timeout 5s         # request timeout</code></pre>
+<p>It reads configuration from the environment:</p>
+<table>
+<thead><tr><th>Variable</th><th>Used for</th><th>Default</th></tr></thead>
+<tbody>
+<tr><td><code>OPENAI_BASE_URL</code></td><td>the endpoint, ending in <code>/v1</code></td><td><code>http://localhost:11434/v1</code></td></tr>
+<tr><td><code>OPENAI_API_KEY</code></td><td>the bearer token</td><td>empty</td></tr>
+<tr><td><code>HARNESS_MODEL</code></td><td>model name when <code>-m</code> is absent</td><td><code>gpt-4o-mini</code></td></tr>
+<tr><td><code>HARNESS_DEBUG</code></td><td>set to any value to log token usage to stderr</td><td>unset</td></tr>
+</tbody>
+</table>
+<p>Then it needs one thing from you:</p>
+<pre><code class="language-go">func (p *OpenAICompat) Chat(ctx context.Context, req Request) (Message, Usage, error)</code></pre>
+<p><code>Request</code>, <code>Message</code>, <code>Usage</code> and <code>HTTPError</code> are in <code>agent/types.go</code>. Read that file first. It is short and it is scaffolding.</p>
+<p>The request goes to <code>{BaseURL}/chat/completions</code> with <code>&#34;stream&#34;: true</code>. The server answers with <code>text/event-stream</code>, one JSON object per <code>data:</code> line. This is the chunk shape, and the nesting matters:</p>
+<pre><code class="language-json">{
+  &#34;choices&#34;: [
+    { &#34;index&#34;: 0, &#34;delta&#34;: { &#34;content&#34;: &#34;The &#34; }, &#34;finish_reason&#34;: null }
+  ],
+  &#34;usage&#34;: { &#34;prompt_tokens&#34;: 42, &#34;completion_tokens&#34;: 7, &#34;total_tokens&#34;: 49 }
+}</code></pre>
+<p><code>content</code> is at <code>choices[0].delta.content</code>, not at the top level. <code>usage</code> appears once, on the final chunk, whose <code>delta</code> is empty.</p>
+<h2>What the verifier does</h2>
+<p>It builds <code>./agent/cmd/agent</code>, starts a scripted HTTP server that speaks the real protocol, points <code>OPENAI_BASE_URL</code> at it, and runs your binary. Then it checks three things:</p>
+<ol>
+<li>what your program <strong>printed</strong> on stdout and stderr, and its exit code;</li>
+<li>what <strong>requests</strong> it sent, decoded from the actual HTTP body and headers;</li>
+<li>whether the conversation used exactly the scripted number of turns.</li>
+</ol>
+<p>Nothing calls your package directly. The internal design is yours.</p>
+<h2>The verifier will assert that</h2>
+<ul>
+<li><code>prints-reply</code> — stdout is the model&#39;s full text plus one newline, and the exit</li>
+</ul>
+<p>code is 0, even when the text arrives in several pieces.</p>
+<ul>
+<li><code>request-shape</code> — the request goes to <code>/v1/chat/completions</code>, carries</li>
+</ul>
+<p><code>Authorization: Bearer &lt;key&gt;</code>, sets the model from <code>-m</code>, sets <code>&#34;stream&#34;: true</code>, and serialises messages as <code>{role, content}</code> in order.</p>
+<ul>
+<li><code>request-envelope</code> — <code>Content-Type: application/json</code> and</li>
+</ul>
+<p><code>Accept: text/event-stream</code> are both set.</p>
+<ul>
+<li><code>optional-zero-values</code> — when no token limit or temperature is set, those keys</li>
+</ul>
+<p>are absent from the body rather than sent as zero.</p>
+<ul>
+<li><code>sse-framing</code> — comment lines, <code>event:</code> fields, CRLF endings, and <code>data:</code> with</li>
+</ul>
+<p>no space after the colon are all tolerated.</p>
+<ul>
+<li><code>debug-usage</code> — with <code>HARNESS_DEBUG=1</code>, stderr reports the prompt, completion</li>
+</ul>
+<p>and total token counts, and stdout still contains only the answer.</p>
+<ul>
+<li><code>http-error</code> — a 429 exits 1, prints nothing on stdout, and names the status on</li>
+</ul>
+<p>stderr.</p>
+<ul>
+<li><code>truncated-stream</code> — a connection that dies mid-stream exits 1 with an error,</li>
+</ul>
+<p>and the request was actually made.</p>
+<ul>
+<li><code>request-timeout</code> — with <code>-timeout 50ms</code> and a server that never answers, the</li>
+</ul>
+<p>program exits 1 quickly, having made the request.</p>
+<h2>Notes</h2>
+<p>Three of these cases only fail for code that looks right. A one-chunk reply passes whether you append or assign. A server that answers instantly passes whether or not you pass the context. Test with a long reply and a slow server.</p>
+<ul>
+<li>An empty reply is not an error. Return an empty message with no error.</li>
+<li>Do not print the answer with <code>fmt.Printf</code> inside the stream loop. Print once,</li>
+</ul>
+<p>at the end, after the stream closes.</p>
+<ul>
+<li>Deliberate omission: no retries, no backoff, no prompt caching, no extra</li>
+</ul>
+<p>provider options. pi does all of that in <code>packages/ai/src/api/openai-completions.ts</code>; read it after you pass.</p>
+<h2>Hints</h2>
+<p>&lt;details&gt;&lt;summary&gt;Rung 1 — the mechanism&lt;/summary&gt;</p>
+<p>Three separate things break here, and each has its own case: what the request looks like, how the deltas are folded, and how the program fails. &lt;/details&gt;</p>
+<p>&lt;details&gt;&lt;summary&gt;Rung 2 — the APIs&lt;/summary&gt;</p>
+<p><code>http.NewRequestWithContext</code>, <code>json.Marshal</code>, <code>bufio.Scanner</code> with a raised <code>Buffer</code> limit, <code>strings.Builder</code>, <code>io.LimitReader</code>.</p>
+<p>The scanner returns lines, not events. The line <code>data: [DONE]</code> ends the stream and is not JSON. &lt;/details&gt;</p>
+<p>&lt;details&gt;&lt;summary&gt;Rung 3 — what the code does&lt;/summary&gt;</p>
+<p>Build the body and POST it with the caller&#39;s ctx. Check the status before reading the body; on non-2xx, read at most a few KiB and return <code>&amp;agent.HTTPError{Status, Body}</code>. Otherwise scan lines, keep those starting <code>data:</code>, skip <code>[DONE]</code>, decode each into a chunk struct with <code>Choices[].Delta.Content</code> and a top-level <code>Usage</code>, append every content delta, and take <code>usage</code> when it is non-nil. After the loop, check <code>scanner.Err()</code> and return it. Assemble the returned message outside the loop.</p>
+<p><code>kata hint 01 &lt;case-id&gt;</code> prints the same rungs from the CLI. &lt;/details&gt;</p>
+<h2>Done when</h2>
+<p><code>kata submit 01</code> reports 9/9, and:</p>
+<ul>
+<li><code>./agent -p &#34;hello&#34;</code> works against Ollama or any OpenAI-compatible endpoint;</li>
+<li>you can explain why <code>scanner.Err()</code> matters without looking;</li>
+<li>you know which of the three traps bit you, and which case caught it.</li>
+</ul>
+<nav class="pager">
+<a class="prev" href="../../chapters/01-chat-with-the-model/overview.html">&larr; 01 Talk to the model · Overview</a>
+<a class="next" href="../../chapters/01-chat-with-the-model/example.html">01 Talk to the model · Example &rarr;</a>
+</nav>
+</main>
+</body>
+</html>
