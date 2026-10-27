@@ -1,6 +1,14 @@
-# Miyagi
+<p align="center">
+  <img src="/docs/assets/logo.png" alt="Miyagi logo, 180 pixels wide" width="180">
+</p>
 
-Build a coding-agent harness in Go, with a grader that tells you what is broken.
+<h1 align="center">Miyagi</h1>
+
+<p align="center"><em>Teach me harness, my inner AI.</em></p>
+
+<p align="center">
+  Build a coding-agent harness in Go, with a grader that tells you what is broken.
+</p>
 
 Read it online at **[miyagi.akhand.cc](https://miyagi.akhand.cc)**.
 
@@ -199,16 +207,20 @@ covers MCP because the client is small enough to teach. For a full harness, read
 
 ## Publishing
 
-Pushing to `main` builds and deploys the site. The workflow runs `miyagi site`, which writes
-a generated VitePress project, and then uploads `site/dist` to Netlify. Nothing generated is
-committed.
+Netlify builds the site from the repository. It watches `main`, so a push is the deploy: no
+workflow uploads files, and nothing generated is committed.
 
 ```
-miyagi site   →   site/src (generated VitePress project)   →   site/dist
+push  →  netlify runs `miyagi site`  →  site/src (generated)  →  site/dist  →  live
 ```
 
-VitePress validates every internal link, so a broken cross-reference fails the build instead
-of shipping.
+`netlify.toml` holds the build command and the publish directory, so the settings live in the
+repository rather than in a dashboard. VitePress validates every internal link, so a broken
+cross-reference fails the build instead of shipping.
+
+The site carries a sitemap, `robots.txt`, and per-page descriptions taken from each page's
+opening sentence. `miyagi site` writes all of it, so a new chapter is indexable without
+anyone editing a config.
 
 To preview locally:
 
@@ -217,7 +229,7 @@ miyagi site                       # build once, output in site/dist
 cd site && npx vitepress dev src  # live reload while editing chapters
 ```
 
-To deploy by hand if a workflow run failed:
+To deploy by hand if a build failed:
 
 ```sh
 miyagi site --out site/dist && netlify deploy --prod --dir site/dist

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"io/fs"
 	"os/exec"
 	"path/filepath"
 	"strconv"
@@ -105,6 +106,7 @@ func prepareContent(root, srcDir string) (int, error) {
 		if err != nil {
 			return fmt.Errorf("read %s: %w", source, err)
 		}
+		body = withDescription(body, source)
 		dest := filepath.Join(srcDir, target)
 		if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
 			return err
@@ -153,7 +155,52 @@ func prepareContent(root, srcDir string) (int, error) {
 		}
 	}
 
+	// Images under docs/assets are copied so the same relative paths resolve on the
+	// site as they do on GitHub. Chapter pages and the README reference them by that
+	// path, so the two renderers must agree about where they live.
+	if err := copyAssets(root, srcDir); err != nil {
+		return pages, err
+	}
+
 	return pages, nil
+}
+
+// copyAssets mirrors docs/assets into the VitePress public directory.
+//
+// Files under `public` are served verbatim at the site root and are never passed through
+// Rollup, which matters here: a relative image path in markdown is otherwise treated as a
+// module import and fails to resolve. After this copy, `/docs/assets/logo.png` works on
+// the site, and the same file is reached relatively on GitHub.
+func copyAssets(root, srcDir string) error {
+	src := filepath.Join(root, "docs", "assets")
+	if _, err := os.Stat(src); err != nil {
+		return nil
+	}
+	publicDir := filepath.Join(srcDir, "public", "docs", "assets")
+	if err := os.MkdirAll(publicDir, 0o755); err != nil {
+		return err
+	}
+	if err := filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		body, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		dest := filepath.Join(publicDir, d.Name())
+		return os.WriteFile(dest, body, 0o644)
+	}); err != nil {
+		return err
+	}
+
+	// robots.txt points crawlers at the sitemap VitePress writes, so a new chapter is
+	// discoverable without anyone submitting a URL by hand.
+	robots := "User-agent: *\nAllow: /\n\nSitemap: https://miyagi.akhand.cc/sitemap.xml\n"
+	return os.WriteFile(filepath.Join(srcDir, "public", "robots.txt"), []byte(robots), 0o644)
 }
 
 func writeProject(srcDir, title, root string) error {
@@ -177,8 +224,110 @@ func writeProject(srcDir, title, root string) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(dir, "config.mts"), []byte(config), 0o644)
+	if err := os.WriteFile(filepath.Join(dir, "config.mts"), []byte(config), 0o644); err != nil {
+		return err
+	}
+
+	// The theme directory holds the stylesheet and the logo. VitePress picks up
+	// theme/index.ts by convention when a theme directory exists.
+	themeDir := filepath.Join(dir, "theme")
+	if err := os.MkdirAll(themeDir, 0o755); err != nil {
+		return err
+	}
+	if err := os.WriteFile(filepath.Join(themeDir, "index.ts"), []byte(themeEntry), 0o644); err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(themeDir, "custom.css"), []byte(themeCSS), 0o644)
 }
+
+// themeEntry pulls in the default theme and then our stylesheet, which is the whole
+// extent of the customisation: colours, the logo lockup, and a wider content column for
+// pages that carry wide tables.
+const themeEntry = `import DefaultTheme from 'vitepress/theme'
+import './custom.css'
+
+export default DefaultTheme
+`
+
+// themeCSS is deliberately small. It sets a warm palette drawn from the logo, tightens
+// the hero, and stops the prose column from stretching to an unreadable width on a
+// large monitor. Everything else is VitePress defaults, because a course site should
+// look like documentation, not like a landing page.
+const themeCSS = `/**
+ * Miyagi site theme.
+ *
+ * One accent colour, taken from the logo, plus a readable measure. The default
+ * VitePress theme is already good documentation design, so this file changes as
+ * little as possible.
+ */
+
+:root {
+  --vp-c-brand-1: #9a4b28;
+  --vp-c-brand-2: #b85c33;
+  --vp-c-brand-3: #d4754a;
+  --vp-c-brand-soft: rgba(154, 75, 40, 0.14);
+
+  /* A warm off-white rather than pure white, which is easier to read for long prose. */
+  --vp-c-bg: #fdfbf9;
+  --vp-c-bg-alt: #f6f1ec;
+  --vp-c-bg-soft: #f3ece5;
+
+  --vp-font-family-base: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    Roboto, 'Helvetica Neue', sans-serif;
+  --vp-font-family-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+}
+
+.dark {
+  --vp-c-brand-1: #e08a5c;
+  --vp-c-brand-2: #d4754a;
+  --vp-c-brand-3: #c2603a;
+  --vp-c-brand-soft: rgba(224, 138, 92, 0.16);
+
+  --vp-c-bg: #16120f;
+  --vp-c-bg-alt: #1d1815;
+  --vp-c-bg-soft: #241d18;
+}
+
+/* The hero: logo and title side by side, tagline underneath. */
+.VPHero .name,
+.VPHero .text {
+  letter-spacing: -0.02em;
+}
+
+.VPHero .tagline {
+  max-width: 34rem;
+  margin-inline: auto;
+}
+
+/* Long-form pages carry wide tables and code; give them room, but stop before the
+   line becomes hard to track. */
+@media (min-width: 960px) {
+  .VPDoc .content-container {
+    max-width: 46rem;
+  }
+}
+
+/* Chapter pages open with a metadata line in bold, which reads as a caption rather
+   than a heading. */
+.vp-doc > p:first-of-type strong:first-child {
+  font-weight: 600;
+}
+
+/* Inline code should not shout. */
+.vp-doc :not(pre) > code {
+  font-size: 0.86em;
+}
+
+/* The course leans on tables; give them a little more breathing room. */
+.vp-doc table {
+  display: table;
+  width: 100%;
+}
+
+.vp-doc tr:nth-child(2n) {
+  background: var(--vp-c-bg-soft);
+}
+`
 
 // buildConfig writes the VitePress configuration, including the sidebar.
 //
@@ -194,7 +343,33 @@ func buildConfig(title, root string) string {
 	fmt.Fprintf(&b, "  title: %s,\n", strconv.Quote(title))
 	b.WriteString("  description: 'Build a coding-agent harness in Go, graded offline by a local verifier.',\n")
 	b.WriteString("  lang: 'en',\n")
+	// The logo and favicon are copied into the site source from docs/assets, so the
+	// repository and the published site use one source of art.
+	//
+	// `cleanUrls` gives every page a path without `.html`, which is what search engines
+	// and shared links should see.
+	b.WriteString("  cleanUrls: true,\n")
+	b.WriteString("  sitemap: { hostname: 'https://miyagi.akhand.cc' },\n")
+	b.WriteString("  head: [\n")
+	b.WriteString("    ['link', { rel: 'icon', href: '/docs/assets/favicon.ico', sizes: 'any' }],\n")
+	b.WriteString("    ['link', { rel: 'apple-touch-icon', href: '/docs/assets/logo-128.png' }],\n")
+	b.WriteString("    ['meta', { name: 'theme-color', content: '#9a4b28' }],\n")
+	b.WriteString("    ['meta', { name: 'author', content: 'Akhand Patel' }],\n")
+	b.WriteString("    ['meta', { name: 'robots', content: 'index, follow' }],\n")
+	// The share card. Absolute URLs are required by every crawler.
+	b.WriteString("    ['meta', { property: 'og:type', content: 'website' }],\n")
+	b.WriteString("    ['meta', { property: 'og:site_name', content: 'Miyagi' }],\n")
+	b.WriteString("    ['meta', { property: 'og:title', content: 'Miyagi: build a coding-agent harness in Go' }],\n")
+	b.WriteString("    ['meta', { property: 'og:description', content: 'Twenty-one graded chapters that take you from one HTTP request to a working agent. Offline, deterministic, no API key.' }],\n")
+	b.WriteString("    ['meta', { property: 'og:image', content: 'https://miyagi.akhand.cc/docs/assets/logo.png' }],\n")
+	b.WriteString("    ['meta', { property: 'og:url', content: 'https://miyagi.akhand.cc/' }],\n")
+	b.WriteString("    ['meta', { name: 'twitter:card', content: 'summary_large_image' }],\n")
+	b.WriteString("    ['meta', { name: 'twitter:title', content: 'Miyagi: build a coding-agent harness in Go' }],\n")
+	b.WriteString("    ['meta', { name: 'twitter:description', content: 'Twenty-one graded chapters that take you from one HTTP request to a working agent. Offline, deterministic, no API key.' }],\n")
+	b.WriteString("    ['meta', { name: 'twitter:image', content: 'https://miyagi.akhand.cc/docs/assets/logo.png' }],\n")
+	b.WriteString("  ],\n")
 	b.WriteString("  themeConfig: {\n")
+	b.WriteString("    logo: { src: '/docs/assets/logo-128.png', alt: 'Miyagi', width: 32, height: 32 },\n")
 	b.WriteString("    search: { provider: 'local' },\n")
 	b.WriteString("    outline: { level: [2, 3] },\n")
 	b.WriteString("    nav: [\n")
@@ -294,4 +469,105 @@ func build(siteDir string) error {
 		return fmt.Errorf("vitepress build: %w", err)
 	}
 	return nil
+}
+
+// withDescription gives every page its own meta description.
+//
+// VitePress uses one site-wide description for the `description` tag unless a page
+// declares its own front matter. A course with 21 similarly named chapters then presents
+// search engines with 21 identical snippets, which is the difference between "22 results
+// that all look the same" and a result a reader can choose between. The chapter's own
+// opening sentence is already written for a human, so it is used verbatim, trimmed to a
+// length crawlers display.
+//
+// A page that already has front matter is left alone: the author said what they wanted.
+func withDescription(body []byte, source string) []byte {
+	text := string(body)
+	if strings.HasPrefix(text, "---\n") {
+		return body
+	}
+
+	desc := firstSentence(text)
+	if desc == "" {
+		return body
+	}
+
+	var b strings.Builder
+	b.WriteString("---\n")
+	fmt.Fprintf(&b, "description: %s\n", strconv.Quote(desc))
+	b.WriteString("---\n\n")
+	b.WriteString(text)
+	return []byte(b.String())
+}
+
+// firstSentence finds the first real paragraph that is not a heading, code fence, table,
+// image or HTML block, and returns its first sentence, capped at about 155 characters
+// because that is all a search result shows.
+func firstSentence(text string) string {
+	lines := strings.Split(text, "\n")
+	inFence := false
+	var para []string
+
+	flush := func() string {
+		if len(para) == 0 {
+			return ""
+		}
+		joined := strings.Join(para, " ")
+		para = nil
+		// Cut at the first sentence end.
+		for i, r := range joined {
+			if (r == '.' || r == '!' || r == '?') && i+1 < len(joined) {
+				if joined[i+1] == ' ' {
+					return trimToSentence(joined[:i+1])
+				}
+			}
+		}
+		return trimToSentence(joined)
+	}
+
+	for _, raw := range lines {
+		line := strings.TrimSpace(raw)
+		if strings.HasPrefix(line, "```") {
+			inFence = !inFence
+			continue
+		}
+		if inFence {
+			continue
+		}
+		switch {
+		case line == "":
+			if s := flush(); s != "" {
+				return s
+			}
+			continue
+		case strings.HasPrefix(line, "#"),
+			strings.HasPrefix(line, "|"),
+			strings.HasPrefix(line, ">"),
+			strings.HasPrefix(line, "<"),
+			strings.HasPrefix(line, "!["),
+			strings.HasPrefix(line, "-"),
+			strings.HasPrefix(line, "*"),
+			strings.HasPrefix(line, "1."),
+			strings.HasPrefix(line, "**Part"):
+			continue
+		}
+		// Strip inline markup a crawler would otherwise show literally.
+		line = strings.ReplaceAll(line, "`", "")
+		line = strings.ReplaceAll(line, "**", "")
+		para = append(para, line)
+	}
+	return flush()
+}
+
+// trimToSentence caps a description without cutting mid-word.
+func trimToSentence(s string) string {
+	const max = 155
+	if len(s) <= max {
+		return s
+	}
+	cut := s[:max]
+	if i := strings.LastIndexByte(cut, ' '); i > 0 {
+		cut = cut[:i]
+	}
+	return strings.TrimRight(cut, " ,;:") + "."
 }
