@@ -89,8 +89,14 @@ func RunLoop(
 			if msg.Content != "" {
 				history = append(history, msg)
 			}
+			// "aborted" means a person stopped it. A deadline is a timeout, which is a
+			// failure of the run, and a consumer that cannot tell them apart cannot render
+			// them differently.
 			reason := "error"
-			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+			if errors.Is(err, context.Canceled) {
+				reason = "aborted"
+			}
+			if ctx.Err() != nil && !errors.Is(ctx.Err(), context.DeadlineExceeded) {
 				reason = "aborted"
 			}
 			emit(Event{Type: EventAgentEnd, Turns: turn, Reason: reason})
