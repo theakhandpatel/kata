@@ -248,7 +248,14 @@ func TestProseHasNoAITells(t *testing.T) {
 		{"In order to", "use 'to'"},
 	}
 
-	files := []string{"README.md", "docs/architecture.md", "docs/designs.md", "docs/chapter-format.md"}
+	files := []string{
+		"README.md",
+		"docs/architecture.md",
+		"docs/designs.md",
+		"docs/chapter-format.md",
+		// writing-style.md is excluded on purpose: it has to name the words it bans.
+		"chapters/where-next.md",
+	}
 	entries, err := os.ReadDir(filepath.Join(root, "chapters"))
 	if err != nil {
 		t.Fatalf("read chapters: %v", err)
@@ -349,6 +356,35 @@ func TestExampleHeadingsMatchTheirChapter(t *testing.T) {
 		want := "# " + slug[:2] + " Example"
 		if first != want {
 			t.Errorf("%s/example.md starts with %q; want %q", slug, first, want)
+		}
+	}
+}
+
+// Each check file's leading comment names its own chapter. Ten of them drifted after the
+// chapter splits, including two that claimed chapter 10.
+func TestCheckCommentsNameTheirChapter(t *testing.T) {
+	root := repoRootForTests(t)
+	for _, slug := range writtenChapters(t) {
+		dir := filepath.Join(root, "chapters", slug, "checks")
+		files, err := os.ReadDir(dir)
+		if err != nil {
+			continue
+		}
+		for _, f := range files {
+			if !strings.HasSuffix(f.Name(), "_test.go") {
+				continue
+			}
+			body, err := os.ReadFile(filepath.Join(dir, f.Name()))
+			if err != nil {
+				continue
+			}
+			m := regexp.MustCompile(`Chapter (\d\d)`).FindStringSubmatch(string(body))
+			if m == nil {
+				continue
+			}
+			if m[1] != slug[:2] {
+				t.Errorf("%s/%s names Chapter %s; it is chapter %s", slug, f.Name(), m[1], slug[:2])
+			}
 		}
 	}
 }

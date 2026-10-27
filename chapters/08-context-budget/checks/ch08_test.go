@@ -16,7 +16,7 @@ import (
 	"kata/internal/hints"
 )
 
-// Chapter 07 -- the context budget.
+// Chapter 08 -- the context budget.
 //
 // Two things are graded: the estimate the program reports, and what the request
 // actually contains after pruning. The estimate is observable through the budget

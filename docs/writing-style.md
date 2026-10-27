@@ -42,13 +42,13 @@ streamline, harness (as a verb), utilize, numerous, myriads.
 
 ## For this course specifically
 
-- `overview.md` explains the mechanism. It may not contain a working
-  implementation.
-- `problem.md` states the task and the graded claims. It may not teach the
-  concept; it points at the overview for that.
-- `example.md` shows a full annotated implementation. It may not introduce a
-  concept that the overview did not already cover.
-- Every claim in `problem.md` names the case id that grades it. If a claim has no
-  case, either the claim is prose or the case is missing. Both are bugs.
-- A trap in the prose names the case that catches it. That link is what stops the
-  teaching and the grading from drifting apart.
+A chapter has two pages. Each has a rule about what it may not do.
+
+- `README.md` explains the mechanism and states the task. It may not contain a working
+  implementation; that is what the second page is for.
+- `example.md` shows a full annotated implementation. It may not introduce a concept the
+  chapter page did not already cover.
+- Every claim in `README.md` names the case id that grades it. If a claim has no case,
+  either the claim is prose or the case is missing. Both are bugs, and a test fails on both.
+- A trap in the prose names the case that catches it. That link is what stops the teaching
+  and the grading from drifting apart.

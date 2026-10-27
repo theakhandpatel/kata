@@ -16,7 +16,7 @@ import (
 	"kata/internal/hints"
 )
 
-// Chapter 08 -- steer and abort.
+// Chapter 09 -- steer and abort.
 //
 // Two ways a run stops being something you wait for: you interrupt it, or you say
 // something while it works. Both are graded against the real process, because both

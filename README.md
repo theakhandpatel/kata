@@ -52,7 +52,7 @@ That is the thing a book cannot do: it tells you whether you built it.
 
 ## The arc
 
-Twenty-one chapters, in six parts. Each one ends with something you can run and a sentence
+Twenty-one chapters, in eight parts. Each one ends with something you can run and a sentence
 you can say about it.
 
 | # | Chapter | By the end |

@@ -14,7 +14,7 @@ import (
 	"kata/internal/hints"
 )
 
-// Chapter 05 -- prompt assembly.
+// Chapter 06 -- prompt assembly.
 //
 // The program must send a system message built from a stable base and the
 // project's own AGENTS.md files. Everything is graded from the request trace, so

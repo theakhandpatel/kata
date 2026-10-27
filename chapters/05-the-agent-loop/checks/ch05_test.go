@@ -14,7 +14,7 @@ import (
 	"kata/internal/hints"
 )
 
-// Chapter 04 -- the agent loop.
+// Chapter 05 -- the agent loop.
 //
 // The program must keep going while the model asks for tools, stop when it does
 // not, and never run forever. The event stream is graded as a sequence, because

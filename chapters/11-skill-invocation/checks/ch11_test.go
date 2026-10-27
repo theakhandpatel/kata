@@ -20,7 +20,7 @@ const (
 	reviewBody = "BODY-REVIEW: Read the diff and list risks."
 )
 
-// Chapter 10 -- invoking a skill.
+// Chapter 11 -- invoking a skill.
 //
 // The catalogue from chapter 09 is already in the system message. This chapter turns
 // `/name args` into the skill's body, substitutes the arguments, and handles stacking.

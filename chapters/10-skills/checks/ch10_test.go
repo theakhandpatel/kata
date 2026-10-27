@@ -14,7 +14,7 @@ import (
 	"kata/internal/hints"
 )
 
-// Chapter 09 -- the skill catalogue.
+// Chapter 10 -- the skill catalogue.
 //
 // A skill is a file. This chapter teaches finding those files and advertising them,
 // and deliberately stops before anything is invoked. Invocation is chapter 10, so the

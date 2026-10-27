@@ -16,7 +16,7 @@ import (
 	"kata/internal/hints"
 )
 
-// Chapter 06 -- sessions.
+// Chapter 07 -- sessions.
 //
 // A run stops being a single process. The program must write conversation to a
 // file, read it back on the next run, and never double-count what it already

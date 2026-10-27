@@ -14,7 +14,7 @@ import (
 	"kata/internal/hints"
 )
 
-// Chapter 10 -- subagents.
+// Chapter 12 -- subagents.
 //
 // A child run has its own context, its own tools and its own step cap, and the
 // parent gets one result for the call. Every case reads the request trace, because

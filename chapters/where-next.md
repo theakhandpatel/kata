@@ -4,7 +4,7 @@ You have an agent that talks to a model, runs tools, remembers a session, holds 
 context budget, accepts steering, reads skills, delegates to a subagent, and calls
 tools that live in another process.
 
-This page lists what to build on top of it. Every entry names the seam it attaches
+This page lists what to build on top of it. Every entry names the interface it attaches
 to and the claim that proves it works. A claim you cannot test is a wish.
 
 ## The rule
@@ -13,11 +13,11 @@ Write the case first.
 
 A feature with no failing case is indistinguishable from a feature that is broken.
 Every chapter in this course arrived with a suite that failed before the code
-existed. Keep doing that and the seams will keep holding.
+existed. Keep doing that and the interfaces will keep holding.
 
 ## Next week
 
-Six changes, each a day's work, each attaching to a seam you already have.
+Six changes, each a day's work, each attaching to an interface you already have.
 
 | Build | Seam | Claim | Size |
 |---|---|---|---|
@@ -83,7 +83,7 @@ order is not source order.
 Add Anthropic's Messages API beside the OpenAI-compatible one.
 
 The claim: the chapter 01 to 03 suites pass against both providers without changing
-a case. If they do not, the provider seam was leaky, and you have found out cheaply.
+a case. If they do not, the provider interface was leaky, and you have found out cheaply.
 
 ## Later
 
@@ -95,7 +95,7 @@ Bigger changes. Each one alters a structure rather than adding to it.
 | Background subagents | `ToolSource` plus a queue | a child returns a receipt and delivers later | large |
 | MCP resources and prompts | MCP client | the protocol grows past `tools/` | medium |
 | A terminal UI | event stream | the events you emit become a rendered transcript | large |
-| An extension API | every seam | in-process plugins register tools and contributors | large |
+| An extension API | every interface | in-process plugins register tools and contributors | large |
 | Evals | nothing | a second harness that scores outcomes, not correctness | large |
 
 ### Sessions as a tree
@@ -142,7 +142,7 @@ terminal and to a text log, so the UI cannot contain logic the log does not have
 
 ### An extension API
 
-Every chapter added a seam. An extension API turns those seams into a public surface:
+Every chapter added an interface. An extension API turns those into a public surface:
 a plugin registers tools, contributors, and event handlers, and receives the
 registry and the provider.
 
@@ -165,7 +165,7 @@ whether the harness works.
   case is for.
 - **A live-model check inside the graded suite.** It is slow, paid, and random. Keep
   it outside, clearly labelled, and never let it gate progress.
-- **An abstraction before the second use.** Every seam in this course appeared when
+- **An abstraction before the second use.** Every interface in this course appeared when
   two chapters needed it, not before.
 
 ## Read these

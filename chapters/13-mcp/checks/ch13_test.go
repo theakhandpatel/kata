@@ -15,7 +15,7 @@ import (
 	"kata/internal/hints"
 )
 
-// Chapter 11 -- MCP over stdio.
+// Chapter 13 -- MCP over stdio.
 //
 // The agent spawns a server, shakes hands, and offers the server's tools. The
 // scripted server records every method it receives, so the handshake and the call

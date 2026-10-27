@@ -16,7 +16,7 @@ import (
 	"kata/internal/hints"
 )
 
-// Chapter 03 -- tools that touch disk.
+// Chapter 04 -- tools that touch disk.
 //
 // The agent gains write and bash, and every tool that can produce a lot of text
 // has to bound what it returns. Each case runs the real binary in a temporary
