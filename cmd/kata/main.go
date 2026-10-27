@@ -112,6 +112,7 @@ var parts = []struct {
 	{6, "III. Remember"},
 	{9, "IV. Extend"},
 	{11, "V. Compose"},
+	{14, "VI. Operate"},
 }
 
 // chapterTitle turns "03-running-a-tool" into "Running a tool".

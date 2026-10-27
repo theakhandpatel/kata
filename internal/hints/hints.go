@@ -15,6 +15,43 @@ import "sort"
 
 // Table maps chapter number -> case id -> the three rungs.
 var Table = map[string]map[string][3]string{
+	"14": {
+		"retries-a-429": {
+			"A 429 means busy, not wrong.",
+			"Wrap the send in a loop that tries again when the status is 429.",
+			"Return the error from the send, check Retryable, wait, and call Do again. The parser should never see the 429.",
+		},
+		"retries-a-500": {
+			"The 5xx family is the server's problem, so the same request may work next time.",
+			"Treat every 5xx except 501 as retryable.",
+			"Retryable returns true for StatusTooManyRequests and for status >= 500, and false for 501, which means the server will never support it.",
+		},
+		"does-not-retry-a-400": {
+			"The request is wrong, and repeating it repeats the mistake.",
+			"Retry only the statuses that mean busy or broken.",
+			"A 400, 401, 403, 404 and 422 all mean the request is wrong. Return the error on the first attempt and exit 1.",
+		},
+		"honours-retry-after": {
+			"The server tells you when to come back.",
+			"Read the Retry-After header into the error, and use it instead of your own delay.",
+			"parseRetryAfter reads the header as a number of seconds. When it is non-zero, wait that long instead of the computed backoff.",
+		},
+		"stops-after-the-limit": {
+			"A server that is down stays down.",
+			"Count attempts, and return the last error when the count runs out.",
+			"withRetry loops from 1 to MaxAttempts, returns on success, returns immediately when the error is not retryable, and otherwise waits and tries again.",
+		},
+		"no-retry-on-success": {
+			"Retrying a success doubles the cost and prints the answer twice.",
+			"Only enter the wait path when the attempt failed.",
+			"If the first Do returns 200, withRetry returns immediately. Check that one request reaches the server.",
+		},
+		"does-not-retry-a-cancellation": {
+			"Ctrl-C has to mean stop.",
+			"Select on the context while waiting, and treat a cancellation as final.",
+			"In the wait, select on ctx.Done() and return ctx.Err(). Retryable also returns false for context.Canceled, so a cancelled request is never retried.",
+		},
+	},
 	"13": {
 		"mcp-tools-advertised": {
 			"A tool the model cannot see is a tool it will never call.",
