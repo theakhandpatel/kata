@@ -15,6 +15,38 @@ import "sort"
 
 // Table maps chapter number -> case id -> the three rungs.
 var Table = map[string]map[string][3]string{
+	"17": {
+		"project-outranks-user": {
+			"A repository's skills are about that repository.",
+			"Give each scope a priority, and let the higher one win a collision.",
+			"Scope{Root, Priority: 20} for project and Priority: 10 for user. On a collision keep the higher priority, and record the loser.",
+		},
+		"losing-copy-is-not-expanded": {
+			"Naming a skill is not enough; the body that runs has to be the chosen one.",
+			"Expand against the resolved catalogue, not against the directories.",
+			"Build the expansion from the winning skills only, so the shadowed body never reaches a prompt.",
+		},
+		"both-scopes-contribute": {
+			"Precedence applies to collisions, not to everything.",
+			"Merge every scope's skills, then resolve duplicates.",
+			"Load each scope, add each skill to a map keyed by name, and let the later priority replace the earlier. Distinct names all survive.",
+		},
+		"missing-scope-is-skipped": {
+			"Most machines have no user skills directory.",
+			"Treat a missing directory as an empty scope.",
+			"If os.ReadDir returns os.ErrNotExist, continue to the next scope. The project skills still load.",
+		},
+		"no-scopes-at-all": {
+			"An empty catalogue must produce no section at all.",
+			"Return an empty string from Contribute when nothing was found.",
+			`If len(chosen) == 0, return ("" , nil) so BuildSystemPrompt writes no skills heading.`,
+		},
+		"malformed-file-in-one-scope": {
+			"One bad file must not take the catalogue with it.",
+			"Skip parse errors inside a scope and keep the other skills from that same scope.",
+			"The loader already skips a file without a name and description. Check that the other scope still contributes.",
+		},
+	},
 	"16": {
 		"ceiling-respected": {
 			"Schemas are paid for on every request.",
