@@ -47,11 +47,10 @@ type Contributor interface {
 }
 ```
 
-and the builder is a fold over the contributors. Chapter 09 adds skills by
-implementing this interface. It does not edit the loop, the provider, or the
-builder.
+and the builder simply walks the contributors in order. Chapter 09 adds skills by
+implementing this interface. It does not touch the loop, the provider, or the builder.
 
-That is the point of the seam: **later chapters add files, not edits.**
+That is the reason for the interface: **later chapters add files, not edits.**
 
 ## The prefix must be stable
 
@@ -143,11 +142,11 @@ wrapper the user cannot see and cannot debug.
 | Prompt cache control | provider-specific cache markers | provider adapters |
 
 Two things they add that this chapter does not: a trust decision before loading
-project files, and per-contributor sizes. Both are policy; the seam is the same.
+project files, and a size per contributor. Both are policy; the interface is the same.
 
 ## Self-check
 
-1. Why is the system message a fold over contributors rather than one format
+1. Why does the system message get built from contributors rather than one format
    string? *(Why a builder and not a format string)*
 2. Name three things that must never appear in it. *(The prefix must be stable)*
 3. Discovery goes up and rendering goes down. Why? *(Discovery walks up, rendering

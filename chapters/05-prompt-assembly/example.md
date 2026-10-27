@@ -4,7 +4,7 @@
 
 The compilable files are `reference/ch05/agent/prompt.go` and
 `reference/ch05/agent/cmd/agent/main.go`. The loop and the provider are unchanged
-from chapter 04, which is the point of the seam.
+from chapter 04, which is the point of that interface.
 
 ---
 
@@ -19,7 +19,7 @@ provider    untouched
 
 Two files changed. That is the design working.
 
-## Step 1: the builder is a fold
+## Step 1: the builder walks a list
 
 ```go
 func BuildSystemPrompt(ctx context.Context, base string, contributors ...Contributor) (string, error) {
@@ -179,13 +179,13 @@ sends a conversation.
 
 | File | Lines | What to read it for |
 |---|---|---|
-| `reference/ch05/agent/prompt.go` | 165 | the fold, discovery, empty handling |
+| `reference/ch05/agent/prompt.go` | 165 | the builder, discovery, empty handling |
 | `reference/ch05/agent/cmd/agent/main.go` | 115 | prepending instead of threading a field |
 
 ## Comparison checklist
 
 - [ ] base prompt is a constant with no varying content
-- [ ] contributors are folded in order, nil and empty skipped
+- [ ] contributors are read in order, nil and empty skipped
 - [ ] discovery walks up and is bounded
 - [ ] rendered order is outermost first
 - [ ] heading written once, only if something was included

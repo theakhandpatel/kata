@@ -84,9 +84,9 @@ flowchart LR
     P --> W["wire"]
 ```
 
-The loop still sends a conversation and still knows nothing about tokens. The
-decorator is where policy lives, which is exactly what the seam from chapter 01
-was for. Chapter 08 uses the same trick for cancellation.
+The loop still sends a conversation and still knows nothing about tokens. The wrapper
+is where that rule lives, which is what the line from chapter 01 was for. Chapter 08
+uses the same trick for cancellation.
 
 ## What survives a cut
 
@@ -131,7 +131,7 @@ per token is enough.
 
 Two properties matter more than accuracy:
 
-1. **monotonic.** Adding content never lowers the estimate. Otherwise pruning
+1. **It only goes up.** Adding content never lowers the estimate. Otherwise pruning
    oscillates: drop, re-estimate lower, stop dropping, overflow.
 2. **counts everything that is sent.** Messages, tool calls inside messages, and
    tool schemas.

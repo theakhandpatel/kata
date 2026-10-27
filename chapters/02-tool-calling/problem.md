@@ -111,5 +111,5 @@ when the extra byte exists.
 `kata submit 02` reports 8/8, and:
 
 - a real endpoint reads a real file for you;
-- you can explain why folding by id fails and folding by index does not;
+- you can explain why grouping by id fails and grouping by index does not;
 - you know why a missing file must not exit the program.

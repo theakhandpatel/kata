@@ -101,7 +101,7 @@ total = addUsage(total, usage)
 `Chat` returned usage per request. A run makes several, and the number a user
 cares about is the total. Summing in the loop is the only place that has them all.
 
-## Step 5: the provider grows a seam without breaking anyone
+## Step 5: the provider gains a second method without breaking anyone
 
 ```go
 func (p *OpenAICompat) Chat(ctx context.Context, req Request) (Message, Usage, error) {
@@ -123,7 +123,7 @@ content.WriteString(choice.Delta.Content)
 ```
 
 Note what did **not** change: the wire format, the error handling, the truncation
-guard. The seam opened and the rest stayed still. That is the difference between a
+guard. One method was added and the rest stayed still. That is the difference between a
 refactor and a rewrite, and it is why `Provider` was left alone and a wider
 interface was declared beside it:
 
@@ -188,7 +188,7 @@ program that also logs to stderr.
 |---|---|---|
 | `reference/ch04/agent/loop.go` | 130 | state machine, cap, accounting |
 | `reference/ch04/agent/events.go` | 60 | the event shape and the grammar |
-| `reference/ch04/agent/provider_openai.go` | 290 | the seam opening |
+| `reference/ch04/agent/provider_openai.go` | 290 | adding `Stream` without breaking `Chat` |
 | `reference/ch04/agent/cmd/agent/main.go` | 100 | wiring flags to options |
 
 ## Comparison checklist

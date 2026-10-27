@@ -39,7 +39,7 @@ flowchart LR
 
 ## The catalogue is a Contributor
 
-Chapter 05 built the seam for exactly this:
+Chapter 05 built the interface for exactly this:
 
 ```go
 system, err := agent.BuildSystemPrompt(ctx, agent.BasePrompt,

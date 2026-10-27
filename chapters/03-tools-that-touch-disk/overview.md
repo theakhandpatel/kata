@@ -129,8 +129,8 @@ next".
 | Process groups and sandboxing | platform-specific | `internal/shell/` |
 | Output handling | truncation with handles | `internal/fsext/` |
 
-The three edges are the same everywhere. What they add is policy, and policy gets
-a seam in chapter 08.
+The three edges are the same everywhere. What they add is policy: who is allowed to run
+what. That arrives in chapter 08.
 
 ## Self-check
 

@@ -49,7 +49,7 @@ model, keep the wire.
 | `starter/` | The initial state of `agent/`. Used to grade chapter 01 and by `kata reset`. |
 | `reference/chNN/` | Overlay of the files as they must be after chapter NN. |
 | `chapters/NN-slug/` | `README.md`, `overview.md`, `problem.md`, `example.md`, `checks/`. |
-| `internal/fake/` | Scripted OpenAI-compatible server. The far side of the seam. |
+| `internal/fake/` | Scripted OpenAI-compatible server. It stands in for the model. |
 | `internal/grader/` | Case DSL, bounded execution, report, diffs. |
 | `internal/hints/` | The three-rung hint ladder, keyed by chapter and case. |
 | `cmd/kata/` | The CLI: `submit`, `read`, `hint`, `list`, `progress`, `verify`, `reset`. |
@@ -131,7 +131,7 @@ flowchart TD
 Every case runs with a timeout and a panic barrier. A harness that blocks costs
 one case with its name attached, not the whole chapter.
 
-## The seams
+## The interfaces
 
 The harness is built around six interfaces. Chapters 05 to 11 add implementations
 of them; they do not rewrite the loop.
@@ -160,18 +160,18 @@ flowchart TD
 ```
 
 A change that makes a later chapter edit `loop.go` is a design error, not a
-scheduling problem. The seams exist so the course stays additive.
+scheduling problem. These interfaces exist so the course stays additive.
 
 Two honest notes about these interfaces.
 
 **Production harnesses do not define most of them.** pi and PiG use concrete
 session types, not a session interface. crush exposes services
 (`session.Service`, `message.Service`) rather than a registry. The interfaces
-here are teaching seams, chosen so that chapters stay additive and so that a
+here are interfaces for teaching, chosen so that chapters stay additive and so a
 check can substitute a scripted implementation. They are good design, not
 doctrine.
 
-**The provider seam is deliberately lossy.** `Chat` returns one finished message,
+**The provider interface hides the stream on purpose.** `Chat` returns one finished message,
 which hides the stream. That is the right compression for chapters 01 to 03.
 Chapter 04 refactors the same parser into a `Stream` call that reports deltas as
 they arrive, and keeps `Chat` as a thin collect-the-stream wrapper. Nothing about
@@ -249,7 +249,7 @@ money, and judgement. Kata grades correctness of the harness, and says so.
 | Term | Meaning |
 |---|---|
 | Harness | The code around a model that turns text into actions: provider, tools, loop, state. |
-| Seam | An interface you can replace. The provider seam is the one the grader uses. |
+| Interface | A small set of methods you can swap for another implementation. |
 | Scripted model | A fixture that replays a fixed reply. Not a mock of your code. |
 | Case | One graded assertion with an id, a reason, and three hint rungs. |
 | Before state | The harness with chapters NN and later removed. |

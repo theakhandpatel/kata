@@ -1,7 +1,7 @@
 # How other harnesses are built
 
 The course teaches one machine. These are four real ones, and what each is worth
-reading for. The point is not to copy them; it is to see the same seams at different
+reading for. The point is not to copy them; it is to see the same decisions at different
 scales.
 
 | Project | Language | Size | Read it for |
@@ -72,7 +72,7 @@ budgets.
 
 - **One call, one result.** A tool call resolves exactly once, including on failure.
 - **Results keep source order.** Execution order is yours; append order is not.
-- **The model is behind a seam.** Every one of them can be pointed at a different
+- **The model sits behind an interface.** Each can be pointed at a different
   provider without touching the loop.
 - **Context is the scarce resource.** They differ in how they bound it, not in
   whether they do.

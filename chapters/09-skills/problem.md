@@ -4,7 +4,7 @@
 > each skill's name and description in the system message.
 
 **You edit:** `agent/skill.go`, `agent/cmd/agent/main.go`
-**Given:** `agent/prompt.go` (the `Contributor` seam), `agent/tools.go`
+**Given:** `agent/prompt.go` (the `Contributor` interface), `agent/tools.go`
 **Time:** 30 to 40 minutes
 
 ---

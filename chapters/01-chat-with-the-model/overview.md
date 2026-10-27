@@ -21,7 +21,7 @@ eleven chapters gradable at all.
 
 ```mermaid
 flowchart LR
-    subgraph yours["your code (deterministic)"]
+    subgraph yours["your code (repeatable)"]
         L[agent loop] --> T[tool registry]
         T --> S[session log]
         S --> P
@@ -34,7 +34,7 @@ flowchart LR
 ```
 
 ```
-   yours: deterministic                │  not yours: random, slow, paid
+   yours: repeatable                   │  not yours: random, slow, paid
    ────────────────────────────────────┼──────────────────────────────────
    loop → tools → session → provider ──┼──▶ model ──▶ back through provider
 ```

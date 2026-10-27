@@ -74,7 +74,7 @@ and the program exits on a model mistake. The model never learns what went wrong
 which is the one thing it can fix.
 
 Note what is **not** here: no logging, no retry, no permission prompt. Those are
-policy, and chapter 08 is where policy gets a seam.
+policy, and chapter 08 is where that policy gets an interface of its own.
 
 ## Step 3: the workspace check is on the resolved path
 
@@ -149,7 +149,7 @@ request is rejected with a message about orphaned tool calls.
 The hop is visible on purpose. Chapter 04 turns the `if` into a `for` and adds a
 step cap.
 
-## Step 6: folding by index
+## Step 6: grouping by index
 
 ```go
 acc := calls[tc.Index]
@@ -175,7 +175,7 @@ the results must match.
 
 ## The diffs
 
-**1. Fold by id instead of index** (`folds-arguments`)
+**1. Group by id instead of index** (`folds-arguments`)
 
 ```diff
 - acc := calls[tc.ID]           // "" on continuation fragments
@@ -223,7 +223,7 @@ the results must match.
 - [ ] path check on the resolved path, absolute paths refused
 - [ ] read is bounded, and the cut is marked
 - [ ] tool results carry `tool_call_id` and keep call order
-- [ ] arguments folded by index, appended not assigned
+- [ ] arguments grouped by index, appended not assigned
 - [ ] one request when there are no tool calls
 
 Differences outside this list are style.
