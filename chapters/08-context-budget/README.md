@@ -199,12 +199,12 @@ and returns the system message, one marker when anything was dropped, and the ke
 tail. `WithBudget` returns a decorator whose `Stream` fits, emits the event, and
 delegates.
 
-`kata hint 08 <case-id>` prints the same three hints.
+`miyagi hint 08 <case-id>` prints the same three hints.
 </details>
 
 ## Done when
 
-`kata submit 08` reports 8/8, and a long session still gets an answer under a small
+`miyagi submit 08` reports 8/8, and a long session still gets an answer under a small
 ceiling.
 
 [example.md](example.md) has the finished code, after you pass.

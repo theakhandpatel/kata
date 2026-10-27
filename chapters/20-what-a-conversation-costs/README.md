@@ -178,12 +178,12 @@ the token total. `Price.Cost` splits cached from uncached prompt tokens, then ad
 completion at the output rate, all in micros. `-usage` opens the store, prints, and returns
 before any provider is built.
 
-`kata hint 20 <case-id>` prints the same three hints.
+`miyagi hint 20 <case-id>` prints the same three hints.
 </details>
 
 ## Done when
 
-`kata submit 20` reports 7/7, and `./agent -usage` tells you which conversation is costing
+`miyagi submit 20` reports 7/7, and `./agent -usage` tells you which conversation is costing
 you the most.
 
 [example.md](example.md) has the finished code, after you pass.

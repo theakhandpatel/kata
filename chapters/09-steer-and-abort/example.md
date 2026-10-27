@@ -1,6 +1,6 @@
 # 09 Example
 
-*Full, annotated implementation. Read it after `kata submit 09` passes.*
+*Full, annotated implementation. Read it after `miyagi submit 09` passes.*
 
 The compilable files are `reference/ch09/agent/`. This is the first chapter that
 edits the loop, and the reasoning for that is below.

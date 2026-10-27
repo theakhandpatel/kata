@@ -1,6 +1,6 @@
 # 21 Example
 
-*The finished implementation, taken apart. Open this after `kata submit 21` passes.*
+*The finished implementation, taken apart. Open this after `miyagi submit 21` passes.*
 
 The file it describes is `reference/ch21/agent/config.go`.
 

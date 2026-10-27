@@ -8,12 +8,12 @@ teach a practice worth learning? And is the grading sequential?
 Yes, and it is the default now.
 
 ```
-$ kata submit          # grades from the frontier, stops at the first failure
-$ kata submit 07       # grades chapter 07 only
-$ kata submit all      # grades everything, does not stop
+$ miyagi submit          # grades from the frontier, stops at the first failure
+$ miyagi submit 07       # grades chapter 07 only
+$ miyagi submit all      # grades everything, does not stop
 ```
 
-`kata list` shows where you are:
+`miyagi list` shows where you are:
 
 ```
   I. Wire
@@ -25,13 +25,13 @@ $ kata submit all      # grades everything, does not stop
 `x` passed, `!` failed, `-` blocked because something before it has not passed, blank ready.
 The first ready chapter is the frontier, and that is the only one worth grading.
 
-**The suites themselves do not depend on each other.** No check file imports `kata/agent`;
+**The suites themselves do not depend on each other.** No check file imports `miyagi/agent`;
 every case builds the binary and runs it. So a broken chapter 06 does not stop chapter 07 from
-compiling or from being graded, and `kata submit all` really does grade everything. The ladder
+compiling or from being graded, and `miyagi submit all` really does grade everything. The ladder
 is a choice about feedback, not a technical constraint. It exists because a later chapter's
 failures are mostly noise when an earlier one is red.
 
-Verified by hand: with only chapter 01's provider in place, `kata submit` passed 01, advanced
+Verified by hand: with only chapter 01's provider in place, `miyagi submit` passed 01, advanced
 to 02, failed 02, and stopped without touching 03. A second run resumed at 02.
 
 ## Interfaces

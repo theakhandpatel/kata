@@ -1,4 +1,4 @@
-//go:build kata_checks
+//go:build miyagi_checks
 
 package checks
 

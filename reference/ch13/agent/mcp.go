@@ -94,7 +94,7 @@ func (c *MCPClient) Initialize(ctx context.Context) error {
 	result, err := c.call(ctx, "initialize", map[string]any{
 		"protocolVersion": MCPProtocolVersion,
 		"capabilities":    map[string]any{},
-		"clientInfo":      map[string]any{"name": "kata-agent", "version": "1.0"},
+		"clientInfo":      map[string]any{"name": "miyagi-agent", "version": "1.0"},
 	})
 	if err != nil {
 		return err

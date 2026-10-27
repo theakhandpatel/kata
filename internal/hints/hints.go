@@ -5,7 +5,7 @@
 // line to look at. Rung 3 states the answer. The ladder exists so that being
 // stuck costs you a nudge, not the exercise.
 //
-// Hints live here rather than beside each check so that `kata hint` can print
+// Hints live here rather than beside each check so that `miyagi hint` can print
 // them without parsing Go source. The type is a fixed [3]string rather than a
 // slice because a missing rung must be a compile error, not an invisible gap in
 // the ladder.

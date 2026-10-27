@@ -143,12 +143,12 @@ and writes either the expanded body or the original text. `expandBody` replaces
 `$ARGUMENTS` first, then each positional match against the whitespace-split arguments,
 substituting the empty string when the index is out of range.
 
-`kata hint 11 <case-id>` prints the same three hints.
+`miyagi hint 11 <case-id>` prints the same three hints.
 </details>
 
 ## Done when
 
-`kata submit 11` reports 6/6, and `/deploy staging eu-west` sends the body with the
+`miyagi submit 11` reports 6/6, and `/deploy staging eu-west` sends the body with the
 arguments applied.
 
 [example.md](example.md) has the finished code, after you pass.

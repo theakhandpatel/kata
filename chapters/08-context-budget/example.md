@@ -1,6 +1,6 @@
 # 08 Example
 
-*Full, annotated implementation. Read it after `kata submit 08` passes.*
+*Full, annotated implementation. Read it after `miyagi submit 08` passes.*
 
 The compilable files are `reference/ch08/agent/budget.go`,
 `reference/ch08/agent/events.go` and `reference/ch08/agent/cmd/agent/main.go`.

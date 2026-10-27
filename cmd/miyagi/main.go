@@ -1,14 +1,14 @@
-// Command kata is the course runner.
+// Command miyagi is the course runner.
 //
 // The learner should never have to type `go test`. This binary owns the
 // vocabulary:
 //
-//	kata                where am I, what is next, one action
-//	kata submit 01      compile triage, then grade
-//	kata read 01        the contract, in a pager
-//	kata read 01 overview   how it works, in general
-//	kata read 01 example    a full annotated implementation
-//	kata hint 01 usage  three rungs, no answer
+//	miyagi                where am I, what is next, one action
+//	miyagi submit 01      compile triage, then grade
+//	miyagi read 01        the contract, in a pager
+//	miyagi read 01 overview   how it works, in general
+//	miyagi read 01 example    a full annotated implementation
+//	miyagi hint 01 usage  three rungs, no answer
 //
 // Grading is ordinary `go test` underneath, because the learner is building a
 // harness and should not be shielded from the tool that grades them. What is
@@ -29,7 +29,7 @@ import (
 
 func main() {
 	if err := run(os.Args[1:]); err != nil {
-		fmt.Fprintln(os.Stderr, "kata:", err)
+		fmt.Fprintln(os.Stderr, "miyagi:", err)
 		os.Exit(1)
 	}
 }
@@ -66,27 +66,27 @@ func run(args []string) error {
 		usage()
 		return nil
 	default:
-		return fmt.Errorf("unknown command %q (try `kata help`)", args[0])
+		return fmt.Errorf("unknown command %q (try `miyagi help`)", args[0])
 	}
 }
 
 func usage() {
-	fmt.Print(`kata -- build a coding-agent harness, one provable chapter at a time
+	fmt.Print(`miyagi -- build a coding-agent harness, one provable chapter at a time
 
-  kata                       where am I, what is next
-  kata submit [NN]           compile triage, then grade  (aliases: run, test)
-  kata submit NN --solution  grade the reference implementation instead
-  kata read [NN] [doc]       problem (default) | overview | example
-  kata hint NN <case-id>     the three-rung ladder for one case
-  kata verify                prove every chapter rejects its starter and accepts its reference
-  kata reset [NN]            restore agent/ to the start of a chapter
-  kata read where-next       what to build after the course
-  kata site                  render the course as a static website (site/dist)
-  kata ui                    terminal interface: pick a chapter, grade it
-  kata watch [NN]            re-grade on every save
-  kata doctor                check the environment
-  kata list                  the arc, with what is written and what is passed
-  kata progress              summary
+  miyagi                       where am I, what is next
+  miyagi submit [NN]           compile triage, then grade  (aliases: run, test)
+  miyagi submit NN --solution  grade the reference implementation instead
+  miyagi read [NN] [doc]       problem (default) | overview | example
+  miyagi hint NN <case-id>     the three-rung ladder for one case
+  miyagi verify                prove every chapter rejects its starter and accepts its reference
+  miyagi reset [NN]            restore agent/ to the start of a chapter
+  miyagi read where-next       what to build after the course
+  miyagi site                  render the course as a static website (site/dist)
+  miyagi ui                    terminal interface: pick a chapter, grade it
+  miyagi watch [NN]            re-grade on every save
+  miyagi doctor                check the environment
+  miyagi list                  the arc, with what is written and what is passed
+  miyagi progress              summary
 
 You edit agent/. Nothing else. No ` + "`go test`" + ` required.
 `)
@@ -249,7 +249,7 @@ type progressEntry struct {
 type progressMap map[string]progressEntry
 
 func progressPath(root string) string {
-	return filepath.Join(root, ".kata", "progress.json")
+	return filepath.Join(root, ".miyagi", "progress.json")
 }
 
 func loadProgress(root string) progressMap {
@@ -330,7 +330,7 @@ func plural(n int, one, many string) string {
 
 func mustWritten(c chapter) error {
 	if !c.written() {
-		return fmt.Errorf("%s is not written yet — the course is being built in order; try `kata list`", c.ID)
+		return fmt.Errorf("%s is not written yet — the course is being built in order; try `miyagi list`", c.ID)
 	}
 	return nil
 }

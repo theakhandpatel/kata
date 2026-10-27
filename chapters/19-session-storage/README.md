@@ -200,12 +200,12 @@ sessions with a message count, ordered by `updated` descending. `Messages` selec
 `session_id` ordered by `ordinal`. `Append` opens a transaction, reads
 `COALESCE(MAX(ordinal)+1, 0)`, inserts each message, and touches `updated`.
 
-`kata hint 19 <case-id>` prints the same three hints.
+`miyagi hint 19 <case-id>` prints the same three hints.
 </details>
 
 ## Done when
 
-`kata submit 19` reports 8/8, and you can start a conversation, quit, list it, and pick it
+`miyagi submit 19` reports 8/8, and you can start a conversation, quit, list it, and pick it
 up again tomorrow.
 
 [example.md](example.md) has the finished code, after you pass.

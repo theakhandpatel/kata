@@ -1,7 +1,7 @@
 # 02 Example
 
 *The finished implementation, taken apart. Open this after a real attempt, or after
-`kata submit 02` passes.*
+`miyagi submit 02` passes.*
 
 The files it describes are `reference/ch02/agent/tool.go` and
 `reference/ch02/agent/provider_openai.go`.

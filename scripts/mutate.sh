@@ -10,8 +10,8 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-KATA="${KATA:-./kata}"
-[ -x "$KATA" ] || { echo "build it first: go build -o kata ./cmd/kata"; exit 1; }
+KATA="${KATA:-./miyagi}"
+[ -x "$KATA" ] || { echo "build it first: go build -o miyagi ./cmd/miyagi"; exit 1; }
 
 # work in a scratch copy so the real tree is never touched
 WORK="$(mktemp -d)"
@@ -19,7 +19,7 @@ trap 'rm -rf "$WORK"' EXIT
 
 cp -r . "$WORK/tree"
 cd "$WORK/tree"
-rm -rf .git .kata site
+rm -rf .git .miyagi site
 
 survived=0
 killed=0

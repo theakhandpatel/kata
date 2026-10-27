@@ -1,6 +1,6 @@
 # 17 Example
 
-*The finished implementation, taken apart. Open this after `kata submit 17` passes.*
+*The finished implementation, taken apart. Open this after `miyagi submit 17` passes.*
 
 The file it describes is `reference/ch17/agent/scoped.go`.
 

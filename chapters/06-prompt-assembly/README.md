@@ -216,12 +216,12 @@ upward within the depth limit, then reverses the slice. `Contribute` reads each 
 skips empty bodies, writes the heading once, and renders `## <path>` followed by the
 body. In `main`, prepend `{Role: RoleSystem, Content: system}` to the history.
 
-`kata hint 06 <case-id>` prints the same three hints.
+`miyagi hint 06 <case-id>` prints the same three hints.
 </details>
 
 ## Done when
 
-`kata submit 06` reports 8/8, and an `AGENTS.md` at the repo root applies when you run
+`miyagi submit 06` reports 8/8, and an `AGENTS.md` at the repo root applies when you run
 the agent in a subdirectory.
 
 [example.md](example.md) has the finished code, after you pass.

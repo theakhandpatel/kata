@@ -15,14 +15,14 @@ import (
 //
 // The screen is a chapter list and a panel, and the only action that matters is
 // "grade this chapter". Everything it shows comes from the same functions the plain
-// commands use, so the interface cannot disagree with `kata list` or `kata submit`.
+// commands use, so the interface cannot disagree with `miyagi list` or `miyagi submit`.
 func cmdUI(args []string) error {
 	// A full-screen interface needs a terminal on both ends. Without one, Bubble Tea waits
 	// for events that never come, and a script or a pipe hangs forever with no message.
 	// Say so and exit instead.
 	if !isTTY() || !stdinIsTTY() {
 		return fmt.Errorf("the terminal interface needs a terminal on stdin and stdout; " +
-			"for a script use `kata submit`, `kata list` or `kata progress`")
+			"for a script use `miyagi submit`, `miyagi list` or `miyagi progress`")
 	}
 
 	root, err := findRoot()
@@ -184,7 +184,7 @@ func (m uiModel) View() string {
 
 func (m uiModel) listView() string {
 	var b strings.Builder
-	b.WriteString(uiTitle.Render("Kata") + "\n\n")
+	b.WriteString(uiTitle.Render("Miyagi") + "\n\n")
 
 	lastPart := ""
 	for i, ch := range m.chapters {
@@ -258,7 +258,7 @@ func (m uiModel) panelView() string {
 				for _, id := range failed {
 					b.WriteString("  · " + id + "\n")
 				}
-				b.WriteString("\n" + uiMuted.Render("kata hint "+ch.ID+" "+failed[0]) + "\n")
+				b.WriteString("\n" + uiMuted.Render("miyagi hint "+ch.ID+" "+failed[0]) + "\n")
 			}
 		}
 	}

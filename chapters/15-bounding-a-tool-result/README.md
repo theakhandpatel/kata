@@ -148,12 +148,12 @@ the line count, the handle and the next call. `Get` validates the handle as hex,
 the file, compares the offset with the size, and reads with `ReadAt`. `ReadResultTool`
 formats the slice with a note naming the byte range and the next offset.
 
-`kata hint 15 <case-id>` prints the same three hints.
+`miyagi hint 15 <case-id>` prints the same three hints.
 </details>
 
 ## Done when
 
-`kata submit 15` reports 7/7, and a 50 KB result reaches the model as a summary it can
+`miyagi submit 15` reports 7/7, and a 50 KB result reaches the model as a summary it can
 follow up.
 
 [example.md](example.md) has the finished code, after you pass.

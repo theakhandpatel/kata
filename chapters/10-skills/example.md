@@ -1,6 +1,6 @@
 # 10 Example
 
-*Full, annotated implementation. Read it after `kata submit 10` passes.*
+*Full, annotated implementation. Read it after `miyagi submit 10` passes.*
 
 The compilable file is `reference/ch10/agent/skill.go`, plus three lines of wiring in
 `reference/ch10/agent/cmd/agent/main.go`.

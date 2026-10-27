@@ -1,6 +1,6 @@
 # 14 Example
 
-*The finished implementation, taken apart. Open this after `kata submit 14` passes.*
+*The finished implementation, taken apart. Open this after `miyagi submit 14` passes.*
 
 The files it describes are `reference/ch14/agent/retry.go` and the send path in
 `reference/ch14/agent/provider_openai.go`.

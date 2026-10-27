@@ -133,12 +133,12 @@ than `limit`, return the first `limit` bytes followed by
 `... [truncated: N of M bytes shown]`. Return an error for a missing file, and let the
 registry turn that error into a result the model can read.
 
-`kata hint 03 <case-id>` prints these same hints in the terminal.
+`miyagi hint 03 <case-id>` prints these same hints in the terminal.
 </details>
 
 ## Done when
 
-`kata submit 03` reports 6/6, and:
+`miyagi submit 03` reports 6/6, and:
 
 - asking the agent to read a file gets you the contents;
 - a missing file produces an answer, not a crash;

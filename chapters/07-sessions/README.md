@@ -183,12 +183,12 @@ writes a header when new. `Load` scans lines, unmarshals a probe holding `type` 
 plus a newline. In `main`, build `[system] + prior + [user]`, run the loop, then append
 `res.History[len(prior)+1:]`.
 
-`kata hint 07 <case-id>` prints the same three hints.
+`miyagi hint 07 <case-id>` prints the same three hints.
 </details>
 
 ## Done when
 
-`kata submit 07` reports 8/8, and a fact told in one run is recalled in the next.
+`miyagi submit 07` reports 8/8, and a fact told in one run is recalled in the next.
 
 [example.md](example.md) has the finished code, after you pass.
 

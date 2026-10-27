@@ -200,12 +200,12 @@ call, emit `tool_result` with the same id, append the result messages in order, 
 `turn_end`. After the cap, emit `agent_end` with reason `step_limit` and return an
 error.
 
-`kata hint 05 <case-id>` prints the same three hints.
+`miyagi hint 05 <case-id>` prints the same three hints.
 </details>
 
 ## Done when
 
-`kata submit 05` reports 9/9, and the agent completes a task that needs three tool
+`miyagi submit 05` reports 9/9, and the agent completes a task that needs three tool
 calls.
 
 [example.md](example.md) has the finished code, after you pass.

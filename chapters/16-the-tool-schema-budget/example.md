@@ -1,6 +1,6 @@
 # 16 Example
 
-*The finished implementation, taken apart. Open this after `kata submit 16` passes.*
+*The finished implementation, taken apart. Open this after `miyagi submit 16` passes.*
 
 The file it describes is `reference/ch16/agent/mount.go`.
 

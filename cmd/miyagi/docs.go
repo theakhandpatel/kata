@@ -35,7 +35,7 @@ func cmdStatus() error {
 		}
 	}
 
-	fmt.Printf("\n  kata · %s %s · %d passed\n\n",
+	fmt.Printf("\n  miyagi · %s %s · %d passed\n\n",
 		itoa(written), plural(written, "chapter", "chapters"), passed)
 
 	if prog.passed(cur.ID) {
@@ -45,14 +45,14 @@ func cmdStatus() error {
 	}
 
 	fmt.Printf("  you are on chapter %s — %s\n\n", cur.ID, cur.Title)
-	fmt.Printf("    1. read   kata read %s\n", cur.ID)
+	fmt.Printf("    1. read   miyagi read %s\n", cur.ID)
 	fmt.Printf("    2. build  edit agent/\n")
-	fmt.Printf("    3. submit kata submit %s\n\n", cur.ID)
-	fmt.Printf("  stuck?  kata hint %s <case-id>\n", cur.ID)
+	fmt.Printf("    3. submit miyagi submit %s\n\n", cur.ID)
+	fmt.Printf("  stuck?  miyagi hint %s <case-id>\n", cur.ID)
 	if isTTY() {
-		fmt.Printf("  prefer keys?  kata ui\n")
+		fmt.Printf("  prefer keys?  miyagi ui\n")
 	}
-	fmt.Printf("  lost?   kata list\n\n")
+	fmt.Printf("  lost?   miyagi list\n\n")
 	return nil
 }
 
@@ -242,7 +242,7 @@ func cmdProgress() error {
 
 func cmdHint(args []string) error {
 	if len(args) < 2 {
-		return fmt.Errorf("usage: kata hint <chapter> <case-id>")
+		return fmt.Errorf("usage: miyagi hint <chapter> <case-id>")
 	}
 	ch := args[0]
 	if len(ch) == 1 {
@@ -256,7 +256,7 @@ func cmdHint(args []string) error {
 	if tiers == ([3]string{}) {
 		known := hints.CasesFor(ch)
 		if len(known) == 0 {
-			return fmt.Errorf("no hints for chapter %q — check `kata list` for chapter numbers", ch)
+			return fmt.Errorf("no hints for chapter %q — check `miyagi list` for chapter numbers", ch)
 		}
 		return fmt.Errorf("no case %q in chapter %s\n  known cases: %s",
 			id, ch, strings.Join(known, ", "))

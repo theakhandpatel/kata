@@ -1,6 +1,6 @@
 # 20 Example
 
-*The finished implementation, taken apart. Open this after `kata submit 20` passes.*
+*The finished implementation, taken apart. Open this after `miyagi submit 20` passes.*
 
 The file it describes is `reference/ch20/agent/usage.go`, plus four columns in
 `reference/ch20/agent/store.go`.

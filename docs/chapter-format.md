@@ -7,7 +7,7 @@ against**, plus the checks and a title.
 chapters/NN-slug/
   README.md      the task, how it works, the graded claims, three hints
   example.md     the finished implementation, annotated
-  title          one line, the chapter's name, used by `kata list` and the site
+  title          one line, the chapter's name, used by `miyagi list` and the site
   checks/        the Go test suite: the only thing that defines "done"
 ```
 
@@ -53,7 +53,7 @@ Sections in this order. A chapter missing one of them is incomplete.
 ## Rules
 
 **Every claim names a case id.** A claim with no case is prose, and a case with no claim is
-a test the reader was not told about. Both are bugs, and `cmd/kata/docs_test.go` fails on
+a test the reader was not told about. Both are bugs, and `cmd/miyagi/docs_test.go` fails on
 both.
 
 **No course commentary.** No "this chapter will teach you", no defence of the fictional
@@ -95,7 +95,7 @@ leaves the internal design free.
 1. Create `chapters/NN-slug/` with `README.md`, `example.md`, `title`, `checks/chNN_test.go`.
 2. Add an `"NN"` entry to `internal/hints/hints.go`, three hints per case.
 3. Add `reference/chNN/` with only the files the chapter changes.
-4. `kata verify`. It must be clean: the reference passes every case and the state before the
+4. `miyagi verify`. It must be clean: the reference passes every case and the state before the
    chapter fails at least one.
 
 Nothing else needs editing. The chapter list, the site sidebar, the part grouping and the
@@ -115,8 +115,8 @@ learner to relocate one would mean maintaining it at two paths for every later c
 constraint on the course author, not on the learner.
 
 A learner may split `agent/` into packages. The checks are black box: they build
-`./agent/cmd/agent` (or `$KATA_ENTRY`) and run it, and never import the learner's package. If the
-entry point moves, `KATA_ENTRY` says where it went, and `kata submit` explains that in one
+`./agent/cmd/agent` (or `$MIYAGI_ENTRY`) and run it, and never import the learner's package. If the
+entry point moves, `MIYAGI_ENTRY` says where it went, and `miyagi submit` explains that in one
 sentence rather than blaming the code for an import error.
 
 A revision is not a failure of the earlier design. It is the lesson of the later chapter. When

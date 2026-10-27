@@ -174,12 +174,12 @@ step count and the partial answer. In `main`, build the base tools, the child re
 the task tool with the provider and system message, then the parent registry as base
 plus task.
 
-`kata hint 12 <case-id>` prints the same three hints.
+`miyagi hint 12 <case-id>` prints the same three hints.
 </details>
 
 ## Done when
 
-`kata submit 12` reports 8/8, and asking the agent to use a subagent produces requests
+`miyagi submit 12` reports 8/8, and asking the agent to use a subagent produces requests
 that never appear in the parent's history.
 
 [example.md](example.md) has the finished code, after you pass.

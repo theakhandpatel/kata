@@ -1,6 +1,6 @@
 # 13 Example
 
-*Full, annotated implementation. Read it after `kata submit 13` passes.*
+*Full, annotated implementation. Read it after `miyagi submit 13` passes.*
 
 The compilable files are `reference/ch13/agent/mcp.go` and
 `reference/ch13/agent/cmd/agent/main.go`. The loop, the prompt and the registry are
@@ -68,7 +68,7 @@ the connection unusable; the chapter says so instead of pretending otherwise.
 result, err := c.call(ctx, "initialize", map[string]any{
 	"protocolVersion": MCPProtocolVersion,
 	"capabilities":    map[string]any{},
-	"clientInfo":      map[string]any{"name": "kata-agent", "version": "1.0"},
+	"clientInfo":      map[string]any{"name": "miyagi-agent", "version": "1.0"},
 })
 // ... record serverInfo.name ...
 

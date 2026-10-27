@@ -153,12 +153,12 @@ only when positive. Add `tools` when the slice is not nil, wrapping each definit
 `{"type":"function","function":{name, description, parameters}}`. Marshal the map, POST it
 to the trimmed base URL plus `/chat/completions`, and set `Content-Type` and `Accept`.
 
-`kata hint 18 <case-id>` prints the same three hints.
+`miyagi hint 18 <case-id>` prints the same three hints.
 </details>
 
 ## Done when
 
-`kata submit 18` reports 7/7, and a request with no limit or temperature carries neither
+`miyagi submit 18` reports 7/7, and a request with no limit or temperature carries neither
 key.
 
 [example.md](example.md) has the finished code, after you pass.

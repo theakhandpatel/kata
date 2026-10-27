@@ -1,6 +1,6 @@
 # Architecture
 
-Kata has two halves. One is the agent you build in `agent/`. The other is the tool that
+Miyagi has two halves. One is the agent you build in `agent/`. The other is the tool that
 checks it. The tool builds your binary and runs it, so nothing reaches inside your code
 and the internal design is yours.
 
@@ -20,7 +20,7 @@ flowchart LR
     end
 
     C["chapters/NN/checks<br/>what done means"]
-    CLI["kata<br/>the runner"]
+    CLI["miyagi<br/>the runner"]
     BIN["your binary<br/>agent -p ..."]
 
     C -->|"go build"| BIN
@@ -45,14 +45,14 @@ reply are fixed. When you point the same client at Ollama, nothing changes but t
 | Path | Role |
 |---|---|
 | `agent/` | The agent you build. The only directory a learner edits. |
-| `starter/` | The state of `agent/` before chapter 01. Used to grade chapter 01 and by `kata reset`. |
+| `starter/` | The state of `agent/` before chapter 01. Used to grade chapter 01 and by `miyagi reset`. |
 | `reference/chNN/` | Only the files chapter NN changes. Applied in order. |
 | `chapters/NN-slug/` | `README.md` (task, mechanism, checks, hints), `example.md` (the finished code), `checks/`, `title`. |
 | `internal/fake/` | Scripted OpenAI-compatible server, and a scripted MCP server. |
 | `internal/blackbox/` | Builds your binary and runs it, so checks see a program and not a package. |
 | `internal/grader/` | Cases, bounded execution, the report, the diff. |
 | `internal/hints/` | Three hints per case, keyed by chapter and case id. |
-| `cmd/kata/` | The CLI: `submit`, `read`, `hint`, `list`, `progress`, `verify`, `reset`, `site`, `ui`, `watch`, `doctor`. |
+| `cmd/miyagi/` | The CLI: `submit`, `read`, `hint`, `list`, `progress`, `verify`, `reset`, `site`, `ui`, `watch`, `doctor`. |
 | `docs/` | Architecture, chapter format, writing style, and how other harnesses are built. |
 
 ## A submit run
@@ -60,13 +60,13 @@ reply are fixed. When you point the same client at Ollama, nothing changes but t
 ```mermaid
 sequenceDiagram
     actor You
-    participant CLI as kata submit
+    participant CLI as miyagi submit
     participant Go as go build
     participant Test as chapter checks
     participant Fake as fake server
     participant Rep as report JSON
 
-    You->>CLI: kata submit 03
+    You->>CLI: miyagi submit 03
     CLI->>Go: build ./...
     alt does not compile
         Go-->>CLI: errors
@@ -101,7 +101,7 @@ The state before chapter NN is derived by applying `reference/ch01` through
 `reference/chNN-1`. Nothing is stored, so nothing can drift. `reference/chNN` holds only
 the files that chapter changes: chapter 14 ships one file, chapter 10 ships one.
 
-`kata verify` grades every chapter twice: once against its after state, which must pass,
+`miyagi verify` grades every chapter twice: once against its after state, which must pass,
 and once against its before state, which must fail at least one case. A chapter whose
 starter passes grades nothing. A chapter whose reference fails cannot be completed. Both
 are caught offline, and both have happened during development.
@@ -110,7 +110,7 @@ are caught offline, and both have happened during development.
 
 ```mermaid
 flowchart TD
-    A["kata submit NN"] --> B{agent/ compiles?}
+    A["miyagi submit NN"] --> B{agent/ compiles?}
     B -- no --> C["not ready<br/>file:line, message, cause"]
     B -- yes --> D["run chapter checks"]
     D --> E["for each case:<br/>bounded, panic-proof"]
@@ -184,7 +184,7 @@ run it.
 | Behaviour | scripted model decisions | your loop, tools and context logic |
 | Output | full request traces, per case | nothing drifted silently |
 
-No layer proves the agent is *good*. Quality needs a real model, money and judgement. Kata
+No layer proves the agent is *good*. Quality needs a real model, money and judgement. Miyagi
 grades whether the harness is correct, and says so.
 
 ## Adding a chapter
@@ -193,7 +193,7 @@ grades whether the harness is correct, and says so.
 2. `internal/hints/hints.go` gets an `"NN"` entry with three hints per case. The
    completeness test fails on a case with no ladder, or a ladder with no case.
 3. `reference/chNN/` with only the files the chapter changes.
-4. `kata verify` clean. Nothing else in the repository needs editing: the chapter list, the
+4. `miyagi verify` clean. Nothing else in the repository needs editing: the chapter list, the
    site sidebar, the part grouping and the grading order all come from the directory names.
 
 ## Glossary

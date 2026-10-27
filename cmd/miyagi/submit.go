@@ -116,7 +116,7 @@ func cmdSubmit(args []string) error {
 					prog[ch.ID] = progressEntry{Status: "failed", When: timeNow(), Cases: "build error"}
 					_ = saveProgress(root, prog)
 				}
-				// A build error must fail the command. A script that runs `kata submit` in CI
+				// A build error must fail the command. A script that runs `miyagi submit` in CI
 				// reads the exit code, and a zero here would report a broken tree as healthy.
 				return errBuildFailed
 			}
@@ -139,8 +139,8 @@ func cmdSubmit(args []string) error {
 			if target != "all" && target != "every" {
 				if next := nextChapterID(root, ch.ID); next != ch.ID {
 					fmt.Printf("  the ladder stops here: chapter %s comes next, and it assumes %s.\n", next, ch.ID)
-					fmt.Printf("  %s\n", "`kata submit all` grades everything anyway.")
-					fmt.Printf("  %s\n\n", "`kata read "+ch.ID+"` reprints the chapter.")
+					fmt.Printf("  %s\n", "`miyagi submit all` grades everything anyway.")
+					fmt.Printf("  %s\n\n", "`miyagi read "+ch.ID+"` reprints the chapter.")
 				}
 				break
 			}
@@ -156,7 +156,7 @@ func cmdSubmit(args []string) error {
 		return fmt.Errorf("%d %s not passing", failures, plural(failures, "chapter is", "chapters are"))
 	}
 	if !useSolution {
-		fmt.Printf("  next: kata read %s\n\n", nextChapterID(root, selected[len(selected)-1].ID))
+		fmt.Printf("  next: miyagi read %s\n\n", nextChapterID(root, selected[len(selected)-1].ID))
 	}
 	return nil
 }
@@ -182,7 +182,7 @@ func triage(root string) (bool, string, error) {
 	// The tree can compile while the entry point the checks build is somewhere else. That
 	// happens whenever a learner restructures, and it produces nine failures that all blame
 	// the wrong thing, so it is caught here first.
-	entry := os.Getenv("KATA_ENTRY")
+	entry := os.Getenv("MIYAGI_ENTRY")
 	if entry == "" {
 		entry = "./agent/cmd/agent"
 	}
@@ -194,7 +194,7 @@ func triage(root string) (bool, string, error) {
 			"    nothing to build at %s\n"+
 				"      %s\n"+
 				"      → if you restructured the tree, tell the grader where the entry point is:\n"+
-				"          KATA_ENTRY=<path> kata submit NN\n"+
+				"          MIYAGI_ENTRY=<path> miyagi submit NN\n"+
 				"        the checks build and run your binary; they never look inside the package.\n\n",
 			entry, firstLine(msg)), nil
 	}
@@ -324,14 +324,14 @@ func gradeChapter(root string, ch chapter, kind string) (gradeResult, error) {
 		workDir = tmp
 	}
 
-	repPath := filepath.Join(os.TempDir(), fmt.Sprintf("kata-report-%d.json", os.Getpid()))
+	repPath := filepath.Join(os.TempDir(), fmt.Sprintf("miyagi-report-%d.json", os.Getpid()))
 	defer os.Remove(repPath)
 
-	cmd := exec.Command("go", "test", "-tags=kata_checks", "-count=1", "-v",
+	cmd := exec.Command("go", "test", "-tags=miyagi_checks", "-count=1", "-v",
 		"./chapters/"+ch.Slug+"/checks/")
 	cmd.Dir = workDir
 	// Test temp dirs go beside the workspace for the same reason.
-	testTmp := filepath.Join(workDir, ".kata", "tmp")
+	testTmp := filepath.Join(workDir, ".miyagi", "tmp")
 	_ = os.MkdirAll(testTmp, 0o755)
 
 	cmd.Env = append(os.Environ(),
@@ -447,9 +447,9 @@ func summarize(output string) string {
 // way for a starter directory to drift from the reference it was subtracted from.
 func workspaceFor(root, id, mode string) (string, func(), error) {
 	// Grade inside the project, not in the system temp dir. A copy plus a compiled
-	// binary is about 12 MB per run, and 22 runs of `kata verify` will fill a small
+	// binary is about 12 MB per run, and 22 runs of `miyagi verify` will fill a small
 	// tmpfs.
-	workRoot := filepath.Join(root, ".kata", "work")
+	workRoot := filepath.Join(root, ".miyagi", "work")
 	if err := os.MkdirAll(workRoot, 0o755); err != nil {
 		return "", nil, err
 	}
@@ -509,7 +509,7 @@ func copyTree(src, dst string) error {
 		}
 		if d.IsDir() {
 			switch filepath.Base(path) {
-			case ".git", ".kata", "reference", "stubs", "node_modules":
+			case ".git", ".miyagi", "reference", "stubs", "node_modules":
 				return fs.SkipDir
 			}
 			return os.MkdirAll(filepath.Join(dst, rel), 0o755)

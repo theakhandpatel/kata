@@ -11,7 +11,7 @@ import (
 
 func TestConfigListsEveryChapter(t *testing.T) {
 	root := repoRootForTests(t)
-	config := buildConfig("Kata", root)
+	config := buildConfig("Miyagi", root)
 
 	for _, ch := range allChapters(root) {
 		if !ch.written() {
@@ -28,7 +28,7 @@ func TestConfigListsEveryChapter(t *testing.T) {
 
 func TestConfigNamesTheParts(t *testing.T) {
 	root := repoRootForTests(t)
-	config := buildConfig("Kata", root)
+	config := buildConfig("Miyagi", root)
 	for _, part := range []string{"I. Wire", "II. Act", "III. Remember", "IV. Extend", "V. Compose"} {
 		if !strings.Contains(config, `"`+part+`"`) {
 			t.Errorf("sidebar is missing part %q", part)
@@ -37,7 +37,7 @@ func TestConfigNamesTheParts(t *testing.T) {
 }
 
 func TestConfigIsValidShape(t *testing.T) {
-	config := buildConfig("Kata", repoRootForTests(t))
+	config := buildConfig("Miyagi", repoRootForTests(t))
 	for _, want := range []string{
 		"withMermaid(defineConfig({",
 		"search: { provider: 'local' }",

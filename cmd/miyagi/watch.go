@@ -14,7 +14,7 @@ import (
 // cmdWatch re-grades a chapter whenever its code changes.
 //
 // The loop is deliberate: a watcher is a program that runs forever, so it prints one
-// line per attempt and nothing else. If you want the detail, run `kata submit`.
+// line per attempt and nothing else. If you want the detail, run `miyagi submit`.
 func cmdWatch(args []string) error {
 	root, err := findRoot()
 	if err != nil {
@@ -85,7 +85,7 @@ func cmdWatch(args []string) error {
 		failed := failingCases(res.Report)
 		if len(failed) > 0 {
 			fmt.Printf("            %s\n", strings.Join(failed, ", "))
-			fmt.Printf("            %s\n", dim("kata hint "+ch.ID+" "+failed[0]))
+			fmt.Printf("            %s\n", dim("miyagi hint "+ch.ID+" "+failed[0]))
 		}
 	}
 }

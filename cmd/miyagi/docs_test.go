@@ -173,7 +173,7 @@ func TestDocCaseIDsExist(t *testing.T) {
 // A chapter mentioned by the docs as a command must exist.
 func TestDocumentedCommandsPointAtWrittenChapters(t *testing.T) {
 	root := repoRootForTests(t)
-	submitRe := regexp.MustCompile("kata submit ([0-9]{2})|kata read ([0-9]{2})")
+	submitRe := regexp.MustCompile("miyagi submit ([0-9]{2})|miyagi read ([0-9]{2})")
 
 	written := map[string]bool{}
 	for _, slug := range writtenChapters(t) {

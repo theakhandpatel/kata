@@ -25,7 +25,7 @@ func cmdSite(args []string) error {
 	}
 
 	out := filepath.Join(root, "site", "dist")
-	title := "Kata"
+	title := "Miyagi"
 	skipInstall := false
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
@@ -94,7 +94,7 @@ func cmdSite(args []string) error {
 
 // prepareContent copies the course markdown into the VitePress source tree.
 //
-// Paths are preserved, so every relative link written for `kata read` and GitHub also
+// Paths are preserved, so every relative link written for `miyagi read` and GitHub also
 // resolves here. Only `README.md` is renamed, because VitePress wants `index.md` for a
 // directory's landing page.
 func prepareContent(root, srcDir string) (int, error) {
@@ -158,7 +158,7 @@ func prepareContent(root, srcDir string) (int, error) {
 
 func writeProject(srcDir, title, root string) error {
 	pkg := `{
-  "name": "kata-site",
+  "name": "miyagi-site",
   "private": true,
   "type": "module",
   "devDependencies": {
@@ -203,10 +203,10 @@ func buildConfig(title, root string) string {
 		fmt.Fprintf(&b, "      { text: 'Chapters', link: %s },\n", strconv.Quote(first))
 	}
 	b.WriteString("      { text: 'Designs', link: '/docs/designs' },\n")
-	b.WriteString("      { text: 'GitHub', link: 'https://github.com/theakhandpatel/kata' },\n")
+	b.WriteString("      { text: 'GitHub', link: 'https://github.com/theakhandpatel/miyagi' },\n")
 	b.WriteString("    ],\n")
 	b.WriteString("    sidebar: [\n")
-	b.WriteString("      { text: 'Start', items: [{ text: 'What Kata is', link: '/' }] },\n")
+	b.WriteString("      { text: 'Start', items: [{ text: 'What Miyagi is', link: '/' }] },\n")
 
 	for _, part := range partTitles() {
 		var items []string
@@ -243,7 +243,7 @@ func buildConfig(title, root string) string {
 	b.WriteString("    ],\n")
 	b.WriteString("    // No editLink: the generated site renames README.md to index.md, so a link\n")
 	b.WriteString("    // derived from the page path points at a file the repository does not have.\n")
-	b.WriteString("    socialLinks: [{ icon: 'github', link: 'https://github.com/theakhandpatel/kata' }],\n")
+	b.WriteString("    socialLinks: [{ icon: 'github', link: 'https://github.com/theakhandpatel/miyagi' }],\n")
 	b.WriteString("  },\n")
 	b.WriteString("  mermaid: {},\n")
 	b.WriteString("}))\n")

@@ -1,7 +1,7 @@
 # 01 Example
 
 *The finished implementation, taken apart. Open this after a real attempt, or after
-`kata submit 01` passes, and compare. Reading it first turns the exercise into
+`miyagi submit 01` passes, and compare. Reading it first turns the exercise into
 copy-typing.*
 
 The file it describes is `reference/ch01/agent/provider_openai.go`. This page follows

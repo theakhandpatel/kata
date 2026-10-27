@@ -1,6 +1,6 @@
 # 11 Example
 
-*Full, annotated implementation. Read it after `kata submit 11` passes.*
+*Full, annotated implementation. Read it after `miyagi submit 11` passes.*
 
 The compilable file is `reference/ch11/agent/skill.go` (the catalogue plus expansion),
 with one changed line in `reference/ch11/agent/cmd/agent/main.go`.

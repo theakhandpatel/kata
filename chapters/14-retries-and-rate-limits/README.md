@@ -153,12 +153,12 @@ over the computed backoff, and selecting on the context during the wait. In `Cha
 `client.Do` in `withRetry` and return the error from the status check so the loop can
 inspect it.
 
-`kata hint 14 <case-id>` prints the same three hints.
+`miyagi hint 14 <case-id>` prints the same three hints.
 </details>
 
 ## Done when
 
-`kata submit 14` reports 7/7, and a server that fails once still produces an answer.
+`miyagi submit 14` reports 7/7, and a server that fails once still produces an answer.
 
 [example.md](example.md) has the finished code, after you pass.
 

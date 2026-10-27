@@ -42,7 +42,7 @@ var (
 // restructures the tree can say where the entry point went, instead of being told their code
 // does not compile.
 //
-//	KATA_ENTRY=./internal/agentcore/cmd/agent kata submit 01
+//	MIYAGI_ENTRY=./internal/agentcore/cmd/agent miyagi submit 01
 var EntryPoint = "./agent/cmd/agent"
 
 // packagePath is the importable package the harness lives in. Used only to give a better error
@@ -58,7 +58,7 @@ func Binary(t *testing.T) string {
 			buildErr = err
 			return
 		}
-		dir, err := os.MkdirTemp("", "kata-bin-*")
+		dir, err := os.MkdirTemp("", "miyagi-bin-*")
 		if err != nil {
 			buildErr = err
 			return
@@ -66,7 +66,7 @@ func Binary(t *testing.T) string {
 		out := filepath.Join(dir, "agent")
 
 		entry := EntryPoint
-		if v := os.Getenv("KATA_ENTRY"); v != "" {
+		if v := os.Getenv("MIYAGI_ENTRY"); v != "" {
 			entry = v
 		}
 
@@ -104,7 +104,7 @@ func explainBuildFailure(root, entry, output string, cause error) error {
 		return fmt.Errorf(
 			"nothing to build at %q.\n"+
 				"  If you restructured the tree, tell the grader where the entry point is:\n"+
-				"      KATA_ENTRY=<path> kata submit NN\n"+
+				"      MIYAGI_ENTRY=<path> miyagi submit NN\n"+
 				"  The checks build and run your binary; they do not look inside the package.\n\n%s",
 			entry, output)
 	}
@@ -126,7 +126,7 @@ func MCPServer(t *testing.T) string {
 			mcpErr = err
 			return
 		}
-		dir := filepath.Join(root, ".kata", "bin")
+		dir := filepath.Join(root, ".miyagi", "bin")
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			mcpErr = err
 			return

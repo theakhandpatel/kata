@@ -183,11 +183,11 @@ struct. `resolveKey` reads the key file when no inline key was given. `applyDefa
 the endpoint, model and numeric limits. `Describe` prints each value with its source, and the
 key as four characters, an ellipsis, and four characters.
 
-`kata hint 21 <case-id>` prints the same three hints.
+`miyagi hint 21 <case-id>` prints the same three hints.
 </details>
 
 ## Done when
 
-`kata submit 21` reports 9/9, and `./agent -config` tells you where every setting came from.
+`miyagi submit 21` reports 9/9, and `./agent -config` tells you where every setting came from.
 
 [example.md](example.md) has the finished code, after you pass.

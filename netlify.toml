@@ -2,7 +2,7 @@
 # VitePress builds it. Nothing generated is committed.
 
 [build]
-  command = "go run ./cmd/kata site"
+  command = "go run ./cmd/miyagi site"
   publish = "site/dist"
 
 [build.environment]

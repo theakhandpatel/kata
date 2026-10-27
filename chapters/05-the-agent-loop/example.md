@@ -1,6 +1,6 @@
 # 05 Example
 
-*Full, annotated implementation. Read it after `kata submit 05` passes.*
+*Full, annotated implementation. Read it after `miyagi submit 05` passes.*
 
 The compilable files are `reference/ch05/agent/`. This document takes them apart
 in the order the thinking happens.

@@ -1,6 +1,6 @@
 # 18 Example
 
-*The finished implementation, taken apart. Open this after `kata submit 18` passes.*
+*The finished implementation, taken apart. Open this after `miyagi submit 18` passes.*
 
 The file it describes is `reference/ch18/agent/request.go`.
 

@@ -136,12 +136,12 @@ missing. `LoadSkills` reads each `skills/*/SKILL.md`, skips parse errors, return
 when the directory is absent, and sorts by name. `Contribute` renders `# Skills`, one
 line about how to invoke, then `- name: description` per skill.
 
-`kata hint 10 <case-id>` prints the same three hints.
+`miyagi hint 10 <case-id>` prints the same three hints.
 </details>
 
 ## Done when
 
-`kata submit 10` reports 4/4, and a skill file on disk appears in the system message by
+`miyagi submit 10` reports 4/4, and a skill file on disk appears in the system message by
 name and description.
 
 [example.md](example.md) has the finished code, after you pass.

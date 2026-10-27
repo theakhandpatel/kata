@@ -129,12 +129,12 @@ In the parser, accumulate by index: set the id and name when present, always app
 argument text, emit in index order. A tool message needs `role: "tool"` and
 `tool_call_id`.
 
-`kata hint 02 <case-id>` prints the same three hints.
+`miyagi hint 02 <case-id>` prints the same three hints.
 </details>
 
 ## Done when
 
-`kata submit 02` reports 7/7, and a model asking for a tool you do not have receives a
+`miyagi submit 02` reports 7/7, and a model asking for a tool you do not have receives a
 readable answer.
 
 [example.md](example.md) has the finished code, after you pass.

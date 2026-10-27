@@ -139,12 +139,12 @@ it. `ToolList` returns one line naming what is hidden. `ToolLoader.Execute` vali
 name, mounts it, and says so. In `main`, append the loader, wrap the registry, and add
 the tool list line to the system message.
 
-`kata hint 16 <case-id>` prints the same three hints.
+`miyagi hint 16 <case-id>` prints the same three hints.
 </details>
 
 ## Done when
 
-`kata submit 16` reports 7/7, and a project with more tools than the ceiling still lets
+`miyagi submit 16` reports 7/7, and a project with more tools than the ceiling still lets
 the model reach all of them.
 
 [example.md](example.md) has the finished code, after you pass.

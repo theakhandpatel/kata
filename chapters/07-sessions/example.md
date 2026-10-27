@@ -1,6 +1,6 @@
 # 07 Example
 
-*Full, annotated implementation. Read it after `kata submit 07` passes.*
+*Full, annotated implementation. Read it after `miyagi submit 07` passes.*
 
 The compilable files are `reference/ch07/agent/session.go` and
 `reference/ch07/agent/cmd/agent/main.go`. The loop and the provider are unchanged.

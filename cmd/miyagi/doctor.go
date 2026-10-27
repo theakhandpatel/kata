@@ -52,7 +52,7 @@ func cmdDoctor(args []string) error {
 	}
 
 	// Writable scratch space. Grading builds a copy of the project here.
-	scratch := filepath.Join(root, ".kata")
+	scratch := filepath.Join(root, ".miyagi")
 	if err := os.MkdirAll(scratch, 0o755); err == nil {
 		probe := filepath.Join(scratch, "doctor-probe")
 		if err := os.WriteFile(probe, []byte("ok"), 0o644); err == nil {
@@ -81,7 +81,7 @@ func cmdDoctor(args []string) error {
 		add("stdout", "warn", "not a terminal; the TUI needs one, the other commands do not")
 	}
 
-	// Pager, used by `kata read`.
+	// Pager, used by `miyagi read`.
 	if pager := os.Getenv("PAGER"); pager != "" {
 		add("pager", "ok", pager)
 	} else if _, err := exec.LookPath("less"); err == nil {

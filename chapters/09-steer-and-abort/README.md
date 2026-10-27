@@ -208,12 +208,12 @@ had no tool calls and nothing was steered. In `main`, persist, then on
 `context.Canceled` print the partial answer, write `agent: aborted` to stderr, and
 return 130.
 
-`kata hint 09 <case-id>` prints the same three hints.
+`miyagi hint 09 <case-id>` prints the same three hints.
 </details>
 
 ## Done when
 
-`kata submit 09` reports 8/8, Ctrl-C during a long answer leaves the text you read on
+`miyagi submit 09` reports 8/8, Ctrl-C during a long answer leaves the text you read on
 screen, and a line typed mid-run lands in the next request as its own message.
 
 [example.md](example.md) has the finished code, after you pass.

@@ -1,6 +1,6 @@
 # 06 Example
 
-*Full, annotated implementation. Read it after `kata submit 06` passes.*
+*Full, annotated implementation. Read it after `miyagi submit 06` passes.*
 
 The compilable files are `reference/ch06/agent/prompt.go` and
 `reference/ch06/agent/cmd/agent/main.go`. The loop and the provider are unchanged

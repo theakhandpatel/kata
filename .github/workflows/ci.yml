@@ -29,4 +29,4 @@ jobs:
       # Prove every chapter rejects its starter and accepts its reference. A
       # chapter whose starter passes grades nothing.
       - name: verify course integrity
-        run: go run ./cmd/kata verify
+        run: go run ./cmd/miyagi verify

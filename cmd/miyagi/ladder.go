@@ -96,7 +96,7 @@ func frontier(root string, prog progressMap) (chapter, bool) {
 	return chapter{}, false
 }
 
-// markString renders the ladder mark for `kata list`.
+// markString renders the ladder mark for `miyagi list`.
 func markString(s state) string {
 	switch s {
 	case statePassed:
@@ -134,7 +134,7 @@ func explainState(root string, prog progressMap, id string) string {
 	return ""
 }
 
-// describeLadder is the paragraph `kata status` prints so the rule is never a surprise.
+// describeLadder is the paragraph `miyagi status` prints so the rule is never a surprise.
 func describeLadder() string {
 	return strings.TrimSpace(`
 Chapters are graded in order. The first one that does not pass becomes your frontier, and

@@ -1,6 +1,6 @@
 # 03 Example
 
-*The finished implementation, taken apart. Read this after `kata submit 03` passes, or
+*The finished implementation, taken apart. Read this after `miyagi submit 03` passes, or
 after a real attempt.*
 
 The file it describes is `reference/ch03/agent/tools.go`, plus two lines in

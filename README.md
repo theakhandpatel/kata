@@ -1,8 +1,14 @@
-# Kata
+# Miyagi
 
 Build a coding-agent harness in Go, with a grader that tells you what is broken.
 
-Read it online at **[kata.akhand.cc](https://kata.akhand.cc)**.
+Read it online at **[miyagi.akhand.cc](https://miyagi.akhand.cc)**.
+
+The name is the teacher from The Karate Kid. He never lectures. He hands you a rag and a
+car and makes you repeat a motion until it is automatic, and then he throws a punch at you
+to see whether it actually is. You do not know why you are waxing a car. You find out when
+it is tested. That is what this course does with code, and it is why the tool is named
+after the thing that tests you rather than the thing you read.
 
 You use a coding agent every day. You type what you want, it reads files, runs commands,
 and comes back with an answer. When it works it looks like magic, and when it does not you
@@ -17,12 +23,12 @@ lines you understand completely, and you can point at the line that decides whet
 agent keeps going or stops.
 
 ```sh
-git clone https://github.com/theakhandpatel/kata && cd kata
-go build -o kata ./cmd/kata
+git clone https://github.com/theakhandpatel/miyagi && cd miyagi
+go build -o miyagi ./cmd/miyagi
 
-./kata                 # where you are, what to do next
-./kata read 01         # the task for chapter 01
-./kata submit 01       # compile, grade, report
+./miyagi                 # where you are, what to do next
+./miyagi read 01         # the task for chapter 01
+./miyagi submit 01       # compile, grade, report
 ```
 
 No account, no API key, no Docker, no network after the clone.
@@ -45,7 +51,7 @@ runs in a second, offline, and fails with a sentence about the thing you got wro
         expected: "*agent.HTTPError"
         actual:   provider: HTTP 429: {"error":"slow down"}
         hint: Check resp.StatusCode before you touch the body.
-        more: kata hint 01 http-error
+        more: miyagi hint 01 http-error
 ```
 
 That is the thing a book cannot do: it tells you whether you built it.
@@ -110,7 +116,7 @@ care: they build your binary and run it, and never look inside your code. If you
 point, tell the grader where it is:
 
 ```sh
-KATA_ENTRY=./internal/agentcore/cmd/agent kata submit 01
+MIYAGI_ENTRY=./internal/agentcore/cmd/agent miyagi submit 01
 ```
 
 Verified from the reference implementations: between chapter 05 and chapter 09, `loop.go` grows
@@ -131,25 +137,25 @@ disagree, the case is right and the page is a bug. A test enforces this.
 ## Commands
 
 ```sh
-kata                      status: current chapter, next action
-kata submit               grade from your frontier, stop at the first failure
-kata submit NN            grade one chapter
-kata submit all           grade everything, do not stop
-kata submit NN --solution grade the reference instead of your code
-kata read [NN] [doc]      the chapter, or its example
-kata hint NN <case-id>    three hints, from nudge to answer
-kata list                 the arc, grouped into parts
-kata progress             what passed, and when
-kata verify               prove each chapter rejects its starter and accepts its reference
-kata reset [NN]           restore agent/ to the state before a chapter
-kata read where-next      what to build after the course
-kata site                 build the website into site/dist (VitePress)
-kata ui                   terminal interface: pick a chapter, grade it
-kata watch [NN]           re-grade on every save
-kata doctor               check the environment
+miyagi                      status: current chapter, next action
+miyagi submit               grade from your frontier, stop at the first failure
+miyagi submit NN            grade one chapter
+miyagi submit all           grade everything, do not stop
+miyagi submit NN --solution grade the reference instead of your code
+miyagi read [NN] [doc]      the chapter, or its example
+miyagi hint NN <case-id>    three hints, from nudge to answer
+miyagi list                 the arc, grouped into parts
+miyagi progress             what passed, and when
+miyagi verify               prove each chapter rejects its starter and accepts its reference
+miyagi reset [NN]           restore agent/ to the state before a chapter
+miyagi read where-next      what to build after the course
+miyagi site                 build the website into site/dist (VitePress)
+miyagi ui                   terminal interface: pick a chapter, grade it
+miyagi watch [NN]           re-grade on every save
+miyagi doctor               check the environment
 ```
 
-`kata site` generates a VitePress project from the same markdown and builds it into
+`miyagi site` generates a VitePress project from the same markdown and builds it into
 `site/dist`: search, dark mode, heading anchors, nested navigation, syntax highlighting and
 diagrams all come from the theme. It needs Node once, to install VitePress; taking the
 course does not.
@@ -178,13 +184,13 @@ Design notes, diagrams and the grading pipeline are in
 Go 1.26 or newer.
 
 The agent you build uses only the standard library, and keeps doing so through all
-twenty-one chapters. The `kata` tool depends on Bubble Tea and Lip Gloss for the terminal
+twenty-one chapters. The `miyagi` tool depends on Bubble Tea and Lip Gloss for the terminal
 interface. Publishing the site additionally needs Node, for VitePress; nothing you do as a
 learner does.
 
-## What Kata is not
+## What Miyagi is not
 
-Kata teaches the machine, not every attachment. It does not ship a terminal UI, an extension
+Miyagi teaches the machine, not every attachment. It does not ship a terminal UI, an extension
 runtime, an LSP client, provider authentication, image input, or a cloud runner. Chapter 13
 covers MCP because the client is small enough to teach. For a full harness, read
 [pi](https://github.com/earendil-works/pi),
@@ -193,29 +199,37 @@ covers MCP because the client is small enough to teach. For a full harness, read
 
 ## Publishing
 
-Netlify builds the site from source; nothing generated is committed.
+Pushing to `main` builds and deploys the site. The workflow runs `miyagi site`, which writes
+a generated VitePress project, and then uploads `site/dist` to Netlify. Nothing generated is
+committed.
 
 ```
-go run ./cmd/kata site   →   site/src (generated VitePress project)   →   site/dist
+miyagi site   →   site/src (generated VitePress project)   →   site/dist
 ```
 
-`netlify.toml` runs that command and publishes `site/dist`. VitePress validates every
-internal link, so a broken cross-reference fails the build instead of shipping.
+VitePress validates every internal link, so a broken cross-reference fails the build instead
+of shipping.
 
 To preview locally:
 
 ```sh
-kata site                         # build once, output in site/dist
+miyagi site                       # build once, output in site/dist
 cd site && npx vitepress dev src  # live reload while editing chapters
+```
+
+To deploy by hand if a workflow run failed:
+
+```sh
+miyagi site --out site/dist && netlify deploy --prod --dir site/dist
 ```
 
 ## Contributing
 
-A chapter is done when `kata verify` is clean: its reference passes every case and its
+A chapter is done when `miyagi verify` is clean: its reference passes every case and its
 starter fails at least one. Hints are validated in both directions, so a case without a
 ladder fails the test suite. Prose follows [docs/writing-style.md](docs/writing-style.md),
 and a test rejects the vocabulary it forbids.
 
 ## License
 
-MIT. See [LICENSE](https://github.com/theakhandpatel/kata/blob/main/LICENSE).
+MIT. See [LICENSE](https://github.com/theakhandpatel/miyagi/blob/main/LICENSE).

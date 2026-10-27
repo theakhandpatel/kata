@@ -1,6 +1,6 @@
 # 12 Example
 
-*Full, annotated implementation. Read it after `kata submit 12` passes.*
+*Full, annotated implementation. Read it after `miyagi submit 12` passes.*
 
 The compilable files are `reference/ch12/agent/subagent.go` and
 `reference/ch12/agent/cmd/agent/main.go`.

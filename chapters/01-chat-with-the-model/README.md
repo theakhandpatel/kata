@@ -162,12 +162,12 @@ to a `strings.Builder`, and keep the usage when it appears.
 After the loop, check `scanner.Err()`. Then build the message from the builder and
 return it.
 
-`kata hint 01 <case-id>` prints the same three hints.
+`miyagi hint 01 <case-id>` prints the same three hints.
 </details>
 
 ## Done when
 
-`kata submit 01` reports 9/9, and `./agent -p "hello"` answers against Ollama or any
+`miyagi submit 01` reports 9/9, and `./agent -p "hello"` answers against Ollama or any
 OpenAI-compatible server.
 
 [example.md](example.md) has the finished code, after you pass.

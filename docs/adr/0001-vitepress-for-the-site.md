@@ -4,7 +4,7 @@
 
 ## Context
 
-The course prose is Markdown in `chapters/`, and `kata read` shows the same files in a
+The course prose is Markdown in `chapters/`, and `miyagi read` shows the same files in a
 terminal. The website needs to render that prose without becoming a second source of
 truth.
 
@@ -20,10 +20,10 @@ engineering course that informed this one) and Hugo (a single Go binary, no Node
 
 VitePress, with `vitepress-plugin-mermaid`.
 
-`kata site` no longer renders anything. It copies the chapter Markdown into a generated
+`miyagi site` no longer renders anything. It copies the chapter Markdown into a generated
 VitePress project, writes the sidebar from the chapter directories, and shells out to
 VitePress. The generated project (`site/src`) and the build output (`site/dist`) are not
-committed; Netlify runs `go run ./cmd/kata site` and publishes the result.
+committed; Netlify runs `go run ./cmd/miyagi site` and publishes the result.
 
 ## Why not Hugo
 
@@ -47,6 +47,6 @@ provides it; taking the course still needs only Go.
   diagrams come from the tool. Upgrades are a version bump.
 - VitePress fails the build on a dead internal link. That already caught two links the
   hand-written generator had shipped.
-- Publishing requires Node and npm. `kata site` installs the dependencies on first run.
+- Publishing requires Node and npm. `miyagi site` installs the dependencies on first run.
 - Reversing this is contained: the generator only copies files and writes a sidebar, so
-  moving to Hugo means replacing `cmd/kata/site.go` and nothing else.
+  moving to Hugo means replacing `cmd/miyagi/site.go` and nothing else.

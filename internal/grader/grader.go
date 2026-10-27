@@ -228,7 +228,7 @@ func Suite(t *testing.T, id, title string, cases []Case) {
 			fmt.Printf("  - %s\n", c.ID)
 		}
 	}
-	fmt.Printf("\n  %s\n\n", dim("run `kata hint "+id+" <case-id>` for the full hint ladder"))
+	fmt.Printf("\n  %s\n\n", dim("run `miyagi hint "+id+" <case-id>` for the full hint ladder"))
 	t.Fail()
 }
 
@@ -308,7 +308,7 @@ func printFailure(id string, c Case, err error) {
 		fmt.Print(wrapped("        ", dim("hint:")+" ", c.Hints[0]))
 	}
 	if rungs > 1 {
-		fmt.Printf("        %s kata hint %s %s\n", dim("more:"), id, c.ID)
+		fmt.Printf("        %s miyagi hint %s %s\n", dim("more:"), id, c.ID)
 	}
 	fmt.Println()
 }

@@ -1,6 +1,6 @@
 # 15 Example
 
-*The finished implementation, taken apart. Open this after `kata submit 15` passes.*
+*The finished implementation, taken apart. Open this after `miyagi submit 15` passes.*
 
 The file it describes is `reference/ch15/agent/spill.go`.
 
@@ -39,7 +39,7 @@ Eight bytes of a SHA-256 is sixteen hex characters: short enough to read in a me
 and long enough that two different results colliding is not a practical concern at this
 scale.
 
-Hashing rather than counting has a second benefit. The same `kata test` twice produces
+Hashing rather than counting has a second benefit. The same `miyagi test` twice produces
 the same handle, so the directory does not fill with copies of identical output.
 
 ## The notice

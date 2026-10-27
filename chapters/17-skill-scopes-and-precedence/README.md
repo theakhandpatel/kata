@@ -159,12 +159,12 @@ records the loser. `Paths` are built from `Scope.Root`, which already contains `
 `Contribute` renders `- name (scope): description`. `Expand` builds a plain catalogue
 from the winners, so the resolved set is what runs.
 
-`kata hint 17 <case-id>` prints the same three hints.
+`miyagi hint 17 <case-id>` prints the same three hints.
 </details>
 
 ## Done when
 
-`kata submit 17` reports 6/6, and a skill you wrote in a repository beats a general one
+`miyagi submit 17` reports 6/6, and a skill you wrote in a repository beats a general one
 with the same name.
 
 [example.md](example.md) has the finished code, after you pass.

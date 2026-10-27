@@ -193,12 +193,12 @@ with an id and reads lines until one carries that id, skipping notifications.
 `tools/call` with the original name and joins the text blocks. `mcpTool` adapts one
 entry. In `main`, warn and continue when the server cannot start.
 
-`kata hint 13 <case-id>` prints the same three hints.
+`miyagi hint 13 <case-id>` prints the same three hints.
 </details>
 
 ## Done when
 
-`kata submit 13` reports 8/8, and the agent calls a tool that lives in another process.
+`miyagi submit 13` reports 8/8, and the agent calls a tool that lives in another process.
 
 [example.md](example.md) has the finished code, after you pass.
 

@@ -170,12 +170,12 @@ timeout, runs `sh -c` with `cmd.Dir` set to the workspace, caps the combined out
 maps the outcome: deadline to a timeout result, `*exec.ExitError` to an exit-code
 result, anything else to a Go error.
 
-`kata hint 04 <case-id>` prints the same three hints.
+`miyagi hint 04 <case-id>` prints the same three hints.
 </details>
 
 ## Done when
 
-`kata submit 04` reports 8/8, and asking the agent to create a file produces one.
+`miyagi submit 04` reports 8/8, and asking the agent to create a file produces one.
 
 [example.md](example.md) has the finished code, after you pass.
 

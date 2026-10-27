@@ -1,6 +1,6 @@
 # 04 Example
 
-*Full, annotated implementation. Read it after `kata submit 04` passes.*
+*Full, annotated implementation. Read it after `miyagi submit 04` passes.*
 
 The compilable files are `reference/ch04/agent/tools.go` and
 `reference/ch04/agent/cmd/agent/main.go`. This document takes them apart in the

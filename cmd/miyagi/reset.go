@@ -10,9 +10,9 @@ import (
 
 // cmdReset restores agent/ to the state at the start of a chapter.
 //
-// The state is derived, not stored: `kata reset NN` applies every earlier chapter's
+// The state is derived, not stored: `miyagi reset NN` applies every earlier chapter's
 // reference overlay in order and drops the result into agent/. That is the same before-state
-// `kata verify` grades, so what you reset to is exactly what the previous
+// `miyagi verify` grades, so what you reset to is exactly what the previous
 // chapter proved.
 //
 // Only .go files are replaced. Notes and scratch files in agent/ survive.
