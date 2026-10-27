@@ -12,12 +12,12 @@ This is a course about the program around it.
 
 Over twenty-one chapters you write one in Go, from an empty stub to something that can read
 a file, run a test, remember yesterday's conversation, and hand a whole job to a second copy
-of itself. You start by making a single HTTP request to a model. You end with about 3,200
+of itself. You start by making a single HTTP request to a model. You end with about 4,300
 lines you understand completely, and you can point at the line that decides whether your
 agent keeps going or stops.
 
 ```sh
-git clone <this repo> && cd kata
+git clone https://github.com/theakhandpatel/kata && cd kata
 go build -o kata ./cmd/kata
 
 ./kata                 # where you are, what to do next
@@ -52,7 +52,7 @@ That is the thing a book cannot do: it tells you whether you built it.
 
 ## The arc
 
-Twenty-one chapters, in eight parts. Each one ends with something you can run and a sentence
+Twenty-one chapters, in seven parts. Each one ends with something you can run and a sentence
 you can say about it.
 
 | # | Chapter | By the end |

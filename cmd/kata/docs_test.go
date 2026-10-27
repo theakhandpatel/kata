@@ -208,13 +208,52 @@ func TestRootDocsAgreeOnTheArc(t *testing.T) {
 	}
 	n := len(writtenChapters(t))
 
-	claims := regexp.MustCompile(`course of (\w+) chapters`)
-	if m := claims.FindStringSubmatch(string(readme)); m != nil {
-		words := map[string]int{"one": 1, "two": 2, "three": 3, "four": 4, "five": 5,
-			"six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12}
+	// A word-number for every count the README might state. The earlier version stopped
+	// at "twelve", so it silently passed "twenty-one" while four chapters were added.
+	words := map[string]int{
+		"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6,
+		"seven": 7, "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12,
+		"thirteen": 13, "fourteen": 14, "fifteen": 15, "sixteen": 16, "seventeen": 17,
+		"eighteen": 18, "nineteen": 19, "twenty": 20, "twenty-one": 21, "twenty-two": 22,
+	}
+	claims := regexp.MustCompile(`(\w+(?:-\w+)?) chapters`)
+	for _, m := range claims.FindAllStringSubmatch(string(readme), -1) {
 		if got, ok := words[m[1]]; ok && got != n {
 			t.Errorf("README says %q chapters, %d chapters exist", m[1], n)
 		}
+	}
+
+	// The parts count is stated in prose and is not derivable from a filename, so it is
+	// counted from the chapter pages themselves.
+	parts := map[string]bool{}
+	entries, err := os.ReadDir(filepath.Join(root, "chapters"))
+	if err != nil {
+		t.Fatalf("read chapters: %v", err)
+	}
+	partRe := regexp.MustCompile(`Part ([IVX]+)`)
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		body, err := os.ReadFile(filepath.Join(root, "chapters", e.Name(), "README.md"))
+		if err != nil {
+			continue
+		}
+		if m := partRe.FindSubmatch(body); m != nil {
+			parts[string(m[1])] = true
+		}
+	}
+	partClaims := regexp.MustCompile(`(\w+) parts`)
+	for _, m := range partClaims.FindAllStringSubmatch(string(readme), -1) {
+		if got, ok := words[m[1]]; ok && got != len(parts) {
+			t.Errorf("README says %q parts, the chapters use %d", m[1], len(parts))
+		}
+	}
+
+	// A clone instruction that cannot be followed is worse than none. The README
+	// shipped a literal `<this repo>` placeholder.
+	if strings.Contains(string(readme), "<this repo>") {
+		t.Error("README still has a <this repo> placeholder in the clone command")
 	}
 }
 
