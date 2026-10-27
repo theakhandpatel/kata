@@ -2,6 +2,8 @@
 
 Build a coding-agent harness in Go, with a grader that tells you what is broken.
 
+Read it online at **[kata.akhand.cc](https://kata.akhand.cc)**.
+
 Kata is a course of eleven chapters and one local tool. You write the harness:
 the provider client, the tools, the loop, sessions, the context budget,
 steering, skills, subagents, and an MCP client. The tool runs your code against a
