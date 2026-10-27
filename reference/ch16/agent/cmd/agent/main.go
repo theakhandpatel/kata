@@ -145,7 +145,7 @@ func run() (int, error) {
 	// The registry advertises at most maxTools schemas. Anything past the ceiling is
 	// reachable through load_tool, whose name is listed in the system prompt.
 	full := agent.NewRegistry(allTools...)
-	mounted := agent.NewMounted(full, *maxTools - 1)
+	mounted := agent.NewMounted(full, *maxTools-1)
 	loader := &agent.ToolLoader{Mounted: mounted}
 	allTools = append(allTools, loader)
 	full = agent.NewRegistry(allTools...)

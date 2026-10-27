@@ -46,6 +46,21 @@ parser below waits for lines that never arrive.
 | `HARNESS_MODEL` | model name when `-m` is absent | `gpt-4o-mini` |
 | `HARNESS_DEBUG` | print token counts to stderr when set | unset |
 
+The endpoint and the model name are settings, not constants. Any server that speaks this
+protocol works, and the model has to be one that server offers:
+
+```sh
+# a local model, no key needed
+OPENAI_BASE_URL=http://localhost:11434/v1 HARNESS_MODEL=llama3.2 ./agent -p "hi"
+
+# a hosted one
+OPENAI_BASE_URL=https://api.openai.com/v1 OPENAI_API_KEY=sk-... ./agent -p "hi" -m gpt-4o-mini
+```
+
+A wrong model name is the most common first failure. Some servers reject it with a 404
+naming the models they do have; others accept anything and answer anyway. The request body
+above is the place to check, and `HARNESS_DEBUG=1` prints what was sent.
+
 ## The response
 
 `text/event-stream`: a sequence of lines, each beginning `data:` followed by a JSON

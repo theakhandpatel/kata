@@ -14,10 +14,10 @@ import (
 // The fields are resolved from several places in a fixed order, and the resolved value is
 // what the rest of the program sees. Nothing downstream reads the environment directly.
 type Config struct {
-	BaseURL string      `json:"base_url"`
-	Model   string      `json:"model"`
-	APIKey  string      `json:"api_key,omitempty"`
-	KeyFile string      `json:"api_key_file,omitempty"`
+	BaseURL     string  `json:"base_url"`
+	Model       string  `json:"model"`
+	APIKey      string  `json:"api_key,omitempty"`
+	KeyFile     string  `json:"api_key_file,omitempty"`
 	MaxSteps    int     `json:"max_steps,omitempty"`
 	MaxContext  int     `json:"max_context,omitempty"`
 	MaxTools    int     `json:"max_tools,omitempty"`
