@@ -49,6 +49,9 @@ func cmdStatus() error {
 	fmt.Printf("    2. build  edit agent/\n")
 	fmt.Printf("    3. submit kata submit %s\n\n", cur.ID)
 	fmt.Printf("  stuck?  kata hint %s <case-id>\n", cur.ID)
+	if isTTY() {
+		fmt.Printf("  prefer keys?  kata ui\n")
+	}
 	fmt.Printf("  lost?   kata list\n\n")
 	return nil
 }

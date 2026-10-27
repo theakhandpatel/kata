@@ -88,6 +88,9 @@ kata verify               prove each chapter rejects its starter and accepts its
 kata reset [NN]           restore agent/ to the state before a chapter
 kata read where-next      what to build after the course
 kata site                 render the course as a static website in site/dist
+kata ui                   terminal interface: pick a chapter, grade it
+kata watch [NN]           re-grade on every save
+kata doctor               check the environment
 ```
 
 `kata site` writes plain HTML and one stylesheet. Open `site/dist/index.html`
@@ -115,8 +118,12 @@ Design notes, diagrams, and the grading pipeline are in
 
 ## Requirements
 
-Go 1.26 or newer. Nothing else. The reference harness uses only the standard
-library.
+Go 1.26 or newer.
+
+The agent you build uses only the standard library, and keeps doing so through all
+eleven chapters. The `kata` tool itself depends on Bubble Tea and Lip Gloss for the
+terminal interface. That is the whole dependency list, and it belongs to the tool,
+not to your code.
 
 ## What Kata is not
 

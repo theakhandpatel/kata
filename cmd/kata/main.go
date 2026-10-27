@@ -53,6 +53,12 @@ func run(args []string) error {
 		return cmdReset(args[1:])
 	case "site":
 		return cmdSite(args[1:])
+	case "ui", "tui":
+		return cmdUI(args[1:])
+	case "watch", "w":
+		return cmdWatch(args[1:])
+	case "doctor", "doc":
+		return cmdDoctor(args[1:])
 	case "progress", "p":
 		return cmdProgress()
 	case "help", "-h", "--help":
@@ -75,6 +81,9 @@ func usage() {
   kata reset [NN]            restore agent/ to the start of a chapter
   kata read where-next       what to build after the course
   kata site                  render the course as a static website (site/dist)
+  kata ui                    terminal interface: pick a chapter, grade it
+  kata watch [NN]            re-grade on every save
+  kata doctor                check the environment
   kata list                  the arc, with what is written and what is passed
   kata progress              summary
 

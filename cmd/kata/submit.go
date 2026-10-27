@@ -203,22 +203,47 @@ func runChapter(root string, ch chapter, useSolution bool) (bool, string, error)
 	return runChapterKind(root, ch, "after")
 }
 
-// runChapterKind grades a chapter in a temp overlay of `kind` ("" = the learner's
-// tree). Kinds are "reference" and "stubs".
+// gradeResult is one chapter's verdict, with the text a terminal would show.
+//
+// The text is returned rather than printed so that the TUI and the watcher can use
+// the same grading path without scrabbling over shared stdout.
+type gradeResult struct {
+	Passed bool
+	Cases  string
+	Text   string
+	Report grader.Report
+}
+
+// runChapterKind grades a chapter and prints what happened. Kinds are "after" (the
+// reference implementation), "before" (the state before this chapter) and "" (the
+// learner's tree).
 func runChapterKind(root string, ch chapter, kind string) (bool, string, error) {
-	workDir := root
 	if kind != "" {
-		tmp, cleanup, err := workspaceFor(root, ch.ID, kind)
-		if err != nil {
-			return false, "", err
-		}
-		defer cleanup()
-		workDir = tmp
 		label := "the reference implementation"
 		if kind == "before" {
 			label = "the state before this chapter"
 		}
 		fmt.Printf("  grading chapter %s against %s\n\n", ch.ID, label)
+	}
+
+	res, err := gradeChapter(root, ch, kind)
+	if err != nil {
+		return false, "", err
+	}
+	fmt.Print(res.Text)
+	return res.Passed, res.Cases, nil
+}
+
+// gradeChapter grades one chapter without printing anything.
+func gradeChapter(root string, ch chapter, kind string) (gradeResult, error) {
+	workDir := root
+	if kind != "" {
+		tmp, cleanup, err := workspaceFor(root, ch.ID, kind)
+		if err != nil {
+			return gradeResult{}, err
+		}
+		defer cleanup()
+		workDir = tmp
 	}
 
 	repPath := filepath.Join(os.TempDir(), fmt.Sprintf("kata-report-%d.json", os.Getpid()))
@@ -239,17 +264,22 @@ func runChapterKind(root string, ch chapter, kind string) (bool, string, error) 
 
 	out, _ := cmd.CombinedOutput() // exit status is not the signal; the report is
 	text, _ := filterTestOutput(string(out))
-	fmt.Print(text)
 
 	// Prefer the machine-readable report. Scraping stdout is only a fallback for
 	// the case where the test binary never ran to completion (compile error,
 	// panic in TestMain, timeout kill).
 	if rep, ok := readReport(repPath); ok {
-		passed := rep.Total > 0 && rep.Passed == rep.Total
-		return passed, fmt.Sprintf("%d/%d cases passed", rep.Passed, rep.Total), nil
+		return gradeResult{
+			Passed: rep.Total > 0 && rep.Passed == rep.Total,
+			Cases:  fmt.Sprintf("%d/%d cases passed", rep.Passed, rep.Total),
+			Text:   text,
+			Report: rep,
+		}, nil
 	}
-	_, passed := filterTestOutput(string(out))
-	return passed, "no report written (the checks did not run to completion)", nil
+	return gradeResult{
+		Cases: "no report written (the checks did not run to completion)",
+		Text:  text,
+	}, nil
 }
 
 func readReport(path string) (grader.Report, bool) {
