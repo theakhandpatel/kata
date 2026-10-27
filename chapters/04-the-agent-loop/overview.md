@@ -1,4 +1,4 @@
-# 04 — Overview
+# 04 Overview
 
 *How a loop works, and what it means to observe one. Read this before you write
 code.*

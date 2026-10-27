@@ -1,4 +1,4 @@
-# 10 — Overview
+# 10 Overview
 
 *How subagents work, and what isolation buys. Read this before you write code.*
 
@@ -29,7 +29,7 @@ flowchart TD
     C2 -.->|"20 messages<br/>never reach the parent"| X["discarded"]
 ```
 
-The parent's history grows by one result. That is the entire economic argument.
+The parent's history grows by one result. That is what you are buying.
 
 ## Isolation means empty, not inherited
 
@@ -88,8 +88,8 @@ resolve:
 | provider failed | an error result naming the failure |
 | returned empty | an error result |
 
-An unresolved call is not a degraded conversation, it is an invalid one: providers
-reject a tool call with no result. So the failure path is part of the contract, not
+A call with no result is invalid, not merely degraded: providers reject a tool call
+that never resolves. So the failure path is part of the contract, not
 an afterthought.
 
 Returning `("", err)` from `Execute` is enough, because `Registry.Run` already

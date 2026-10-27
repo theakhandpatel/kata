@@ -1,4 +1,4 @@
-# 05 — Overview
+# 05 Overview
 
 *How prompt assembly works, and why it is a builder rather than a string. Read
 this before you write code.*

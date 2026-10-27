@@ -1,4 +1,4 @@
-# 04 — Example
+# 04 Example
 
 *Full, annotated implementation. Read it after `kata submit 04` passes.*
 
@@ -20,7 +20,7 @@ main.go      -max-steps and -events, one call to RunLoop
 only its own job, which is why chapter 08 can add cancellation without touching
 the registry or the parser.
 
-## Step 1 — the loop is a state machine with one exit
+## Step 1: the loop is a state machine with one exit
 
 ```go
 for turn := 1; turn <= max; turn++ {
@@ -48,7 +48,7 @@ The `for` bound and the `if` exit are both present and they mean different thing
 The `if` is the program working. The bound is the program refusing to work
 forever. Deleting either one breaks a different case.
 
-## Step 2 — announce the batch, then run it
+## Step 2: announce the batch, then run it
 
 ```go
 for _, call := range msg.ToolCalls {
@@ -75,7 +75,7 @@ trace of what it was.
 `Bytes` rather than the content in the event is deliberate: the event stream is a
 log, not a second copy of the conversation. Chapter 07 uses those byte counts.
 
-## Step 3 — the cap is a distinct failure
+## Step 3: the cap is a distinct failure
 
 ```go
 emit(Event{Type: EventAgentEnd, Turns: max, Reason: "step_limit"})
@@ -92,7 +92,7 @@ Three details:
 - The result still carries the history, because the caller may want to resume or
   inspect it.
 
-## Step 4 — the accounting
+## Step 4: the accounting
 
 ```go
 total = addUsage(total, usage)
@@ -101,7 +101,7 @@ total = addUsage(total, usage)
 `Chat` returned usage per request. A run makes several, and the number a user
 cares about is the total. Summing in the loop is the only place that has them all.
 
-## Step 5 — the provider grows a seam without breaking anyone
+## Step 5: the provider grows a seam without breaking anyone
 
 ```go
 func (p *OpenAICompat) Chat(ctx context.Context, req Request) (Message, Usage, error) {
@@ -136,7 +136,7 @@ type StreamingProvider interface {
 
 Chapters 01 to 03 satisfy `Provider` and keep compiling.
 
-## Step 6 — events as JSON lines
+## Step 6: events as JSON lines
 
 ```go
 func JSONEmitter(w io.Writer) Emitter {
@@ -152,21 +152,21 @@ program that also logs to stderr.
 
 ## The diffs
 
-**1. Continuing after the last tool instead of on the reply** — `single-turn-no-tools`
+**1. Continuing after the last tool instead of on the reply** (`single-turn-no-tools`)
 
 ```diff
 - for i := 0; i < max; i++ { doTurn() }        // exactly N turns
 + if len(msg.ToolCalls) == 0 { finish() }      // until the model is done
 ```
 
-**2. Collecting results out of order** — `preserves-result-order`
+**2. Collecting results out of order** (`preserves-result-order`)
 
 ```diff
 - for _, call := range calls { go func(){ results = append(results, run(call)) }() }
 + for _, call := range calls { results = append(results, run(call)) }
 ```
 
-**3. Ending without saying why** — `step-cap-stops`
+**3. Ending without saying why** (`step-cap-stops`)
 
 ```diff
 - return Result{}, errors.New("too many turns")
@@ -174,7 +174,7 @@ program that also logs to stderr.
 + return Result{...}, fmt.Errorf("%w after %d turns", ErrStepLimit, max)
 ```
 
-**4. Two parsers** — `events-text-deltas`
+**4. Two parsers** (`events-text-deltas`)
 
 ```diff
 - func readSSE(r io.Reader) (Message, Usage, error)

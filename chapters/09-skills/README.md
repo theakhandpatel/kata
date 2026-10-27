@@ -1,4 +1,4 @@
-# 09 — Skills: advertise
+# 09 Skills: advertise
 
 **Part IV · Extend** · Difficulty: easy-medium · 30 to 40 minutes · 4 graded cases
 
@@ -8,9 +8,9 @@ the system message; **chapter 10 makes them runnable**.
 
 | | |
 |---|---|
-| **How it works** | [overview.md](overview.md) — one file, two audiences |
-| **What to build** | [problem.md](problem.md) — the contract, the graded claims, the hints |
-| **Full implementation** | [example.md](example.md) — annotated, after an attempt |
+| **How it works** | [overview.md](overview.md), one file, two audiences |
+| **What to build** | [problem.md](problem.md), the contract, the graded claims, the hints |
+| **Full implementation** | [example.md](example.md), annotated, after an attempt |
 | **You edit** | `agent/skill.go`, `agent/cmd/agent/main.go` |
 | **Submit** | `kata submit 09` |
 
@@ -29,4 +29,4 @@ The model should be able to tell you about `review` without reading its body.
 
 ---
 
-Next: **10 — Skills: invoke**, where `/name args` turns into the body.
+Next: **10 Skills: invoke**, where `/name args` turns into the body.

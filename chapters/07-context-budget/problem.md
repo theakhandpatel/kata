@@ -1,4 +1,4 @@
-# 07 — Problem
+# 07 Problem
 
 > **Your task:** give the agent a token ceiling, estimate what a request costs,
 > drop the oldest history when it does not fit, mark the cut, and report the
@@ -50,19 +50,19 @@ event, so nothing reaches into your package.
 
 ## The verifier will assert that
 
-- `budget-event-reported` — at least one `budget` event, with a positive `tokens`
+- `budget-event-reported`: at least one `budget` event, with a positive `tokens`
   and the configured `budget`.
-- `estimate-counts-tools` — a request with one short prompt estimates at 50 tokens
+- `estimate-counts-tools`: a request with one short prompt estimates at 50 tokens
   or more, because three tool schemas are not free.
-- `estimate-grows-with-history` — twelve prior messages estimate higher than two.
-- `ceiling-respected` — with `-max-context 500`, every budget event reports at most
+- `estimate-grows-with-history`: twelve prior messages estimate higher than two.
+- `ceiling-respected`: with `-max-context 500`, every budget event reports at most
   500 tokens.
-- `prunes-when-over` — a 40-message session at that ceiling reports `pruned > 0`
+- `prunes-when-over`: a 40-message session at that ceiling reports `pruned > 0`
   and sends far fewer messages than it loaded.
-- `prune-marker-present` — the request carries the marker text.
-- `no-orphaned-tool-pairs` — after a cut, no `tool` message appears whose
+- `prune-marker-present`: the request carries the marker text.
+- `no-orphaned-tool-pairs`: after a cut, no `tool` message appears whose
   `toolCallId` was not announced by an earlier assistant message.
-- `keeps-system-and-newest` — the system message is first and still contains the
+- `keeps-system-and-newest`: the system message is first and still contains the
   `AGENTS.md` body, and the last message is the prompt that was just typed.
 
 ## Notes
@@ -83,19 +83,19 @@ event, so nothing reaches into your package.
 
 ## Hints
 
-<details><summary>Rung 1 — the mechanism</summary>
+<details><summary>Rung 1, the mechanism</summary>
 
 Estimate everything a request sends, fit the conversation to the ceiling before
 each request, and say what you dropped.
 </details>
 
-<details><summary>Rung 2 — the APIs</summary>
+<details><summary>Rung 2, the APIs</summary>
 
 `json.Marshal` on a tool's `Parameters` for its size. A backwards `for` over the
 message slice. A struct that implements `StreamingProvider` and delegates.
 </details>
 
-<details><summary>Rung 3 — what the code does</summary>
+<details><summary>Rung 3, what the code does</summary>
 
 `EstimateTokens` sums role, content, tool-call fields and per-message overhead,
 adds each tool's name, description and marshalled schema, divides by four.

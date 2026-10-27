@@ -1,4 +1,4 @@
-# 05 — Problem
+# 05 Problem
 
 > **Your task:** assemble a system message from a stable base instruction and the
 > project's `AGENTS.md` files, and send it before the user's message.
@@ -53,21 +53,21 @@ the recorded request. It also compares two runs for byte equality.
 
 ## The verifier will assert that
 
-- `system-message-first` — `messages[0].role` is `system`, it contains the base
+- `system-message-first`: `messages[0].role` is `system`, it contains the base
   instruction, and `messages[1]` is the user's prompt.
-- `agents-md-included` — the workspace `AGENTS.md` body appears in the system
+- `agents-md-included`: the workspace `AGENTS.md` body appears in the system
   message, and the message names its path.
-- `agents-md-from-parent` — running in `pkg/`, an `AGENTS.md` one directory up is
+- `agents-md-from-parent`: running in `pkg/`, an `AGENTS.md` one directory up is
   included.
-- `agents-md-order` — with both files present, the outer body appears before the
+- `agents-md-order`: with both files present, the outer body appears before the
   inner one.
-- `no-agents-md` — with no such file, the base instruction is still sent and no
+- `no-agents-md`: with no such file, the base instruction is still sent and no
   project section appears.
-- `empty-agents-md` — a whitespace-only file produces no project section, and the
+- `empty-agents-md`: a whitespace-only file produces no project section, and the
   base instruction is still there.
-- `system-prompt-stable` — two runs in the same workspace produce identical system
+- `system-prompt-stable`: two runs in the same workspace produce identical system
   content.
-- `user-message-preserved` — the user's prompt arrives unchanged as `messages[1]`,
+- `user-message-preserved`: the user's prompt arrives unchanged as `messages[1]`,
   quotes and all.
 
 ## Notes
@@ -85,19 +85,19 @@ the recorded request. It also compares two runs for byte equality.
 
 ## Hints
 
-<details><summary>Rung 1 — the mechanism</summary>
+<details><summary>Rung 1, the mechanism</summary>
 
 The system message is built before the loop starts, from parts. Discovery walks up
 the tree; rendering goes back down it.
 </details>
 
-<details><summary>Rung 2 — the APIs</summary>
+<details><summary>Rung 2, the APIs</summary>
 
 `os.Getwd`, `filepath.Dir` until it stops changing, `os.Stat`, `os.ReadFile`,
 `strings.TrimSpace`, `strings.Builder`.
 </details>
 
-<details><summary>Rung 3 — what the code does</summary>
+<details><summary>Rung 3, what the code does</summary>
 
 `BuildSystemPrompt` writes the trimmed base, then each non-empty contributor
 section separated by a blank line. `AgentsFile.discover` collects `AGENTS.md` from

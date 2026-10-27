@@ -1,4 +1,4 @@
-# 11 — Subagent
+# 11 Subagent
 
 **Part V · Compose** · Difficulty: hard · 90 to 120 minutes · 8 graded cases
 
@@ -8,9 +8,9 @@ never sees the detail.
 
 | | |
 |---|---|
-| **How it works** | [overview.md](overview.md) — isolation, structural recursion limits, and why the parent blocks |
-| **What to build** | [problem.md](problem.md) — the contract, the graded claims, the hints |
-| **Full implementation** | [example.md](example.md) — annotated, after an attempt |
+| **How it works** | [overview.md](overview.md), isolation, structural recursion limits, and why the parent blocks |
+| **What to build** | [problem.md](problem.md), the contract, the graded claims, the hints |
+| **Full implementation** | [example.md](example.md), annotated, after an attempt |
 | **You edit** | `agent/subagent.go`, `agent/cmd/agent/main.go` |
 | **Submit** | `kata submit 11` |
 
@@ -24,4 +24,4 @@ never sees the detail.
 
 ---
 
-Next: **12 — MCP**, where the agent gains tools it did not compile in.
+Next: **12 MCP**, where the agent gains tools it did not compile in.

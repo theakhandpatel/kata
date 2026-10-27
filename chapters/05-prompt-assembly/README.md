@@ -1,4 +1,4 @@
-# 05 — Prompt assembly
+# 05 Prompt assembly
 
 **Part III · Remember** · Difficulty: easy-medium · 45 to 60 minutes · 8 graded cases
 
@@ -8,9 +8,9 @@ possible later.
 
 | | |
 |---|---|
-| **How it works** | [overview.md](overview.md) — the stable prefix, discovery order, and why assembly beats pasting |
-| **What to build** | [problem.md](problem.md) — the contract, the graded claims, the hints |
-| **Full implementation** | [example.md](example.md) — annotated, after an attempt |
+| **How it works** | [overview.md](overview.md), the stable prefix, discovery order, and why assembly beats pasting |
+| **What to build** | [problem.md](problem.md), the contract, the graded claims, the hints |
+| **Full implementation** | [example.md](example.md), annotated, after an attempt |
 | **You edit** | `agent/prompt.go`, `agent/cmd/agent/main.go` |
 | **Submit** | `kata submit 05` |
 
@@ -25,5 +25,5 @@ printf '# Rules\n\nUse tabs.\n' > AGENTS.md
 
 ---
 
-Next: **06 — Sessions**, where a run stops being a single process and starts
+Next: **06 Sessions**, where a run stops being a single process and starts
 being something you can resume.

@@ -1,4 +1,4 @@
-# 01 — Problem
+# 01 Problem
 
 > **Your task:** make the program answer a prompt. `agent -p "hello"` should
 > print the model's reply on stdout.
@@ -72,24 +72,24 @@ Nothing calls your package directly. The internal design is yours.
 
 ## The verifier will assert that
 
-- `prints-reply` — stdout is the model's full text plus one newline, and the exit
+- `prints-reply`: stdout is the model's full text plus one newline, and the exit
   code is 0, even when the text arrives in several pieces.
-- `request-shape` — the request goes to `/v1/chat/completions`, carries
+- `request-shape`: the request goes to `/v1/chat/completions`, carries
   `Authorization: Bearer <key>`, sets the model from `-m`, sets `"stream": true`,
   and serialises messages as `{role, content}` in order.
-- `request-envelope` — `Content-Type: application/json` and
+- `request-envelope`: `Content-Type: application/json` and
   `Accept: text/event-stream` are both set.
-- `optional-zero-values` — when no token limit or temperature is set, those keys
+- `optional-zero-values`: when no token limit or temperature is set, those keys
   are absent from the body rather than sent as zero.
-- `sse-framing` — comment lines, `event:` fields, CRLF endings, and `data:` with
+- `sse-framing`: comment lines, `event:` fields, CRLF endings, and `data:` with
   no space after the colon are all tolerated.
-- `debug-usage` — with `HARNESS_DEBUG=1`, stderr reports the prompt, completion
+- `debug-usage`: with `HARNESS_DEBUG=1`, stderr reports the prompt, completion
   and total token counts, and stdout still contains only the answer.
-- `http-error` — a 429 exits 1, prints nothing on stdout, and names the status on
+- `http-error`: a 429 exits 1, prints nothing on stdout, and names the status on
   stderr.
-- `truncated-stream` — a connection that dies mid-stream exits 1 with an error,
+- `truncated-stream`: a connection that dies mid-stream exits 1 with an error,
   and the request was actually made.
-- `request-timeout` — with `-timeout 50ms` and a server that never answers, the
+- `request-timeout`: with `-timeout 50ms` and a server that never answers, the
   program exits 1 quickly, having made the request.
 
 ## Notes
@@ -107,13 +107,13 @@ whether or not you pass the context. Test with a long reply and a slow server.
 
 ## Hints
 
-<details><summary>Rung 1 — the mechanism</summary>
+<details><summary>Rung 1, the mechanism</summary>
 
 Three separate things break here, and each has its own case: what the request
 looks like, how the deltas are folded, and how the program fails.
 </details>
 
-<details><summary>Rung 2 — the APIs</summary>
+<details><summary>Rung 2, the APIs</summary>
 
 `http.NewRequestWithContext`, `json.Marshal`, `bufio.Scanner` with a raised
 `Buffer` limit, `strings.Builder`, `io.LimitReader`.
@@ -122,7 +122,7 @@ The scanner returns lines, not events. The line `data: [DONE]` ends the stream
 and is not JSON.
 </details>
 
-<details><summary>Rung 3 — what the code does</summary>
+<details><summary>Rung 3, what the code does</summary>
 
 Build the body and POST it with the caller's ctx. Check the status before reading
 the body; on non-2xx, read at most a few KiB and return

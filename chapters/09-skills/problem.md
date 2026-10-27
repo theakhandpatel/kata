@@ -1,4 +1,4 @@
-# 09 — Problem
+# 09 Problem
 
 > **Your task:** discover `skills/*/SKILL.md`, parse the small header, and advertise
 > each skill's name and description in the system message.
@@ -47,13 +47,13 @@ your parser directly.
 
 ## The verifier will assert that
 
-- `advertises-skills` — the system message names `deploy` and `review` with their
+- `advertises-skills`: the system message names `deploy` and `review` with their
   descriptions.
-- `body-not-advertised` — with the catalogue present, no uninvoked body appears
+- `body-not-advertised`: with the catalogue present, no uninvoked body appears
   anywhere in the request.
-- `malformed-skill-skipped` — a `SKILL.md` with no frontmatter is left out, and the
+- `malformed-skill-skipped`: a `SKILL.md` with no frontmatter is left out, and the
   run still succeeds with the valid skill advertised.
-- `missing-skills-dir` — with no `skills/` directory the base prompt is sent, there is
+- `missing-skills-dir`: with no `skills/` directory the base prompt is sent, there is
   no skills section, and the exit code is 0.
 
 ## Notes
@@ -68,19 +68,19 @@ your parser directly.
 
 ## Hints
 
-<details><summary>Rung 1 — the mechanism</summary>
+<details><summary>Rung 1, the mechanism</summary>
 
 A skill is a small header plus a body. The header is advertised everywhere; the body
 waits.
 </details>
 
-<details><summary>Rung 2 — the APIs</summary>
+<details><summary>Rung 2, the APIs</summary>
 
 `os.ReadDir`, `strings.Cut` for `key: value`, `strings.Index` for the closing fence,
 `os.ErrNotExist` for the missing directory.
 </details>
 
-<details><summary>Rung 3 — what the code does</summary>
+<details><summary>Rung 3, what the code does</summary>
 
 `ParseSkill` requires a leading `---`, finds the next `\n---`, reads `key: value` lines
 into a map, and takes the rest as the body; it errors when `name` or `description` is

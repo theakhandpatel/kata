@@ -1,4 +1,4 @@
-# 06 — Overview
+# 06 Overview
 
 *How sessions work, and what belongs in one. Read this before you write code.*
 
@@ -90,7 +90,7 @@ That `+1` is the chapter.
 
 A conversation with a tool call and no result is invalid: providers reject it. A
 resumed conversation is no different, which means the session must record
-**assistant messages with their tool calls**, not only the results.
+**assistant messages with their tool calls**, as well as the results.
 
 ```
 {"role":"assistant","toolCalls":[{"id":"call_1","name":"read","arguments":"..."}]}
@@ -133,7 +133,7 @@ files (`proper-lockfile` in its dependency list) and why this course defers it.
 | Locking | `proper-lockfile` | ported |
 
 The tree is what makes branching and compaction cheap. This chapter uses a line,
-which is the honest minimum and enough for eleven chapters.
+which is the honest minimum and enough for twelve chapters.
 
 ## Self-check
 

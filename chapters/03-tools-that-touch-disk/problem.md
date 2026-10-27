@@ -1,4 +1,4 @@
-# 03 — Problem
+# 03 Problem
 
 > **Your task:** add `write` and `bash` to the agent, and bound what they return
 > and how long they may take.
@@ -50,20 +50,20 @@ exists.
 
 ## The verifier will assert that
 
-- `advertises-three-tools` — the request advertises `read`, `write` and `bash`.
-- `writes-a-file` — after the run, the file exists with exactly the requested
+- `advertises-three-tools`: the request advertises `read`, `write` and `bash`.
+- `writes-a-file`: after the run, the file exists with exactly the requested
   contents.
-- `write-creates-parents` — `a/b/c/deep.txt` is created even though none of those
+- `write-creates-parents`: `a/b/c/deep.txt` is created even though none of those
   directories existed.
-- `write-refuses-escape` — `../escaped.txt` is not created, and the tool result
+- `write-refuses-escape`: `../escaped.txt` is not created, and the tool result
   names the escape.
-- `bash-runs-a-command` — `ls && cat here.txt` returns the file contents, proving
+- `bash-runs-a-command`: `ls && cat here.txt` returns the file contents, proving
   the working directory is the workspace.
-- `bash-reports-exit-code` — `echo before; exit 3` yields a result containing both
+- `bash-reports-exit-code`: `echo before; exit 3` yields a result containing both
   the output and the code, and the program exits 0.
-- `bash-truncates-output` — 5000 lines of output yields at most 25 KB of tool
+- `bash-truncates-output`: 5000 lines of output yields at most 25 KB of tool
   content, with a marker containing `truncated`.
-- `bash-timeout-is-a-result` — with `-tool-timeout 300ms`, `sleep 5` produces a
+- `bash-timeout-is-a-result`: with `-tool-timeout 300ms`, `sleep 5` produces a
   result containing `timed out`, the program exits 0, and the whole run finishes
   in under three seconds.
 
@@ -83,19 +83,19 @@ exists.
 
 ## Hints
 
-<details><summary>Rung 1 — the mechanism</summary>
+<details><summary>Rung 1, the mechanism</summary>
 
 Three edges: whose input, how much output, how long. Each tool answers all three
 before it does any work.
 </details>
 
-<details><summary>Rung 2 — the APIs</summary>
+<details><summary>Rung 2, the APIs</summary>
 
 `os.MkdirAll`, `os.WriteFile`, `exec.CommandContext`, `cmd.CombinedOutput`,
 `errors.As(err, &exitErr)`, `context.WithTimeout`.
 </details>
 
-<details><summary>Rung 3 — what the code does</summary>
+<details><summary>Rung 3, what the code does</summary>
 
 Share one `resolveInside(root, p)` between `read` and `write`. `write` calls
 `MkdirAll(filepath.Dir(full), 0o755)` then `WriteFile(full, content, 0o644)` and

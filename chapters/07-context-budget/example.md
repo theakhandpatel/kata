@@ -1,4 +1,4 @@
-# 07 — Example
+# 07 Example
 
 *Full, annotated implementation. Read it after `kata submit 07` passes.*
 
@@ -16,7 +16,7 @@ events.go   three new fields and the budget event type
 main.go     -max-context, and one wrapper around the provider
 ```
 
-## Step 1 — estimate everything that is sent
+## Step 1: estimate everything that is sent
 
 ```go
 func EstimateTokens(msgs []Message, tools []ToolDef) int {
@@ -46,7 +46,7 @@ Three decisions:
 - **One division at the end.** Dividing per message rounds each cost down and
   under-counts long conversations badly.
 
-## Step 2 — fit from the newest end
+## Step 2: fit from the newest end
 
 ```go
 kept := make([]Message, 0, len(rest))
@@ -68,7 +68,7 @@ Recomputing the estimate per candidate is O(n²) in the worst case. For a
 conversation of a few hundred messages that is microseconds, and it is much easier
 to get right than incremental accounting. Say so in a comment if you rewrite it.
 
-## Step 3 — repair the boundary
+## Step 3: repair the boundary
 
 ```go
 for len(kept) > 0 && kept[0].Role == RoleTool {
@@ -84,7 +84,7 @@ invalid: providers reject it with a message about orphaned tool calls.
 The cheapest correct fix is to drop the orphan. The alternative, pulling its call
 back in, can exceed the budget again.
 
-## Step 4 — one marker, not one per drop
+## Step 4: one marker, not one per drop
 
 ```go
 if dropped > 0 {
@@ -102,7 +102,7 @@ about who said what.
 The number is included so a person reading `-events` output can see the difference
 between "one message was enormous" and "thirty messages were trimmed".
 
-## Step 5 — the decorator
+## Step 5: the decorator
 
 ```go
 func (b *budgetedProvider) Stream(ctx context.Context, req Request, onText func(string)) (Message, Usage, error) {
@@ -130,7 +130,7 @@ a request that mutated it.
 `StreamingProvider`. `Chat` delegates to `Stream`, which means the budget applies
 to whichever entry point the caller uses.
 
-## Step 6 — wiring order
+## Step 6: wiring order
 
 ```go
 tools := agent.NewRegistry(...)
@@ -149,28 +149,28 @@ the only structural change in `main`.
 
 ## The diffs
 
-**1. Counting only messages** — `estimate-counts-tools`
+**1. Counting only messages** (`estimate-counts-tools`)
 
 ```diff
 - for _, m := range msgs { bytes += len(m.Content) }
 + for _, t := range tools { bytes += len(t.Name) + len(t.Description) + len(schema) }
 ```
 
-**2. Threshold instead of ceiling** — `ceiling-respected`
+**2. Threshold instead of ceiling** (`ceiling-respected`)
 
 ```diff
 - if EstimateTokens(history) > budget { history = Fit(history) }   // once, at start
 + // inside the provider decorator, on every request
 ```
 
-**3. Dividing per message** — `estimate-grows-with-history`
+**3. Dividing per message** (`estimate-grows-with-history`)
 
 ```diff
 - total += (len(m.Content) + 4) / 4
 + bytes += len(m.Content) + 4; ... ; return bytes / 4
 ```
 
-**4. Ignoring the orphan** — `no-orphaned-tool-pairs`
+**4. Ignoring the orphan** (`no-orphaned-tool-pairs`)
 
 ```diff
 - return append(system, kept...)

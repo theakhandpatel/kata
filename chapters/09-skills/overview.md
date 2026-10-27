@@ -1,4 +1,4 @@
-# 09 — Overview
+# 09 Overview
 
 *How a skill catalogue works. Read this before you write code.*
 

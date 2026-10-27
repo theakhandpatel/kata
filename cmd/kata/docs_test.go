@@ -221,3 +221,63 @@ func TestRootDocsAgreeOnTheArc(t *testing.T) {
 		}
 	}
 }
+
+// Prose checks. These are the tells the writing style forbids, limited to patterns
+// that are always wrong here rather than matters of taste.
+func TestProseHasNoAITells(t *testing.T) {
+	root := repoRootForTests(t)
+	banned := []struct {
+		pattern string
+		why     string
+	}{
+		{"—", "no em dashes; use a comma, a colon, or a new sentence"},
+		{"crucial", "AI vocabulary"},
+		{"delve", "AI vocabulary"},
+		{"leverage", "AI vocabulary"},
+		{"seamless", "AI vocabulary"},
+		{"robust", "AI vocabulary"},
+		{"showcase", "AI vocabulary"},
+		{"underscore", "AI vocabulary"},
+		{"comprehensive", "AI vocabulary"},
+		{"is not just ", "state the point instead of the construction"},
+		{"not only ", "state the point instead of the construction"},
+		{"It's worth noting", "filler"},
+		{"In order to", "use 'to'"},
+	}
+
+	files := []string{"README.md", "docs/architecture.md", "docs/designs.md", "docs/chapter-format.md"}
+	entries, err := os.ReadDir(filepath.Join(root, "chapters"))
+	if err != nil {
+		t.Fatalf("read chapters: %v", err)
+	}
+	for _, e := range entries {
+		if !e.IsDir() || len(e.Name()) < 3 {
+			continue
+		}
+		for _, doc := range []string{"README.md", "overview.md", "problem.md", "example.md"} {
+			files = append(files, filepath.Join("chapters", e.Name(), doc))
+		}
+	}
+
+	for _, rel := range files {
+		body, err := os.ReadFile(filepath.Join(root, rel))
+		if err != nil {
+			continue
+		}
+		for _, b := range banned {
+			if strings.Contains(string(body), b.pattern) {
+				line := lineContaining(string(body), b.pattern)
+				t.Errorf("%s: %q appears (%s)\n  line: %s", rel, b.pattern, b.why, line)
+			}
+		}
+	}
+}
+
+func lineContaining(body, needle string) string {
+	for _, line := range strings.Split(body, "\n") {
+		if strings.Contains(line, needle) {
+			return strings.TrimSpace(line)
+		}
+	}
+	return ""
+}

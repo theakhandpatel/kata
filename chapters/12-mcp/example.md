@@ -1,4 +1,4 @@
-# 11 — Example
+# 11 Example
 
 *Full, annotated implementation. Read it after `kata submit 11` passes.*
 
@@ -15,7 +15,7 @@ mcp.go      StartMCP, call, Initialize, ListTools, CallTool, mcpTool
 main.go     spawn, handshake, merge tools, warn and continue on failure
 ```
 
-## Step 1 — a process, and two pipes
+## Step 1: a process, and two pipes
 
 ```go
 cmd := exec.CommandContext(ctx, "sh", "-c", command)
@@ -28,7 +28,7 @@ cmd.Start()
 commands (`npx -y some-server`). The server's stderr is not attached: stdout is the
 protocol, and mixing diagnostics into it breaks the framing on the first warning.
 
-## Step 2 — one request, one matching response
+## Step 2: one request, one matching response
 
 ```go
 func (c *MCPClient) call(ctx context.Context, method string, params any) (json.RawMessage, error) {
@@ -55,14 +55,14 @@ func (c *MCPClient) call(ctx context.Context, method string, params any) (json.R
 }
 ```
 
-The `continue` on a mismatched id is the line that makes this robust. Servers send
+The `continue` on a mismatched id is what keeps this working. Servers send
 notifications for progress and logging, and a client that assumes "the next line is
 my answer" deadlocks the first time one arrives.
 
 The read runs in a goroutine so `ctx` can interrupt it. A timed-out request leaves
 the connection unusable; the chapter says so instead of pretending otherwise.
 
-## Step 3 — the handshake, including the silent part
+## Step 3: the handshake, including the silent part
 
 ```go
 result, err := c.call(ctx, "initialize", map[string]any{
@@ -82,7 +82,7 @@ looks like a hang.
 The server name is taken from the response rather than the command line, because the
 name in the command is often `npx` or a path.
 
-## Step 4 — namespacing is derived, not hardcoded
+## Step 4: namespacing is derived, not hardcoded
 
 ```go
 func (t *mcpTool) Name() string { return t.server + "." + t.info.Name }
@@ -95,7 +95,7 @@ that both expose `read` produce `alpha.read` and `beta.read`.
 Without the prefix, `read` from the server replaces the built-in `read`, and the
 model's "I read the file" refers to a file on another machine.
 
-## Step 5 — content is a list
+## Step 5: content is a list
 
 ```go
 var parts []string
@@ -118,7 +118,7 @@ Two decisions:
 `IsError` result. That distinction matters: a tool that ran and failed is not the
 same as a transport that broke, but both end up as readable text for the model.
 
-## Step 6 — startup failure is a warning
+## Step 6: startup failure is a warning
 
 ```go
 client, err := agent.StartMCP(ctx, *mcpCommand)
@@ -145,7 +145,7 @@ tools. That keeps the child's schema list small and keeps the dependency order s
 
 ## The diffs
 
-**1. Skipping the initialized notification** — `mcp-initialize-handshake`
+**1. Skipping the initialized notification** (`mcp-initialize-handshake`)
 
 ```diff
   c.call(ctx, "initialize", ...)
@@ -153,21 +153,21 @@ tools. That keeps the child's schema list small and keeps the dependency order s
   c.call(ctx, "tools/list", nil)
 ```
 
-**2. Using the server's tool name unchanged** — `mcp-name-collision`
+**2. Using the server's tool name unchanged** (`mcp-name-collision`)
 
 ```diff
 - func (t *mcpTool) Name() string { return t.info.Name }
 + func (t *mcpTool) Name() string { return t.server + "." + t.info.Name }
 ```
 
-**3. Taking only the first content block** — `mcp-content-blocks-joined`
+**3. Taking only the first content block** (`mcp-content-blocks-joined`)
 
 ```diff
 - return call.Content[0].Text, nil
 + // join every text block
 ```
 
-**4. Exiting when the server is missing** — `mcp-unavailable-is-survivable`
+**4. Exiting when the server is missing** (`mcp-unavailable-is-survivable`)
 
 ```diff
 - if err != nil { return 1, err }

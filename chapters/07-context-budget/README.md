@@ -1,4 +1,4 @@
-# 07 — Context budget
+# 07 Context budget
 
 **Part III · Remember** · Difficulty: hard · 90 to 120 minutes · 8 graded cases
 
@@ -7,9 +7,9 @@ drop, and be able to say why.
 
 | | |
 |---|---|
-| **How it works** | [overview.md](overview.md) — two budgets, ceilings versus thresholds, and why pruning is a decorator |
-| **What to build** | [problem.md](problem.md) — the contract, the graded claims, the hints |
-| **Full implementation** | [example.md](example.md) — annotated, after an attempt |
+| **How it works** | [overview.md](overview.md), two budgets, ceilings versus thresholds, and why pruning is a decorator |
+| **What to build** | [problem.md](problem.md), the contract, the graded claims, the hints |
+| **Full implementation** | [example.md](example.md), annotated, after an attempt |
 | **You edit** | `agent/budget.go`, `agent/events.go`, `agent/cmd/agent/main.go` |
 | **Submit** | `kata submit 07` |
 
@@ -23,4 +23,4 @@ drop, and be able to say why.
 
 ---
 
-Next: **08 — Steer and abort**, where a run stops being something you wait for.
+Next: **08 Steer and abort**, where a run stops being something you wait for.

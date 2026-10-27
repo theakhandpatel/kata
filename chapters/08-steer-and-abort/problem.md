@@ -1,4 +1,4 @@
-# 08 — Problem
+# 08 Problem
 
 > **Your task:** keep the partial answer when a run is interrupted, and let lines
 > typed during a run join it at the next turn boundary.
@@ -46,19 +46,19 @@ the session file.
 
 ## The verifier will assert that
 
-- `steer-continues-after-done` — a run whose model answered, then received a
+- `steer-continues-after-done`: a run whose model answered, then received a
   steered line, makes two requests and prints the second answer.
-- `steer-enters-after-turn` — request 1 contains no steering text; request 2 is
+- `steer-enters-after-turn`: request 1 contains no steering text; request 2 is
   `system, user, assistant, user(steer)`, in that order.
-- `steer-not-duplicated` — one steered line appears exactly once across all
+- `steer-not-duplicated`: one steered line appears exactly once across all
   requests.
-- `no-steer-single-request` — with empty stdin the run costs one request.
-- `steer-event-reported` — exactly one `steer` event, carrying the text.
-- `abort-keeps-partial` — exit code 130, and stdout is a non-empty prefix of the
+- `no-steer-single-request`: with empty stdin the run costs one request.
+- `steer-event-reported`: exactly one `steer` event, carrying the text.
+- `abort-keeps-partial`: exit code 130, and stdout is a non-empty prefix of the
   streamed reply.
-- `abort-emits-event` — the event stream ends with `agent_end` whose reason is
+- `abort-emits-event`: the event stream ends with `agent_end` whose reason is
   `aborted`.
-- `abort-persists-session` — the session file contains the user message and an
+- `abort-persists-session`: the session file contains the user message and an
   assistant record with the beginning of the interrupted reply.
 
 ## Notes
@@ -78,20 +78,20 @@ the session file.
 
 ## Hints
 
-<details><summary>Rung 1 — the mechanism</summary>
+<details><summary>Rung 1, the mechanism</summary>
 
 Interruption is a normal outcome with its own exit code and its own event reason.
 Steering is a queued message that enters at the end of a turn, never inside the
 prompt being answered.
 </details>
 
-<details><summary>Rung 2 — the APIs</summary>
+<details><summary>Rung 2, the APIs</summary>
 
 `context.Canceled`, `errors.Is`, `signal.NotifyContext`, `bufio.Scanner` on a
 goroutine, `sync.Mutex`, `os.Exit` avoided by returning an exit code from `run`.
 </details>
 
-<details><summary>Rung 3 — what the code does</summary>
+<details><summary>Rung 3, what the code does</summary>
 
 In the parser, return `Message{Role: RoleAssistant, Content: content.String()}`
 beside the stream error. In the loop, on error append that partial message when it

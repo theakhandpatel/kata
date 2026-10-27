@@ -1,4 +1,4 @@
-# 07 — Overview
+# 07 Overview
 
 *How a context budget works, and what pruning must not break. Read this before
 you write code.*

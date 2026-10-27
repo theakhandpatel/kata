@@ -1,4 +1,4 @@
-# 02 — Example
+# 02 Example
 
 *Full, annotated implementation. Read it after `kata submit 02` passes, then
 compare.*
@@ -23,7 +23,7 @@ The registry is the only place that knows the set of tools. The provider knows
 the wire format. `main` knows the sequence. Keeping those three apart is what
 makes chapter 03 a two-file change.
 
-## Step 1 — the registry is a lookup, not a switch
+## Step 1: the registry is a lookup, not a switch
 
 ```go
 type Registry struct {
@@ -49,7 +49,7 @@ func (r *Registry) Defs() []ToolDef {
 a stable prefix is what lets a provider cache it. A map iteration order would
 change the bytes on every call.
 
-## Step 2 — a call can fail in four ways, and all four are results
+## Step 2: a call can fail in four ways, and all four are results
 
 ```go
 func (r *Registry) Run(ctx context.Context, call ToolCall) ToolResult {
@@ -76,7 +76,7 @@ which is the one thing it can fix.
 Note what is **not** here: no logging, no retry, no permission prompt. Those are
 policy, and chapter 08 is where policy gets a seam.
 
-## Step 3 — the workspace check is on the resolved path
+## Step 3: the workspace check is on the resolved path
 
 ```go
 func (t *ReadTool) resolve(p string) (string, error) {
@@ -96,7 +96,7 @@ Checking the string for `..` is not enough: `a/../../etc/passwd` contains `..` b
 so do legitimate names, and a symlink defeats a string check entirely. Resolve
 first, then ask whether the result is still inside the root.
 
-## Step 4 — truncation must be visible
+## Step 4: truncation must be visible
 
 ```go
 buf := make([]byte, limit+1)
@@ -117,7 +117,7 @@ Reading `limit+1` bytes is how you learn there was more. Two consequences:
 - the result has a hard ceiling, so one large file cannot consume the context
   budget that chapter 07 will enforce.
 
-## Step 5 — the one hop, stated plainly
+## Step 5: the one hop, stated plainly
 
 ```go
 msg, usage, err := provider.Chat(ctx, agent.Request{Messages: history, Tools: tools.Defs()})
@@ -149,7 +149,7 @@ request is rejected with a message about orphaned tool calls.
 The hop is visible on purpose. Chapter 04 turns the `if` into a `for` and adds a
 step cap.
 
-## Step 6 — folding by index
+## Step 6: folding by index
 
 ```go
 acc := calls[tc.Index]
@@ -175,21 +175,21 @@ the results must match.
 
 ## The diffs
 
-**1. Fold by id instead of index** — `folds-arguments`
+**1. Fold by id instead of index** (`folds-arguments`)
 
 ```diff
 - acc := calls[tc.ID]           // "" on continuation fragments
 + acc := calls[tc.Index]
 ```
 
-**2. Return the error instead of a result** — `missing-file`
+**2. Return the error instead of a result** (`missing-file`)
 
 ```diff
 - if err != nil { return "", err }        // becomes a fatal error upstream
 + return ToolResult{Content: "no such file: " + args.Path, IsError: true}
 ```
 
-**3. String check for path escape** — `refuses-escape`
+**3. String check for path escape** (`refuses-escape`)
 
 ```diff
 - if strings.Contains(p, "..") { reject }
@@ -198,7 +198,7 @@ the results must match.
 + if rel == ".." || strings.HasPrefix(rel, "../") { reject }
 ```
 
-**4. Unbounded read** — `truncates-large-file`
+**4. Unbounded read** (`truncates-large-file`)
 
 ```diff
 - data, _ := os.ReadFile(full)

@@ -1,4 +1,4 @@
-# 10 — Example
+# 10 Example
 
 *Full, annotated implementation. Read it after `kata submit 10` passes.*
 
@@ -14,7 +14,7 @@ subagent.go  TaskTool: fresh history, child loop, one answer
 main.go      build child registry first, then the task tool, then the parent registry
 ```
 
-## Step 1 — a tool whose body is an agent
+## Step 1: a tool whose body is an agent
 
 ```go
 type TaskTool struct {
@@ -31,7 +31,7 @@ and the parent already sees one message per call.
 
 A subagent is not a new mechanism. It is a tool that happens to run a loop.
 
-## Step 2 — the child's history is two messages
+## Step 2: the child's history is two messages
 
 ```go
 history := []Message{
@@ -47,7 +47,7 @@ It also explains the tool's description, which says the child cannot see the
 conversation. Without that sentence, models write task prompts like "fix the bug you
 were just looking at", which is unanswerable in a fresh context.
 
-## Step 3 — recursion is impossible, not discouraged
+## Step 3: recursion is impossible, not discouraged
 
 ```go
 baseTools := []agent.Tool{&agent.ReadTool{...}, &agent.WriteTool{...}, &agent.BashTool{...}}
@@ -72,7 +72,7 @@ program `baseTools` is a fresh literal, so nothing else observes the change. In
 general, `append` to a slice you did not just create is a trap; build the second
 registry from an explicit union or a fresh slice if that ever stops being true.
 
-## Step 4 — one answer, or one error
+## Step 4: one answer, or one error
 
 ```go
 res, err := RunLoop(ctx, t.Provider, t.Tools, history, LoopOptions{MaxSteps: steps})
@@ -104,7 +104,7 @@ cap, the parent's model reads "step limit reached ... partial answer: I found th
 of the five TODOs" and can decide what to do next. Without it, the parent knows only
 that something failed.
 
-## Step 5 — the step cap is the child's, not the parent's
+## Step 5: the step cap is the child's, not the parent's
 
 ```go
 steps := t.MaxSteps
@@ -119,7 +119,7 @@ should not be able to hand that budget to five children; the cap is per run.
 The parent is blocked while the child works, so an optimistic child cap is also a
 latency bug.
 
-## Step 6 — the build order in main
+## Step 6: the build order in main
 
 ```
 1. root
@@ -137,28 +137,28 @@ which is why the tools could not be built first as in earlier chapters.
 
 ## The diffs
 
-**1. Passing the parent's history to the child** — `child-gets-fresh-context`
+**1. Passing the parent's history to the child** (`child-gets-fresh-context`)
 
 ```diff
 - history := append(parentHistory, Message{Role: RoleUser, Content: args.Prompt})
 + history := []Message{{Role: RoleSystem, Content: t.System}, {Role: RoleUser, Content: args.Prompt}}
 ```
 
-**2. Adding the task tool to the child registry** — `child-cannot-recurse`
+**2. Adding the task tool to the child registry** (`child-cannot-recurse`)
 
 ```diff
 - tools := NewRegistry(append(base, task)...); task.Tools = tools
 + task.Tools = NewRegistry(base...)
 ```
 
-**3. Swallowing a child failure** — `child-failure-is-a-result`
+**3. Swallowing a child failure** (`child-failure-is-a-result`)
 
 ```diff
 - if err != nil { return "done", nil }
 + if err != nil { return "", fmt.Errorf("subagent failed: %w", err) }
 ```
 
-**4. Returning both a result and an error** — `exactly-one-result`
+**4. Returning both a result and an error** (`exactly-one-result`)
 
 ```diff
 - return partial, err

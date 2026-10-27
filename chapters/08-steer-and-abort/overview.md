@@ -1,4 +1,4 @@
-# 08 — Overview
+# 08 Overview
 
 *How interruption and steering work. Read this before you write code.*
 

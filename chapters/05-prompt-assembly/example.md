@@ -1,4 +1,4 @@
-# 05 — Example
+# 05 Example
 
 *Full, annotated implementation. Read it after `kata submit 05` passes.*
 
@@ -19,7 +19,7 @@ provider    untouched
 
 Two files changed. That is the design working.
 
-## Step 1 — the builder is a fold
+## Step 1: the builder is a fold
 
 ```go
 func BuildSystemPrompt(ctx context.Context, base string, contributors ...Contributor) (string, error) {
@@ -58,7 +58,7 @@ A contributor returns a *section*, not a line. It decides its own heading. That
 keeps the builder ignorant of what kinds of things contribute, which is what lets
 chapter 09 reuse it unchanged.
 
-## Step 2 — discovery walks up, rendering runs down
+## Step 2: discovery walks up, rendering runs down
 
 ```go
 func (a *AgentsFile) discover() ([]string, error) {
@@ -90,7 +90,7 @@ the direction a model reads.
 bound is a second guard: a stray `/AGENTS.md` on a container image should not
 silently become project instructions.
 
-## Step 3 — empty is absent, and the heading is written once
+## Step 3: empty is absent, and the heading is written once
 
 ```go
 for _, path := range files {
@@ -124,7 +124,7 @@ Three failure modes collapsed into one loop:
 A file that disappears between discovery and reading is skipped on purpose. The
 instruction is nice to have; the run is not.
 
-## Step 4 — the loop does not change
+## Step 4: the loop does not change
 
 ```go
 system, err := agent.BuildSystemPrompt(ctx, agent.BasePrompt,
@@ -147,28 +147,28 @@ sends a conversation.
 
 ## The diffs
 
-**1. Pasting instead of assembling** — `system-message-first`
+**1. Pasting instead of assembling** (`system-message-first`)
 
 ```diff
 - history := []Message{{Role: RoleUser, Content: prompt}}
 + history := []Message{{Role: RoleSystem, Content: system}, {Role: RoleUser, Content: prompt}}
 ```
 
-**2. Rendering in discovery order** — `agents-md-order`
+**2. Rendering in discovery order** (`agents-md-order`)
 
 ```diff
 - return found                     // nearest first
 + reverse(found); return found     // outermost first
 ```
 
-**3. A heading per file** — `empty-agents-md`
+**3. A heading per file** (`empty-agents-md`)
 
 ```diff
 - b.WriteString("# Project instructions\n")    // outside the loop
 + if included == 0 { b.WriteString("# Project instructions\n") }
 ```
 
-**4. Unstable prefix** — `system-prompt-stable`
+**4. Unstable prefix** (`system-prompt-stable`)
 
 ```diff
 - fmt.Fprintf(&b, "# Context\nworking in %s at %s\n", dir, time.Now())

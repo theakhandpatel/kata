@@ -1,4 +1,4 @@
-# 10 — Overview
+# 10 Overview
 
 *How invocation works. Read this before you write code.*
 

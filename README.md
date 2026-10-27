@@ -4,10 +4,18 @@ Build a coding-agent harness in Go, with a grader that tells you what is broken.
 
 Read it online at **[kata.akhand.cc](https://kata.akhand.cc)**.
 
-Kata is a course of twelve chapters and one local tool. You write the harness:
-the provider client, the tools, the loop, sessions, the context budget,
-steering, skills, subagents, and an MCP client. The tool runs your code against a
-scripted model and reports which claim failed and why.
+You use a coding agent every day. You type what you want, it reads files, runs
+commands, and comes back with an answer. When it works it looks like magic, and when
+it does not you are left guessing whether the model was confused or the program
+around it was.
+
+This is a course about the program around it.
+
+Over twelve chapters you write one in Go, from an empty stub to something that can
+read a file, run a test, remember yesterday's conversation, and hand a whole job to a
+second copy of itself. You start by making a single HTTP request to a model. You end
+with 2,000 lines you understand completely, and you can point at the line that decides
+whether your agent keeps going or stops.
 
 ```sh
 git clone <this repo> && cd kata
@@ -19,6 +27,30 @@ go build -o kata ./cmd/kata
 ```
 
 No account, no API key, no Docker, no network after the clone.
+
+## Why you get graded
+
+Here is the problem with learning this from a tutorial. A model is random, slow, and
+costs money per call, so "run it and see" teaches you nothing. It worked yesterday. It
+failed today. You cannot tell whether you broke something or the sample answer moved.
+
+So the course ships a second program that plays the model. It is a real HTTP server
+speaking real Server-Sent Events to a real socket. Only the words in the reply are
+fixed. That means every check runs in a second, offline, and fails with a sentence
+about the thing you got wrong:
+
+```
+  FAIL 04 surfaces a non-2xx response as *agent.HTTPError
+        why: A 429 is not a parse failure. Wrapping it in a typed error is
+             what lets the loop later retry with backoff.
+        field: error type
+        expected: "*agent.HTTPError"
+        actual:   provider: HTTP 429: {"error":"slow down"}
+        hint: Check resp.StatusCode before you touch the body.
+```
+
+That is the whole idea, and it is the thing this course does that a book cannot: it
+tells you whether you built it.
 
 ## Why a grader
 
@@ -44,22 +76,26 @@ rather than showing a diff of prose.
 
 ## The arc
 
-| # | Chapter | You prove |
-|---|---|---|
-| 01 | Talk to the model | request shape, SSE reassembly, framing, errors, cancellation |
-| 02 | Tool calling | tool-call fragments folded by index, ids omitted on continuations |
-| 03 | Tools that touch disk | `read`, `write`, `bash` honour the schema, errors, truncation |
-| 04 | The agent loop | event order, one result per call, clean termination |
-| 05 | Prompt assembly | `AGENTS.md` discovery and attribution |
-| 06 | Sessions | JSONL append, replay, resume, idempotence |
-| 07 | Context budget | a hard ceiling, no orphaned pairs, marked pruning, recall |
-| 08 | Steer and abort | abort mid-stream, a queued message entering at the seam |
-| 09 | Skills | frontmatter, lazy body load, arguments, stacking |
-| 10 | Subagent | fresh context, scoped tools, exactly one result |
-| 11 | MCP (advanced) | stdio JSON-RPC, initialize, `tools/list`, `tools/call` |
+Twelve chapters. Each one ends with something you can run and a sentence you can say
+about it.
 
-Chapter 11 is optional. Chapters 01 to 04 give you a working agent you can point at
-Ollama or any OpenAI-compatible endpoint.
+| # | Chapter | By the end |
+|---|---|---|
+| 01 | Talk to the model | `agent -p hello` prints a reply, and you know why it needed a stream parser |
+| 02 | Tool calling | it reads a file you named, after asking for the tool by name |
+| 03 | Tools that touch disk | it writes what you asked for, and a runaway command cannot hang it |
+| 04 | The agent loop | it finishes a task that needs three tool calls, and stops |
+| 05 | Prompt assembly | it follows the instructions in your repo's `AGENTS.md` |
+| 06 | Sessions | it remembers yesterday, without repeating itself |
+| 07 | Context budget | a long session still fits the window, and says what it dropped |
+| 08 | Steer and abort | Ctrl-C keeps the half answer you already read |
+| 09 | Skills: advertise | the model can see the skills in `skills/` by name |
+| 10 | Skills: invoke | `/deploy staging` expands into the skill you wrote |
+| 11 | Subagent | it hands a whole job to a fresh context and gets one answer back |
+| 12 | MCP (advanced) | it calls a tool that lives in another process |
+
+Chapter 12 is optional. Chapters 01 to 04 already give you an agent you can point at
+Ollama or any OpenAI-compatible endpoint and use.
 
 When the arc is done, [chapters/where-next.md](chapters/where-next.md) lists what to
 build on top: recovery of pruned context, a schema budget, parallel tool calls, a
@@ -67,14 +103,13 @@ second wire format, and the bigger structural changes after those.
 
 ## What each chapter contains
 
-| File | Read when | Contains |
-|---|---|---|
-| `overview.md` | before you start | how the mechanism works, with diagrams |
-| `problem.md` | at the keyboard | the task, the graded claims, the hint ladder |
-| `example.md` | after an attempt | a full annotated implementation |
+Three pages, and you read them at different times. `overview.md` explains how the
+mechanism works, before you start. `problem.md` is what you keep beside you at the
+keyboard. `example.md` is a full annotated implementation, and you open it after a real
+attempt, not before.
 
-`problem.md` states every claim the verifier makes, by case id. If a claim and a
-case ever disagree, the case is correct and the page is a bug.
+`problem.md` lists every claim the verifier makes, by case id. If a claim and a case
+ever disagree, the case is right and the page is a bug.
 
 ## Commands
 

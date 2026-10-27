@@ -1,4 +1,4 @@
-# 12 — MCP
+# 12 MCP
 
 **Part V · Compose** · Difficulty: hard, advanced · 90 to 120 minutes · 8 graded cases
 
@@ -7,9 +7,9 @@ JSON-RPC over stdio, and its tools appear in the request beside the built-in one
 
 | | |
 |---|---|
-| **How it works** | [overview.md](overview.md) — the framing, the handshake, and why names are namespaced |
-| **What to build** | [problem.md](problem.md) — the contract, the graded claims, the hints |
-| **Full implementation** | [example.md](example.md) — annotated, after an attempt |
+| **How it works** | [overview.md](overview.md), the framing, the handshake, and why names are namespaced |
+| **What to build** | [problem.md](problem.md), the contract, the graded claims, the hints |
+| **Full implementation** | [example.md](example.md), annotated, after an attempt |
 | **You edit** | `agent/mcp.go`, `agent/cmd/agent/main.go` |
 | **Submit** | `kata submit 12` |
 

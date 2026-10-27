@@ -1,4 +1,4 @@
-# 11 — Problem
+# 11 Problem
 
 > **Your task:** spawn an MCP server, shake hands with it, and offer its tools to the
 > model under namespaced names.
@@ -47,20 +47,20 @@ pointing at that server, then inspects two traces:
 
 ## The verifier will assert that
 
-- `mcp-tools-advertised` — the request advertises `read`, `write`, `bash`, `task`,
+- `mcp-tools-advertised`: the request advertises `read`, `write`, `bash`, `task`,
   `demo.echo` and `demo.read`.
-- `mcp-initialize-handshake` — the server received `initialize`,
+- `mcp-initialize-handshake`: the server received `initialize`,
   `notifications/initialized`, `tools/list`, in that order.
-- `mcp-tool-call` — a call to `demo.echo` reaches `tools/call` on the server and its
+- `mcp-tool-call`: a call to `demo.echo` reaches `tools/call` on the server and its
   text comes back as the tool result.
-- `mcp-content-blocks-joined` — both text blocks appear in the result.
-- `mcp-name-collision` — `demo.read` returns the server's content while `read`
+- `mcp-content-blocks-joined`: both text blocks appear in the result.
+- `mcp-name-collision`: `demo.read` returns the server's content while `read`
   remains the built-in.
-- `mcp-error-is-a-result` — a JSON-RPC error becomes an error result, and the run
+- `mcp-error-is-a-result`: a JSON-RPC error becomes an error result, and the run
   exits 0.
-- `mcp-unavailable-is-survivable` — a server that cannot start produces a warning,
+- `mcp-unavailable-is-survivable`: a server that cannot start produces a warning,
   no MCP tools, and still answers.
-- `mcp-no-call-when-unused` — a plain run performs no `tools/call`.
+- `mcp-no-call-when-unused`: a plain run performs no `tools/call`.
 
 ## Notes
 
@@ -77,19 +77,19 @@ pointing at that server, then inspects two traces:
 
 ## Hints
 
-<details><summary>Rung 1 — the mechanism</summary>
+<details><summary>Rung 1, the mechanism</summary>
 
 A subprocess, one JSON object per line, ids to match answers. Spawn it, handshake,
 ask for its tools, wrap each one.
 </details>
 
-<details><summary>Rung 2 — the APIs</summary>
+<details><summary>Rung 2, the APIs</summary>
 
 `exec.CommandContext` with `StdinPipe` and `StdoutPipe`, `bufio.Reader.ReadBytes('\n')`,
 `encoding/json` on each line, `cmd.Process.Kill` on close.
 </details>
 
-<details><summary>Rung 3 — what the code does</summary>
+<details><summary>Rung 3, what the code does</summary>
 
 `StartMCP` runs `sh -c <command>`, keeps stdin and stdout. `call` writes a request with
 an id and reads lines until one has that id, skipping notifications. `Initialize` sends

@@ -184,7 +184,7 @@ Where to read the real thing, by concern:
 | the loop, event order, tool batching | PiG `agent/agent_loop.go` | crush, whose loop lives in `charm.land/fantasy` |
 | permission policy as a first-class service | crush `internal/permission/` | pi or PiG, which expose hooks only |
 | MCP over stdio, hand-rolled | PiG/pi MCP clients | crush, which uses the official Go SDK |
-| provider adapters | pi `packages/ai/src/api/` | — |
+| provider adapters | pi `packages/ai/src/api/` | none |
 
 ## Grading policy
 

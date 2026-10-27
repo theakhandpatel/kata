@@ -1,4 +1,4 @@
-# 09 — Example
+# 09 Example
 
 *Full, annotated implementation. Read it after `kata submit 09` passes.*
 
@@ -7,7 +7,7 @@ The compilable file is `reference/ch09/agent/skill.go`, plus three lines of wiri
 
 ---
 
-## Step 1 — parse without a YAML dependency
+## Step 1: parse without a YAML dependency
 
 ```go
 if !strings.HasPrefix(text, "---") {
@@ -35,7 +35,7 @@ does not.
 Quotes are trimmed rather than required, because both `name: deploy` and
 `name: "deploy"` appear in the wild.
 
-## Step 2 — required fields, and skipping is not failing
+## Step 2: required fields, and skipping is not failing
 
 ```go
 name := meta["name"]
@@ -55,7 +55,7 @@ if err != nil {
 A skill with no description cannot be advertised, so there is nothing useful to do
 with it. Skipping keeps the agent usable while the person fixes the file.
 
-## Step 3 — a missing directory is empty, not broken
+## Step 3: a missing directory is empty, not broken
 
 ```go
 entries, err := os.ReadDir(base)
@@ -70,7 +70,7 @@ if err != nil {
 Most projects have no `skills/`. Treating that as an error makes the agent refuse to
 work in an empty folder, which is the state every new project starts in.
 
-## Step 4 — advertise the minimum
+## Step 4: advertise the minimum
 
 ```go
 b.WriteString("# Skills\n\n")
@@ -86,7 +86,7 @@ function, which is what keeps a large catalogue cheap.
 The instruction line matters: without it the model sees a list of names and no
 statement about how they are used.
 
-## Step 5 — three lines of wiring
+## Step 5: three lines of wiring
 
 ```go
 skills, err := agent.LoadSkills(root)

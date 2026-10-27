@@ -1,4 +1,4 @@
-# 08 — Example
+# 08 Example
 
 *Full, annotated implementation. Read it after `kata submit 08` passes.*
 
@@ -16,7 +16,7 @@ provider      the parser returns the partial message with its error
 main.go       run() returns an exit code; abort prints and exits 130
 ```
 
-## Step 1 — the parser keeps what it read
+## Step 1: the parser keeps what it read
 
 ```go
 if err := scanner.Err(); err != nil {
@@ -32,7 +32,7 @@ it stopped.
 Note that the error still wraps the original. `errors.Is(err, context.Canceled)`
 has to keep working, because that is how `main` decides between 130 and 1.
 
-## Step 2 — the loop keeps it too
+## Step 2: the loop keeps it too
 
 ```go
 if err != nil {
@@ -57,7 +57,7 @@ Three things happen before the return, and each is graded:
 A consumer that only sees `agent_end` without a reason cannot tell "the user
 stopped it" from "the network died", and those want different messages on screen.
 
-## Step 3 — steering is drained after the turn, not before
+## Step 3: steering is drained after the turn, not before
 
 ```go
 steered := false
@@ -85,7 +85,7 @@ arrives exactly where a person would have spoken.
 something. Without the flag the loop returns a final answer and silently discards
 the message.
 
-## Step 4 — Drain takes, clears, and returns immediately
+## Step 4: Drain takes, clears, and returns immediately
 
 ```go
 func (s *StdinSteering) Drain() []Message {
@@ -123,7 +123,7 @@ go func() {
 Empty lines are skipped rather than queued, because a queued empty message makes
 the model answer nothing and wastes a turn.
 
-## Step 5 — `run` returns an exit code
+## Step 5: `run` returns an exit code
 
 ```go
 func main() {
@@ -173,28 +173,28 @@ only chapter where the rule is exercised.
 
 ## The diffs
 
-**1. Returning an empty message on stream failure** — `abort-keeps-partial`
+**1. Returning an empty message on stream failure** (`abort-keeps-partial`)
 
 ```diff
 - return Message{}, Usage{}, fmt.Errorf("read stream: %w", err)
 + return Message{Role: RoleAssistant, Content: content.String()}, usage, ...
 ```
 
-**2. Merging steering into the prompt** — `steer-enters-after-turn`
+**2. Merging steering into the prompt** (`steer-enters-after-turn`)
 
 ```diff
 - prompt = prompt + "\n" + strings.Join(lines, "\n")
 + history = append(history, Message{Role: RoleUser, Content: line})
 ```
 
-**3. Draining without clearing** — `steer-not-duplicated`
+**3. Draining without clearing** (`steer-not-duplicated`)
 
 ```diff
 - out := s.queue
 + out := s.queue; s.queue = nil
 ```
 
-**4. Stopping on the model's word alone** — `steer-continues-after-done`
+**4. Stopping on the model's word alone** (`steer-continues-after-done`)
 
 ```diff
 - if len(msg.ToolCalls) == 0 { return }

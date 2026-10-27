@@ -1,4 +1,4 @@
-# 03 — Example
+# 03 Example
 
 *Full, annotated implementation. Read it after `kata submit 03` passes.*
 
@@ -20,7 +20,7 @@ WriteTool                ← resolve, parents, write
 BashTool                 ← bound, run, cap, classify
 ```
 
-## Step 1 — one boundary check, two tools
+## Step 1: one boundary check, two tools
 
 ```go
 func resolveInside(root, p string) (string, error) {
@@ -40,7 +40,7 @@ Putting it here rather than in each tool means `write` cannot drift from `read`.
 That matters more than it looks: a write escape creates files on the host, so the
 two tools failing differently is a real bug class.
 
-## Step 2 — write creates parents after it resolves
+## Step 2: write creates parents after it resolves
 
 ```go
 full, err := resolveInside(t.Root, args.Path)
@@ -63,7 +63,7 @@ blast radius.
 The result reports the byte count. The model can confirm the write without calling
 `read` to check, which would spend the same context twice.
 
-## Step 3 — bash classifies four outcomes
+## Step 3: bash classifies four outcomes
 
 ```go
 runCtx, cancel := context.WithTimeout(ctx, wait)
@@ -101,7 +101,7 @@ Everything else is a genuine error.
 Get the order wrong and one of two things happens: cancelling the agent looks like
 a broken command, or a hung command looks like a crash.
 
-## Step 4 — cap the output, mark the cap
+## Step 4: cap the output, mark the cap
 
 ```go
 func (t *BashTool) cap(s string) string {
@@ -121,7 +121,7 @@ half. That is a real bug with a real fix (`utf8.DecodeLastRune`), and it is left
 out on purpose: the course grades the cap and the marker, not the rune boundary.
 Say so in a comment if you fix it.
 
-## Step 5 — the flag is the contract
+## Step 5: the flag is the contract
 
 ```go
 toolTTL = flag.Duration("tool-timeout", 10*time.Second, "cancel one tool call after this long")
@@ -139,14 +139,14 @@ test.
 
 ## The diffs
 
-**1. Trusting the path** — `write-refuses-escape`
+**1. Trusting the path** (`write-refuses-escape`)
 
 ```diff
 - full := filepath.Join(t.Root, args.Path)
 + full, err := resolveInside(t.Root, args.Path)
 ```
 
-**2. Creating parents before resolving** — `write-refuses-escape`
+**2. Creating parents before resolving** (`write-refuses-escape`)
 
 ```diff
 - os.MkdirAll(filepath.Dir(filepath.Join(t.Root, p)), 0o755)
@@ -155,7 +155,7 @@ test.
 + os.MkdirAll(filepath.Dir(full), 0o755)
 ```
 
-**3. Treating a non-zero exit as an error** — `bash-reports-exit-code`
+**3. Treating a non-zero exit as an error** (`bash-reports-exit-code`)
 
 ```diff
 - if err != nil { return "", err }
@@ -164,7 +164,7 @@ test.
 + }
 ```
 
-**4. Passing the tool timeout to the caller's context** — `bash-timeout-is-a-result`
+**4. Passing the tool timeout to the caller's context** (`bash-timeout-is-a-result`)
 
 ```diff
 - cmd := exec.CommandContext(ctx, "sh", "-c", command)   // uses the request bound

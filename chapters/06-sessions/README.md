@@ -1,4 +1,4 @@
-# 06 — Sessions
+# 06 Sessions
 
 **Part III · Remember** · Difficulty: medium · 60 to 90 minutes · 8 graded cases
 
@@ -7,9 +7,9 @@ picks it up on the next run, without duplicating a single turn.
 
 | | |
 |---|---|
-| **How it works** | [overview.md](overview.md) — append-only logs, what to store, what to rebuild |
-| **What to build** | [problem.md](problem.md) — the contract, the graded claims, the hints |
-| **Full implementation** | [example.md](example.md) — annotated, after an attempt |
+| **How it works** | [overview.md](overview.md), append-only logs, what to store, what to rebuild |
+| **What to build** | [problem.md](problem.md), the contract, the graded claims, the hints |
+| **Full implementation** | [example.md](example.md), annotated, after an attempt |
 | **You edit** | `agent/session.go`, `agent/cmd/agent/main.go` |
 | **Submit** | `kata submit 06` |
 
@@ -24,5 +24,5 @@ picks it up on the next run, without duplicating a single turn.
 
 ---
 
-Next: **07 — Context budget**, where the conversation finally outgrows the
+Next: **07 Context budget**, where the conversation finally outgrows the
 window and something has to give.

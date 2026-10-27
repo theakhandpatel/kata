@@ -1,4 +1,4 @@
-# 02 — Overview
+# 02 Overview
 
 *How tool calling works, in general. Read this before you write code.*
 

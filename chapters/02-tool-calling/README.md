@@ -1,4 +1,4 @@
-# 02 — Tool calling
+# 02 Tool calling
 
 **Part I · Wire** · Difficulty: medium · 60 to 90 minutes · 8 graded cases
 
@@ -7,9 +7,9 @@ runs it against a real file, and sends the result back so the model can answer.
 
 | | |
 |---|---|
-| **How it works** | [overview.md](overview.md) — the call/result pairing and why arguments arrive in pieces |
-| **What to build** | [problem.md](problem.md) — the contract, the graded claims, the hints |
-| **Full implementation** | [example.md](example.md) — annotated, after an attempt |
+| **How it works** | [overview.md](overview.md), the call/result pairing and why arguments arrive in pieces |
+| **What to build** | [problem.md](problem.md), the contract, the graded claims, the hints |
+| **Full implementation** | [example.md](example.md), annotated, after an attempt |
 | **You edit** | `agent/provider_openai.go`, `agent/tool.go`, `agent/tools.go`, `agent/cmd/agent/main.go` |
 | **Given** | `agent/types.go` (including the `Tool` interface) |
 | **Submit** | `kata submit 02` |
@@ -25,5 +25,5 @@ echo "hello from a file" > notes.txt
 
 ---
 
-Next: **03 — Tools that touch disk**, where `write` and `bash` join `read`, and
+Next: **03 Tools that touch disk**, where `write` and `bash` join `read`, and
 the hard part becomes bounding what a tool returns.

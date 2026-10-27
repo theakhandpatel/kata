@@ -1,6 +1,6 @@
-# 01 — Example
+# 01 Example
 
-*Full, annotated implementation. Open this after a real attempt — ideally after
+*Full, annotated implementation. Open this after a real attempt, ideally after
 `kata submit 01` passes, then compare. Reading it first turns the exercise into
 copy-typing.*
 
@@ -24,7 +24,7 @@ If you write `Chat` as one 90-line function you will pass, and you will hate it
 in chapter 02 when the fold grows tool calls. Written as three functions, chapter
 02 adds ~15 lines and touches nothing else.
 
-## Step 1 — translate, don't leak
+## Step 1: translate, don't leak
 
 Your `Message` and the wire's message are similar but not the same. Keep a wire
 type and a conversion function; never put `json:` tags on your domain types.
@@ -52,7 +52,7 @@ Two details that are cheap now and expensive later:
 - The model falls back: `req.Model` first, then `p.Model`. Chapter 05 sends
   requests with no model when it reuses a session's provider.
 
-## Step 2 — the request, and the three things that are graded
+## Step 2: the request, and the three things that are graded
 
 ```go
 url := strings.TrimRight(p.BaseURL, "/") + "/chat/completions"
@@ -75,7 +75,7 @@ if p.APIKey != "" {
   function returns a whole message. We stream because chapter 06 will want
   incremental events, and because learning the stream is the chapter.
 
-## Step 3 — fail the way a caller can act on
+## Step 3: fail the way a caller can act on
 
 ```go
 resp, err := client.Do(httpReq)
@@ -99,7 +99,7 @@ Three decisions worth defending:
 - **A typed error, not `fmt.Errorf`.** `*HTTPError` is what lets the loop in
   chapter 04 distinguish "retry with backoff" from "the model is wrong".
 
-## Step 4 — fold the stream
+## Step 4: fold the stream
 
 This is the chapter. Everything above is plumbing.
 
@@ -185,11 +185,11 @@ framing loop that has no per-line ceiling. We raise it, and note the tradeoff.
 
 It is not JSON. `json.Unmarshal` on `[DONE]` returns
 `invalid character 'D' looking for beginning of value`, which the naive
-implementation wraps as "decode stream chunk" and reports as a protocol error —
+implementation wraps as "decode stream chunk" and reports as a protocol error ,
 on a completely healthy stream. This is the single most common first-run failure
 in this chapter.
 
-## Step 5 — assemble outside the loop
+## Step 5: assemble outside the loop
 
 ```go
 msg := Message{Role: RoleAssistant, Content: content.String()}
@@ -208,14 +208,14 @@ snapshot them once.
 Each of these is a real failure mode with a graded case. Left is what a
 competent first implementation does; right is the fix.
 
-**1. Assign instead of append** — `prints-reply`
+**1. Assign instead of append** (`prints-reply`)
 
 ```diff
 - msg.Content = choice.Delta.Content
 + content.WriteString(choice.Delta.Content)
 ```
 
-**2. Ignore the scanner's error** — `truncated-stream`
+**2. Ignore the scanner's error** (`truncated-stream`)
 
 ```diff
   for scanner.Scan() { ... }
@@ -225,14 +225,14 @@ competent first implementation does; right is the fix.
   return Message{Content: content.String()}, usage, nil
 ```
 
-**3. Only decode chunks with content** — `debug-usage`
+**3. Only decode chunks with content** (`debug-usage`)
 
 ```diff
 - if choice.Delta.Content == "" { continue }
   if chunk.Usage != nil { usage = ... }
 ```
 
-**4. Background context** — `request-timeout`
+**4. Background context** (`request-timeout`)
 
 ```diff
 - http.NewRequest(http.MethodPost, url, body)

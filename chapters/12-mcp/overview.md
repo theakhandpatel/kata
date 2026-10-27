@@ -1,4 +1,4 @@
-# 11 — Overview
+# 11 Overview
 
 *How MCP works over stdio. Read this before you write code.*
 
@@ -74,7 +74,7 @@ func (t *mcpTool) Execute(ctx, input) (string, error) {
 ```
 
 Nothing in the loop changed to support MCP. That is the last time the course makes
-this point, and it is the reason the previous ten chapters built seams.
+this point, and it is the reason the previous eleven chapters built seams.
 
 ## Content is a list, not a string
 

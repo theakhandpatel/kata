@@ -1,4 +1,4 @@
-# 04 — Problem
+# 04 Problem
 
 > **Your task:** replace the single hop with a loop that runs until the model has
 > no more tools, cap the number of turns, and report what happened as events.
@@ -57,28 +57,28 @@ is still a provider.
 
 It builds the binary, scripts a conversation, runs the program, and inspects:
 
-1. **the request trace** — how many turns, and whether each turn carried the
+1. **the request trace**: how many turns, and whether each turn carried the
    previous results in order;
-2. **stderr** — the JSON events, parsed as a sequence;
+2. **stderr**: the JSON events, parsed as a sequence;
 3. **stdout and the exit code**.
 
 ## The verifier will assert that
 
-- `loops-until-done` — a task needing two tools makes three requests and prints
+- `loops-until-done`: a task needing two tools makes three requests and prints
   the final answer.
-- `preserves-result-order` — two calls in one message return two results in the
+- `preserves-result-order`: two calls in one message return two results in the
   same order, with matching ids.
-- `step-cap-stops` — with `-max-steps 3` and a model that always asks for a tool,
+- `step-cap-stops`: with `-max-steps 3` and a model that always asks for a tool,
   the run makes exactly three requests, exits 1, and names the step limit.
-- `events-sequence` — every `tool_call` id has exactly one `tool_result` with the
+- `events-sequence`: every `tool_call` id has exactly one `tool_result` with the
   same id, and `agent_end` appears once, last.
-- `events-text-deltas` — the `text` events concatenate to the final answer, in at
+- `events-text-deltas`: the `text` events concatenate to the final answer, in at
   least two deltas.
-- `single-turn-no-tools` — a plain reply produces one `turn_start`, one
+- `single-turn-no-tools`: a plain reply produces one `turn_start`, one
   `turn_end`, one request.
-- `continues-after-tool-error` — a failed tool does not end the run; a later turn
+- `continues-after-tool-error`: a failed tool does not end the run; a later turn
   succeeds, and the events mark the failed result.
-- `turn-count-matches-requests` — `agent_end.turns` equals the number of requests
+- `turn-count-matches-requests`: `agent_end.turns` equals the number of requests
   the server recorded.
 
 ## Notes
@@ -96,19 +96,19 @@ It builds the binary, scripts a conversation, runs the program, and inspects:
 
 ## Hints
 
-<details><summary>Rung 1 — the mechanism</summary>
+<details><summary>Rung 1, the mechanism</summary>
 
 The reply is the exit condition. The cap is a safety net around it. The events are
 the same facts, written down in order.
 </details>
 
-<details><summary>Rung 2 — the APIs</summary>
+<details><summary>Rung 2, the APIs</summary>
 
 `json.NewEncoder(w).Encode` per event. `errors.Join` or a sentinel for the step
 limit. A function parameter for the delta callback.
 </details>
 
-<details><summary>Rung 3 — what the code does</summary>
+<details><summary>Rung 3, what the code does</summary>
 
 Loop from turn 1 to max. Emit `turn_start`, call `provider.Stream` with a callback
 that emits `text`, append the message. If there are no tool calls, emit

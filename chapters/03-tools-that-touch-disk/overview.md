@@ -1,4 +1,4 @@
-# 03 — Overview
+# 03 Overview
 
 *How tools that touch disk work, and what can go wrong. Read this before you
 write code.*
@@ -79,8 +79,8 @@ meaningfully.
 | exit 3 | `exit code: 3` plus output | none |
 | output too long | capped plus marker | none |
 | tool timeout | `command timed out after 10s` | none |
-| user pressed Ctrl-C | — | `context.Canceled` |
-| `sh` not found | — | start error |
+| user pressed Ctrl-C | none | `context.Canceled` |
+| `sh` not found | none | start error |
 
 ## Two bounds, and they are not the same
 
@@ -96,7 +96,7 @@ caller's decision and the other is the tool's.
 
 ## The truncation rule
 
-An unbounded output does not just cost tokens. It costs the model's understanding
+An unbounded output costs more than tokens. It costs the model's understanding
 of position: with 200 KB of log in the middle of the conversation, the important
 instruction from the first message is proportionally invisible.
 

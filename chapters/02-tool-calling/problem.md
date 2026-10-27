@@ -1,4 +1,4 @@
-# 02 — Problem
+# 02 Problem
 
 > **Your task:** let the agent run a tool. Advertise `read`, execute it when the
 > model asks, and send the result back so the model can answer.
@@ -47,22 +47,22 @@ directory as its working directory. Then it inspects:
 
 ## The verifier will assert that
 
-- `advertises-read` — the first request carries a tool named `read` whose
+- `advertises-read`: the first request carries a tool named `read` whose
   parameters declare a `path` property.
-- `reads-a-file` — the second request contains a `tool` message with the file
+- `reads-a-file`: the second request contains a `tool` message with the file
   contents and `tool_call_id` equal to the call id, and stdout is the model's
   follow-up answer.
-- `folds-arguments` — arguments split across four fragments, with the id present
+- `folds-arguments`: arguments split across four fragments, with the id present
   only on the first, still resolve to the right file.
-- `missing-file` — the tool result says `no such file`, and the program exits 0
+- `missing-file`: the tool result says `no such file`, and the program exits 0
   after printing the model's answer.
-- `refuses-escape` — `../../etc/passwd` produces a refusal naming the escape, and
+- `refuses-escape`: `../../etc/passwd` produces a refusal naming the escape, and
   no file contents appear in the result.
-- `truncates-large-file` — a 50 KB file yields at most 25 KB of tool content and
+- `truncates-large-file`: a 50 KB file yields at most 25 KB of tool content and
   a marker containing `truncated`.
-- `invalid-arguments` — malformed JSON produces a result saying the arguments are
+- `invalid-arguments`: malformed JSON produces a result saying the arguments are
   not valid JSON; the program exits 0.
-- `text-only-single-request` — a plain reply costs exactly one request.
+- `text-only-single-request`: a plain reply costs exactly one request.
 
 ## Notes
 
@@ -79,13 +79,13 @@ directory as its working directory. Then it inspects:
 
 ## Hints
 
-<details><summary>Rung 1 — the mechanism</summary>
+<details><summary>Rung 1, the mechanism</summary>
 
 A call and its result are two halves of one message pair. The id is what ties
 them together, and the index is what ties the streamed fragments together.
 </details>
 
-<details><summary>Rung 2 — the APIs</summary>
+<details><summary>Rung 2, the APIs</summary>
 
 `json.Valid` before `json.Unmarshal` on model-supplied argument text.
 `filepath.Abs` and `filepath.Rel` for the workspace check. `os.Stat` to tell a
@@ -93,7 +93,7 @@ missing file from a directory. `f.Read` with `limit+1` bytes to detect an
 overflow.
 </details>
 
-<details><summary>Rung 3 — what the code does</summary>
+<details><summary>Rung 3, what the code does</summary>
 
 Fold tool-call fragments into a map keyed by `index`, appending
 `function.arguments`; emit the calls sorted by index. Serialise an assistant

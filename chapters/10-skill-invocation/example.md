@@ -1,4 +1,4 @@
-# 10 — Example
+# 10 Example
 
 *Full, annotated implementation. Read it after `kata submit 10` passes.*
 
@@ -7,7 +7,7 @@ with one changed line in `reference/ch10/agent/cmd/agent/main.go`.
 
 ---
 
-## Step 1 — expansion is a left-to-right walk
+## Step 1: expansion is a left-to-right walk
 
 ```go
 for i, m := range matches {
@@ -43,7 +43,7 @@ Four details, each with a failure behind it:
 - **`TrimRight` on the preceding text** removes the single space before the command.
 - **The write after the loop** keeps text that follows the last command.
 
-## Step 2 — placeholders, longest first
+## Step 2: placeholders, longest first
 
 ```go
 out := strings.ReplaceAll(body, "$ARGUMENTS", args)
@@ -65,7 +65,7 @@ matching `$0` inside something like `$0x`.
 A missing argument becomes empty. Leaving `$3` literal would send the model a
 placeholder it cannot resolve.
 
-## Step 3 — one line of wiring
+## Step 3: one line of wiring
 
 ```go
 userText, _ := catalog.Expand(*prompt)
@@ -77,28 +77,28 @@ expanded text. The session stores what was sent, not the shorthand.
 
 ## The diffs
 
-**1. Replacing `$0` before `$ARGUMENTS`** — `substitutes-arguments`
+**1. Replacing `$0` before `$ARGUMENTS`** (`substitutes-arguments`)
 
 ```diff
 - out = strings.ReplaceAll(out, "$0", words[0])
   out = strings.ReplaceAll(out, "$ARGUMENTS", args)
 ```
 
-**2. Dropping an unknown command** — `unknown-skill-preserved`
+**2. Dropping an unknown command** (`unknown-skill-preserved`)
 
 ```diff
 - if !ok { continue }
 + if !ok { b.WriteString(prompt[last:argsEnd]); last = argsEnd; continue }
 ```
 
-**3. Replacing in place for every invocation** — `stacks-skills`
+**3. Replacing in place for every invocation** (`stacks-skills`)
 
 ```diff
 - prompt = strings.Replace(prompt, "/"+name, body, 1)   // loses arguments and order
 + // walk matches and rebuild once
 ```
 
-**4. Sending the header** — `frontmatter-not-leaked`
+**4. Sending the header** (`frontmatter-not-leaked`)
 
 ```diff
 - b.WriteString(skill.Path)   // or the whole file

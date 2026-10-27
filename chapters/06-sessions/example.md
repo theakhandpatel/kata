@@ -1,4 +1,4 @@
-# 06 — Example
+# 06 Example
 
 *Full, annotated implementation. Read it after `kata submit 06` passes.*
 
@@ -15,7 +15,7 @@ main.go      load prior, prepend system, run, save only the suffix
 loop.go      untouched
 ```
 
-## Step 1 — open, and notice whether the file was new
+## Step 1: open, and notice whether the file was new
 
 ```go
 _, statErr := os.Stat(path)
@@ -31,7 +31,7 @@ overwrite each other.
 The `Stat` before the open is how the header is written exactly once. Checking
 after opening cannot distinguish a new file from an old one.
 
-## Step 2 — the header carries a version
+## Step 2: the header carries a version
 
 ```go
 header := sessionHeader{Type: recordHeader, Version: SessionVersion, Created: ...}
@@ -41,7 +41,7 @@ A version is cheap and its absence is expensive. When the record shape changes,
 an old file must be rejected with a message, not parsed into a conversation that
 is subtly wrong. `Load` refuses a `version` higher than the program understands.
 
-## Step 3 — load is a scanner with a probe
+## Step 3: load is a scanner with a probe
 
 ```go
 var probe struct {
@@ -69,7 +69,7 @@ extensible.
 `line` in the error is what turns "invalid character" into a sentence someone can
 act on.
 
-## Step 4 — the slice that prevents duplication
+## Step 4: the slice that prevents duplication
 
 ```go
 prior := []agent.Message{}
@@ -104,7 +104,7 @@ Index by index, with `prior` of length 2:
 Take the `+1` away and you write the system message into the session, which then
 appears twice on the next resume. Use `len(history)` and you write nothing.
 
-## Step 5 — persist before returning the error
+## Step 5: persist before returning the error
 
 ```go
 res, err := agent.RunLoop(...)
@@ -129,28 +129,28 @@ failed *and* the disk is full, the loop's error is the one a user needs.
 
 ## The diffs
 
-**1. Saving the loaded history too** — `no-duplicate-turns`
+**1. Saving the loaded history too** (`no-duplicate-turns`)
 
 ```diff
 - for _, m := range res.History { rec.Append(m) }
 + for _, m := range res.History[len(prior)+1:] { rec.Append(m) }
 ```
 
-**2. Storing the system message** — `system-not-duplicated`
+**2. Storing the system message** (`system-not-duplicated`)
 
 ```diff
 - rec.Append(agent.Message{Role: agent.RoleSystem, Content: system})
 + // not stored: rebuilt from AGENTS.md on every run
 ```
 
-**3. Rewriting the file** — `appends-not-overwrites`
+**3. Rewriting the file** (`appends-not-overwrites`)
 
 ```diff
 - os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o644)
 + os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
 ```
 
-**4. Recording results but not calls** — `tool-history-persisted`
+**4. Recording results but not calls** (`tool-history-persisted`)
 
 ```diff
 - if m.Role == agent.RoleTool { rec.Append(m) }

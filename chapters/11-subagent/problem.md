@@ -1,4 +1,4 @@
-# 10 — Problem
+# 10 Problem
 
 > **Your task:** add a `task` tool that runs a child agent from the task prompt
 > alone, with its own tool set and step cap, and returns exactly one result.
@@ -45,20 +45,20 @@ every recorded request and distinguishes parent from child by shape.
 
 ## The verifier will assert that
 
-- `task-tool-advertised` — the parent's request advertises `task`.
-- `child-gets-fresh-context` — the child's request has exactly two messages, a
+- `task-tool-advertised`: the parent's request advertises `task`.
+- `child-gets-fresh-context`: the child's request has exactly two messages, a
   system message and the task prompt, and contains none of the parent's text.
-- `child-cannot-recurse` — the child's request does not advertise `task`, and it is
+- `child-cannot-recurse`: the child's request does not advertise `task`, and it is
   a genuine child request (two messages).
-- `result-returned-to-parent` — the parent's next request carries the child's answer
+- `result-returned-to-parent`: the parent's next request carries the child's answer
   as the tool result for the call id.
-- `exactly-one-result` — that call has exactly one result, and the result is not an
+- `exactly-one-result`: that call has exactly one result, and the result is not an
   "unknown tool" error.
-- `child-uses-tools` — the child can read a file, and its final answer reaches the
+- `child-uses-tools`: the child can read a file, and its final answer reaches the
   parent.
-- `child-failure-is-a-result` — a child that exhausts its step cap produces an error
+- `child-failure-is-a-result`: a child that exhausts its step cap produces an error
   result naming the cap, and the parent still exits 0.
-- `parent-continues-after-task` — two delegations in one run both complete and the
+- `parent-continues-after-task`: two delegations in one run both complete and the
   parent prints its own answer after five requests.
 
 ## Notes
@@ -77,20 +77,20 @@ every recorded request and distinguishes parent from child by shape.
 
 ## Hints
 
-<details><summary>Rung 1 — the mechanism</summary>
+<details><summary>Rung 1, the mechanism</summary>
 
 A subagent is the same loop started with a fresh history and a smaller tool set. Its
 final answer becomes the result of the call that asked for it.
 </details>
 
-<details><summary>Rung 2 — the APIs</summary>
+<details><summary>Rung 2, the APIs</summary>
 
 `RunLoop` with a two-message history, `NewRegistry(base...)` before the task tool
 exists, `append(base, task)` for the parent, `fmt.Errorf("%w")` to keep the child's
 error inspectable.
 </details>
 
-<details><summary>Rung 3 — what the code does</summary>
+<details><summary>Rung 3, what the code does</summary>
 
 `TaskTool.Execute` parses `prompt`, builds `[{system}, {user prompt}]`, calls
 `RunLoop` with `MaxSteps`, and returns the final content. On error it returns an

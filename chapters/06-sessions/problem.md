@@ -1,4 +1,4 @@
-# 06 — Problem
+# 06 Problem
 
 > **Your task:** record the conversation to a JSONL file and resume from it on the
 > next run, without duplicating what is already there.
@@ -48,20 +48,20 @@ add a tool call on the first run to check that the pairing survives.
 
 ## The verifier will assert that
 
-- `creates-session-file` — the file exists and is not empty after one run.
-- `session-is-jsonl` — every line parses as JSON with a `type`, and line 1 is a
+- `creates-session-file`: the file exists and is not empty after one run.
+- `session-is-jsonl`: every line parses as JSON with a `type`, and line 1 is a
   header carrying a version.
-- `resumes-history` — the second request is `system`, `user`, `assistant`, `user`,
+- `resumes-history`: the second request is `system`, `user`, `assistant`, `user`,
   in that order, with the first run's text intact.
-- `appends-not-overwrites` — after two runs the file grew, and the first question
+- `appends-not-overwrites`: after two runs the file grew, and the first question
   appears exactly once.
-- `no-duplicate-turns` — the first run's answer appears exactly once in the second
+- `no-duplicate-turns`: the first run's answer appears exactly once in the second
   request.
-- `system-not-duplicated` — exactly one `system` message, at index 0, rebuilt from
+- `system-not-duplicated`: exactly one `system` message, at index 0, rebuilt from
   the current `AGENTS.md`.
-- `tool-history-persisted` — the resumed request contains both the assistant's
+- `tool-history-persisted`: the resumed request contains both the assistant's
   `tool_calls` entry and the matching `tool` result.
-- `missing-session-is-created` — a path in a non-existent directory works, and the
+- `missing-session-is-created`: a path in a non-existent directory works, and the
   next run resumes it.
 
 ## Notes
@@ -79,19 +79,19 @@ add a tool call on the first run to check that the pairing survives.
 
 ## Hints
 
-<details><summary>Rung 1 — the mechanism</summary>
+<details><summary>Rung 1, the mechanism</summary>
 
 A session is an append-only log of messages. Loading gives you a prefix; saving
 must write only the suffix you just created.
 </details>
 
-<details><summary>Rung 2 — the APIs</summary>
+<details><summary>Rung 2, the APIs</summary>
 
 `os.OpenFile` with `O_CREATE|O_WRONLY|O_APPEND`, `bufio.Scanner` over the file,
 `encoding/json` per line, `errors.Is(err, os.ErrNotExist)` to detect a new file.
 </details>
 
-<details><summary>Rung 3 — what the code does</summary>
+<details><summary>Rung 3, what the code does</summary>
 
 `OpenSession` creates parent directories, checks whether the file exists, opens it
 for append, and writes a header only when it is new. `Load` scans line by line,

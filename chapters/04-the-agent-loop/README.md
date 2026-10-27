@@ -1,4 +1,4 @@
-# 04 — The agent loop
+# 04 The agent loop
 
 **Part II · Act** · Difficulty: medium · 60 to 90 minutes · 8 graded cases
 
@@ -8,9 +8,9 @@ starts reporting what it does, as events.
 
 | | |
 |---|---|
-| **How it works** | [overview.md](overview.md) — the loop as a state machine, and the event grammar |
-| **What to build** | [problem.md](problem.md) — the contract, the graded claims, the hints |
-| **Full implementation** | [example.md](example.md) — annotated, after an attempt |
+| **How it works** | [overview.md](overview.md), the loop as a state machine, and the event grammar |
+| **What to build** | [problem.md](problem.md), the contract, the graded claims, the hints |
+| **Full implementation** | [example.md](example.md), annotated, after an attempt |
 | **You edit** | `agent/loop.go`, `agent/events.go`, `agent/provider_openai.go`, `agent/cmd/agent/main.go` |
 | **Submit** | `kata submit 04` |
 
@@ -24,5 +24,5 @@ starts reporting what it does, as events.
 
 ---
 
-Next: **05 — Prompt assembly**, where the agent learns to read the project's own
+Next: **05 Prompt assembly**, where the agent learns to read the project's own
 instructions before it starts.

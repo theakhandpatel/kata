@@ -1,4 +1,4 @@
-# 03 — Tools that touch disk
+# 03 Tools that touch disk
 
 **Part II · Act** · Difficulty: medium · 60 to 90 minutes · 8 graded cases
 
@@ -7,9 +7,9 @@ is that both can produce unbounded output, and one can run forever.
 
 | | |
 |---|---|
-| **How it works** | [overview.md](overview.md) — untrusted arguments, unbounded output, unbounded time |
-| **What to build** | [problem.md](problem.md) — the contract, the graded claims, the hints |
-| **Full implementation** | [example.md](example.md) — annotated, after an attempt |
+| **How it works** | [overview.md](overview.md), untrusted arguments, unbounded output, unbounded time |
+| **What to build** | [problem.md](problem.md), the contract, the graded claims, the hints |
+| **Full implementation** | [example.md](example.md), annotated, after an attempt |
 | **You edit** | `agent/tools.go`, `agent/cmd/agent/main.go` |
 | **Submit** | `kata submit 03` |
 
@@ -23,5 +23,5 @@ is that both can produce unbounded output, and one can run forever.
 
 ---
 
-Next: **04 — The agent loop**, which replaces the single hop with a loop, adds a
+Next: **04 The agent loop**, which replaces the single hop with a loop, adds a
 step cap, and starts grading the order of what happens.

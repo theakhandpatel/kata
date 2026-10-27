@@ -1,4 +1,4 @@
-# 10 — Problem
+# 10 Problem
 
 > **Your task:** expand `/name args` into the skill's body, substituting
 > `$ARGUMENTS` and positional placeholders, and handle several skills in one prompt.
@@ -43,15 +43,15 @@ your parser.
 
 ## The verifier will assert that
 
-- `loads-body-on-invoke` — `/deploy staging eu-west` puts the body in the user message.
-- `substitutes-arguments` — `$0`, `$1` and `$ARGUMENTS` are replaced, and no placeholder
+- `loads-body-on-invoke`: `/deploy staging eu-west` puts the body in the user message.
+- `substitutes-arguments`: `$0`, `$1` and `$ARGUMENTS` are replaced, and no placeholder
   survives.
-- `stacks-skills` — `/review /deploy production eu-west` expands both, review first, with
+- `stacks-skills`: `/review /deploy production eu-west` expands both, review first, with
   deploy's own arguments applied.
-- `no-invocation-no-body` — an ordinary prompt arrives byte-identical and no body is sent.
-- `unknown-skill-preserved` — `/nosuch please help` keeps the original text, and the
+- `no-invocation-no-body`: an ordinary prompt arrives byte-identical and no body is sent.
+- `unknown-skill-preserved`: `/nosuch please help` keeps the original text, and the
   program still answers.
-- `frontmatter-not-leaked` — the expanded body is present, and neither `---` nor
+- `frontmatter-not-leaked`: the expanded body is present, and neither `---` nor
   `description:` appears in it.
 
 ## Notes
@@ -65,19 +65,19 @@ your parser.
 
 ## Hints
 
-<details><summary>Rung 1 — the mechanism</summary>
+<details><summary>Rung 1, the mechanism</summary>
 
 Walk the prompt for slash commands, and replace each recognised one with its body.
 Arguments run to the next command.
 </details>
 
-<details><summary>Rung 2 — the APIs</summary>
+<details><summary>Rung 2, the APIs</summary>
 
 `regexp` with `(^|\s)/([a-z0-9][a-z0-9-]*)` for commands, `strings.Fields` for arguments,
 `regexp.ReplaceAllStringFunc` for `\$(\d+)`.
 </details>
 
-<details><summary>Rung 3 — what the code does</summary>
+<details><summary>Rung 3, what the code does</summary>
 
 `Expand` finds every command match, takes the text between one command and the next as
 its arguments, and writes either the expanded body or the original text. `expandBody`
