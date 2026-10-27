@@ -129,7 +129,12 @@ func run() (int, error) {
 	if err != nil {
 		// Ctrl-C is a normal way to stop a long answer. Print what arrived, say so,
 		// and use the shell's convention for an interrupted process.
-		if errors.Is(err, context.Canceled) {
+		//
+		// The check is on the context, not the error. An interrupt that lands while the
+		// response is being read surfaces as a transport error from net/http, and does
+		// not satisfy errors.Is(err, context.Canceled) on every platform. The context
+		// always knows.
+		if errors.Is(err, context.Canceled) || ctx.Err() != nil {
 			if res.Message.Content != "" {
 				fmt.Println(res.Message.Content)
 			}
