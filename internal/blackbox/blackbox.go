@@ -251,53 +251,6 @@ func RunInterruptUntil(t *testing.T, dir string, env map[string]string, srv *fak
 	return res
 }
 
-// RunInterrupt starts the program, waits, sends SIGINT, then collects what it
-// printed. Prefer RunInterruptUntil where a server is available: a fixed delay
-// races process startup.
-func RunInterrupt(t *testing.T, dir string, env map[string]string, after time.Duration, args ...string) Result {
-	t.Helper()
-	bin := Binary(t)
-
-	ctx, cancel := context.WithTimeout(context.Background(), DefaultTimeout)
-	defer cancel()
-
-	cmd := exec.CommandContext(ctx, bin, args...)
-	cmd.Dir = dir
-	cmd.Env = append(os.Environ(), flatten(env)...)
-
-	// A synchronised buffer lets the caller wait for the first byte of output rather than
-	// sleeping for a guess. A fixed sleep is a race: on a slow machine the signal can
-	// arrive before the request is sent, and the run ends with a transport error instead
-	// of an abort.
-	out := newSyncBuffer()
-	errOut := newSyncBuffer()
-	cmd.Stdout = out
-	cmd.Stderr = errOut
-
-	start := time.Now()
-	if err := cmd.Start(); err != nil {
-		t.Fatalf("start harness: %v", err)
-	}
-
-	// The program prints its answer only after the stream ends, so there is no output to
-	// wait for while it is streaming. A delay is the only signal available. The cases that
-	// use this set the server's frame delay high enough that the stream is still running
-	// when the signal lands, on any machine.
-	time.Sleep(after)
-	_ = cmd.Process.Signal(os.Interrupt)
-
-	err := cmd.Wait()
-	res := finish(t, cmd, err, ctx, out.String(), errOut.String(), start)
-	// A signal-terminated process reports -1 from ExitCode. Use the shell
-	// convention of 128+signal so a test can assert 130 for SIGINT.
-	if cmd.ProcessState != nil {
-		if ws, ok := cmd.ProcessState.Sys().(syscall.WaitStatus); ok && ws.Signaled() {
-			res.ExitCode = 128 + int(ws.Signal())
-		}
-	}
-	return res
-}
-
 // RunTimeout is Run with an explicit wall-clock bound.
 func RunTimeout(t *testing.T, limit time.Duration, env map[string]string, args ...string) Result {
 	t.Helper()
