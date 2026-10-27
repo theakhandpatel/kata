@@ -15,6 +15,48 @@ import "sort"
 
 // Table maps chapter number -> case id -> the three rungs.
 var Table = map[string]map[string][3]string{
+	"21": {
+		"config-from-file": {
+			"A model name is not something to re-export in every shell.",
+			"Read agent.json from the working directory and use its base_url and model.",
+			"Decode into a struct of pointers, so a missing key means 'not set here' rather than the zero value.",
+		},
+		"flag-beats-file": {
+			"A file is shared; a flag is for one command.",
+			"Apply files first, then the environment, then flags.",
+			"Resolve in three passes: DefaultConfigScopes, then applyEnv, then applyFile from the flags. Later passes overwrite earlier ones.",
+		},
+		"env-beats-file": {
+			"A shell with one export should beat a file.",
+			"Apply the environment after the files, before the flags.",
+			"applyEnv writes OPENAI_BASE_URL, OPENAI_API_KEY and HARNESS_MODEL over whatever the files set.",
+		},
+		"key-from-file": {
+			"An environment variable is visible in a process listing.",
+			"Add api_key_file, read it when no inline key was given, and trim the newline.",
+			"Read the file, strings.TrimSpace the contents, and set cfg.APIKey. An inline api_key still wins, so a shell can override a file.",
+		},
+		"missing-key-file-is-reported": {
+			"A silent start with no key produces a 401 that reads like a wrong key.",
+			"Fail before the first request, naming the path.",
+			`errors.Is(err, os.ErrNotExist) becomes "api_key_file: <path> does not exist". Resolve the key before building the client.`,
+		},
+		"config-report-redacts-the-key": {
+			"The report answers 'why is it using that model'.",
+			"Print every resolved value, its source, and a redacted key.",
+			"Show the first four and last four characters, or '(set)' when short. Never print the whole value.",
+		},
+		"config-needs-no-provider": {
+			"Asking how you are configured must work before the configuration is valid.",
+			"Handle -config before the prompt check and before the client is built.",
+			"Load config, describe, return. No provider, no context deadline.",
+		},
+		"bad-base-url-is-explained": {
+			"A URL without a scheme makes the client treat the host as a path.",
+			"Check the URL when printing the report, and warn in a sentence.",
+			`If it has no "://" say so and suggest https://<value>. A trailing /chat/completions is the other common mistake.`,
+		},
+	},
 	"20": {
 		"usage-is-recorded": {
 			"The counts arrive once, on the last message of the stream.",
