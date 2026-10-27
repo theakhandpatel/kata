@@ -235,6 +235,7 @@ func buildConfig(title, root string) string {
         { text: 'Chapter format', link: '/docs/chapter-format' },
         { text: 'Writing style', link: '/docs/writing-style' },
         { text: 'Designs', link: '/docs/designs' },
+        { text: 'Design audit', link: '/docs/design-audit' },
         { text: 'Why VitePress', link: '/docs/adr/0001-vitepress-for-the-site' },
       ] },
 `)

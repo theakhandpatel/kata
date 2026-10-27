@@ -276,20 +276,6 @@ func saveProgress(root string, m progressMap) error {
 	return os.WriteFile(p, append(b, '\n'), 0o644)
 }
 
-// firstUnmetPrerequisite returns the earliest written chapter before id that has not
-// passed, or "" when everything before id is done.
-func firstUnmetPrerequisite(root string, prog progressMap, id string) string {
-	for _, c := range allChapters(root) {
-		if c.ID >= id {
-			break
-		}
-		if c.written() && !prog.passed(c.ID) {
-			return c.ID
-		}
-	}
-	return ""
-}
-
 func (p progressMap) passed(id string) bool {
 	e, ok := p[id]
 	return ok && e.Status == "passed"

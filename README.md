@@ -101,7 +101,9 @@ disagree, the case is right and the page is a bug. A test enforces this.
 
 ```sh
 kata                      status: current chapter, next action
-kata submit [NN]          compile, grade, record
+kata submit               grade from your frontier, stop at the first failure
+kata submit NN            grade one chapter
+kata submit all           grade everything, do not stop
 kata submit NN --solution grade the reference instead of your code
 kata read [NN] [doc]      the chapter, or its example
 kata hint NN <case-id>    three hints, from nudge to answer

@@ -38,14 +38,34 @@ func cmdSubmit(args []string) error {
 		}
 	}
 
+	all := allChapters(root)
+	prog := loadProgress(root)
+
 	var selected []chapter
-	if target == "" || target == "all" {
-		for _, c := range allChapters(root) {
+	switch {
+	case target == "all" || target == "every":
+		// Everything, in order, without stopping. For an author who wants the whole picture.
+		for _, c := range all {
 			if c.written() {
 				selected = append(selected, c)
 			}
 		}
-	} else {
+	case target == "":
+		// The ladder: from the frontier forward, stopping at the first chapter that fails.
+		if c, ok := frontier(root, prog); ok {
+			start := -1
+			for i, x := range all {
+				if x.ID == c.ID {
+					start = i
+				}
+			}
+			for _, x := range all[start:] {
+				if x.written() {
+					selected = append(selected, x)
+				}
+			}
+		}
+	default:
 		c, err := findChapter(root, target)
 		if err != nil {
 			return err
@@ -61,19 +81,23 @@ func cmdSubmit(args []string) error {
 		}
 	}
 
-	prog := loadProgress(root)
+	// Grading a locked chapter is allowed but pointless: say why instead of printing a wall
+	// of failures that belong to an earlier chapter.
+	if target != "" && target != "all" && target != "every" {
+		if why := explainState(root, prog, selected[0].ID); why != "" {
+			fmt.Printf("  note: %s\n\n", why)
+		}
+	}
+	if target != "" && target != "all" && target != "every" {
+		prog = loadProgress(root)
+	}
+
 	failures := 0
 
 	// Grading a chapter whose predecessor is unfinished usually means a wall of failures
 	// that are really the predecessor's job. Say so once, and say it as a likelihood
 	// rather than a rule: chapters are graded independently, and a later one can pass on
 	// its own.
-	for _, ch := range selected {
-		if prior := firstUnmetPrerequisite(root, prog, ch.ID); prior != "" {
-			fmt.Printf("  note: chapter %s has not passed yet. Chapter %s is graded on its own,\n", prior, ch.ID)
-			fmt.Printf("        so a failure here may be about something %s teaches.\n\n", prior)
-		}
-	}
 
 	for _, ch := range selected {
 		// Compile triage first. A build error is not a failed case, and saying so
@@ -104,16 +128,22 @@ func cmdSubmit(args []string) error {
 		}
 		if passed {
 			fmt.Printf("  %s chapter %s — %s\n\n", "PASS", ch.ID, cases)
+			_ = saveProgressLater(root, prog, ch.ID, "passed", cases)
 		} else {
 			fmt.Printf("  %s chapter %s — %s\n\n", "FAIL", ch.ID, cases)
 			failures++
-		}
-		if !useSolution {
-			status := "failed"
-			if passed {
-				status = "passed"
+			_ = saveProgressLater(root, prog, ch.ID, "failed", cases)
+
+			// The ladder stops here unless the caller asked for everything. Everything after
+			// this chapter assumes it, so its failures would be noise.
+			if target != "all" && target != "every" {
+				if next := nextChapterID(root, ch.ID); next != ch.ID {
+					fmt.Printf("  the ladder stops here: chapter %s comes next, and it assumes %s.\n", next, ch.ID)
+					fmt.Printf("  %s\n", "`kata submit all` grades everything anyway.")
+					fmt.Printf("  %s\n\n", "`kata read "+ch.ID+"` reprints the chapter.")
+				}
+				break
 			}
-			prog[ch.ID] = progressEntry{Status: status, When: timeNow(), Cases: cases}
 		}
 	}
 
@@ -349,6 +379,13 @@ func filterTestOutput(s string) (string, bool) {
 		b.WriteString("\n")
 	}
 	return b.String(), passed
+}
+
+// saveProgressLater records one chapter's verdict in the in-memory map. The map is written
+// to disk once, at the end of the run.
+func saveProgressLater(root string, prog progressMap, id, status, cases string) error {
+	prog[id] = progressEntry{Status: status, When: timeNow(), Cases: cases}
+	return nil
 }
 
 func summarize(output string) string {

@@ -156,6 +156,7 @@ func cmdList() error {
 		return err
 	}
 	prog := loadProgress(root)
+	states := ladder(root, prog)
 
 	// The column is as wide as the longest title, so nothing is truncated and nothing
 	// misaligns when a chapter is renamed.
@@ -176,17 +177,24 @@ func cmdList() error {
 			fmt.Printf("  %s\n", p)
 			lastPart = p
 		}
-		mark := " "
 		note := ""
-		switch {
-		case !c.written():
+		mark := " "
+		if !c.written() {
 			note = "not written yet"
 			mark = "·"
-		case prog.passed(c.ID):
-			mark = "x"
-			note = prog[c.ID].Cases
-		default:
-			note = "open"
+		} else {
+			st := states[c.ID]
+			mark = markString(st)
+			switch st {
+			case statePassed:
+				note = prog[c.ID].Cases
+			case stateFailed:
+				note = "failed: " + prog[c.ID].Cases
+			case stateLocked:
+				note = "blocked"
+			default:
+				note = "ready"
+			}
 		}
 		fmt.Printf("    [%s] %s  %-*s  %s\n", mark, c.ID, titleWidth, c.Title, note)
 	}
