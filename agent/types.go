@@ -16,7 +16,7 @@ import (
 
 // ErrNotImplemented is returned by stubs. A check that sees this is telling you
 // "this chapter is not started", not "your logic is wrong".
-var ErrNotImplemented = errors.New("agent: not implemented yet")
+var ErrNotImplemented = errors.New("not implemented yet")
 
 // Message roles. These mirror the OpenAI wire format, which uses a flat list of
 // messages rather than typed content blocks.

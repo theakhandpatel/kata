@@ -173,8 +173,12 @@ type wireChunk struct {
 
 If you write `Delta` as a top-level field instead, it compiles. It decodes without a
 single error. And it gives you an empty string for every message, so stdout is a blank
-line and the program exits 0. That is exactly what `prints-reply` reports as
-`actual: "\n"`.
+line and the program exits 0. That is what `prints-reply` reports as `actual: "\n"`.
+
+The other way to get a blank line is to assign instead of append. Those are different
+bugs with the same symptom. Assigning keeps the last message's text, and the last message
+of a stream carries the token counts and no text at all, so you get `""`, not a truncated
+sentence. This is why the case checks the whole answer rather than its length.
 
 ### Why the scanner buffer has to be raised
 

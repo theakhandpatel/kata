@@ -64,12 +64,14 @@ func cmdSubmit(args []string) error {
 	prog := loadProgress(root)
 	failures := 0
 
-	// A learner who jumps ahead sees a wall of exit-code failures that are really the
-	// previous chapter's job. One line of context is cheaper than the confusion.
+	// Grading a chapter whose predecessor is unfinished usually means a wall of failures
+	// that are really the predecessor's job. Say so once, and say it as a likelihood
+	// rather than a rule: chapters are graded independently, and a later one can pass on
+	// its own.
 	for _, ch := range selected {
 		if prior := firstUnmetPrerequisite(root, prog, ch.ID); prior != "" {
-			fmt.Printf("  note: chapter %s is not passing yet, and chapter %s builds on it\n", prior, ch.ID)
-			fmt.Printf("        %s\n\n", "run `kata read "+prior+"`, then `kata submit "+prior+"` first")
+			fmt.Printf("  note: chapter %s has not passed yet. Chapter %s is graded on its own,\n", prior, ch.ID)
+			fmt.Printf("        so a failure here may be about something %s teaches.\n\n", prior)
 		}
 	}
 

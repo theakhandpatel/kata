@@ -157,6 +157,15 @@ func cmdList() error {
 	}
 	prog := loadProgress(root)
 
+	// The column is as wide as the longest title, so nothing is truncated and nothing
+	// misaligns when a chapter is renamed.
+	titleWidth := 0
+	for _, c := range allChapters(root) {
+		if n := len(c.Title); n > titleWidth {
+			titleWidth = n
+		}
+	}
+
 	fmt.Println()
 	lastPart := ""
 	for _, c := range allChapters(root) {
@@ -179,7 +188,7 @@ func cmdList() error {
 		default:
 			note = "open"
 		}
-		fmt.Printf("    [%s] %s  %-26s %s\n", mark, c.ID, c.Title, note)
+		fmt.Printf("    [%s] %s  %-*s  %s\n", mark, c.ID, titleWidth, c.Title, note)
 	}
 	fmt.Println()
 	fmt.Printf("  %d chapters. You edit agent/ only.\n\n", writtenCount(root))

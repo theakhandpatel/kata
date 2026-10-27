@@ -789,7 +789,7 @@ var Table = map[string]map[string][3]string{
 		"prints-reply": {
 			"The answer is printed, not returned, and it arrives in pieces.",
 			"Keep adding each new piece of text, then print once at the end. If stdout is empty, check where the text is read from: the wire puts it inside choices[0].delta, not at the top level.",
-			`Assigning instead of appending keeps only the last fragment. Use strings.Builder and write it out after the stream ends.`,
+			`Assigning instead of appending throws away every earlier piece. The final message of a stream carries the token counts and no text, so the answer ends up empty rather than short. Use strings.Builder and write it out once the stream ends.`,
 		},
 		"debug-usage": {
 			"stdout carries the answer only; diagnostics go to stderr.",
