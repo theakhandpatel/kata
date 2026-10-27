@@ -7,7 +7,8 @@ import (
 // cmdVerify proves the course is honest.
 //
 // For every written chapter it runs the same suite twice: once against
-// solutions/ch01..NN, which must pass every case, and once against stubs/chNN, which
+// every earlier reference overlay, which must pass every case, and once against the
+// state before the chapter, which
 // must fail at least one. A chapter whose starter passes grades nothing; a
 // chapter whose reference fails is impossible to complete. Both are silent
 // disasters that no amount of prose review catches, and both are cheap to detect

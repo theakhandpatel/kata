@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 )
 
 // ErrNotImplemented is returned by stubs. A check that sees this is telling you
@@ -91,6 +92,9 @@ type Provider interface {
 type HTTPError struct {
 	Status int
 	Body   string
+
+	// RetryAfter is what the server asked for in its Retry-After header, if any.
+	RetryAfter time.Duration
 }
 
 func (e *HTTPError) Error() string {

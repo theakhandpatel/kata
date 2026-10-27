@@ -35,12 +35,12 @@ func cmdStatus() error {
 		}
 	}
 
-	fmt.Printf("\n  kata · %s %s written · %d passed · %d planned\n\n",
-		itoa(written), plural(written, "chapter", "chapters"), passed, len(planned))
+	fmt.Printf("\n  kata · %s %s · %d passed\n\n",
+		itoa(written), plural(written, "chapter", "chapters"), passed)
 
 	if prog.passed(cur.ID) {
 		fmt.Printf("  everything written so far passes.\n")
-		fmt.Printf("  next: more chapters are being written — see docs/chapter-format.md\n\n")
+		fmt.Printf("  every chapter passes. See chapters/where-next.md for what to build next.\n\n")
 		return nil
 	}
 
@@ -182,7 +182,7 @@ func cmdList() error {
 		fmt.Printf("    [%s] %s  %-26s %s\n", mark, c.ID, c.Title, note)
 	}
 	fmt.Println()
-	fmt.Printf("  %d of %d chapters written. You edit agent/ only.\n\n", writtenCount(root), len(planned))
+	fmt.Printf("  %d chapters. You edit agent/ only.\n\n", writtenCount(root))
 	return nil
 }
 

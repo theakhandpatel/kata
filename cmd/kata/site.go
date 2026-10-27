@@ -199,7 +199,9 @@ func buildConfig(title, root string) string {
 	b.WriteString("    outline: { level: [2, 3] },\n")
 	b.WriteString("    nav: [\n")
 	b.WriteString("      { text: 'Home', link: '/' },\n")
-	b.WriteString("      { text: 'Chapters', link: '/chapters/01-chat-with-the-model/' },\n")
+	if first := firstChapterLink(root); first != "" {
+		fmt.Fprintf(&b, "      { text: 'Chapters', link: %s },\n", strconv.Quote(first))
+	}
 	b.WriteString("      { text: 'Designs', link: '/docs/designs' },\n")
 	b.WriteString("      { text: 'GitHub', link: 'https://github.com/theakhandpatel/kata' },\n")
 	b.WriteString("    ],\n")
@@ -245,6 +247,15 @@ func buildConfig(title, root string) string {
 	b.WriteString("}))\n")
 
 	return b.String()
+}
+
+// firstChapterLink points the top navigation at whichever chapter is first on disk.
+func firstChapterLink(root string) string {
+	all := allChapters(root)
+	if len(all) == 0 {
+		return ""
+	}
+	return "/chapters/" + all[0].Slug + "/"
 }
 
 func ensureDependencies(siteDir string) error {

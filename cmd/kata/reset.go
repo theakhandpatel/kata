@@ -10,8 +10,8 @@ import (
 
 // cmdReset restores agent/ to the state at the start of a chapter.
 //
-// The state is derived, not stored: `kata reset 04` applies solutions/ch01
-// through ch03 and drops the result into agent/. That is the same before-state
+// The state is derived, not stored: `kata reset NN` applies every earlier chapter's
+// reference overlay in order and drops the result into agent/. That is the same before-state
 // `kata verify` grades, so what you reset to is exactly what the previous
 // chapter proved.
 //

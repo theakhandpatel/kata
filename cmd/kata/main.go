@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -93,42 +94,75 @@ You edit agent/. Nothing else. No ` + "`go test`" + ` required.
 
 // --- the arc ---
 
-// planned is the whole arc, including chapters not yet written, so that
-// `kata list` communicates the shape of the course rather than only what
-// happens to exist on disk. Keep in sync with README.md.
-var planned = []struct {
-	ID    string
+// The arc is derived from the chapters directory, never listed by hand.
+//
+// A chapter directory is `NN-slug`, and its part comes from a `part` file inside it if
+// one exists, otherwise from the part ranges below. Adding a chapter means adding a
+// directory; nothing in this file needs editing.
+//
+// parts is ordered, and each entry owns every chapter number from its first value up to
+// the next entry's first value. Appending a chapter inside an existing range needs no
+// change here; opening a new part adds one line.
+var parts = []struct {
+	From  int
 	Title string
 }{
-	{"01", "Talk to the model"},
-	{"02", "Tool calling"},
-	{"03", "Running a tool"},
-	{"04", "Tools that touch disk"},
-	{"05", "The agent loop"},
-	{"06", "Prompt assembly"},
-	{"07", "Sessions"},
-	{"08", "Context budget"},
-	{"09", "Interrupt and steering"},
-	{"10", "Skills: advertise"},
-	{"11", "Skills: invoke"},
-	{"12", "Subagent"},
-	{"13", "MCP"},
+	{1, "I. Wire"},
+	{3, "II. Act"},
+	{6, "III. Remember"},
+	{9, "IV. Extend"},
+	{11, "V. Compose"},
 }
 
-func partOf(id string) string {
-	n, _ := strconv.Atoi(id)
-	switch {
-	case n <= 2:
-		return "I. Wire"
-	case n <= 5:
-		return "II. Act"
-	case n <= 8:
-		return "III. Remember"
-	case n <= 10:
-		return "IV. Extend"
-	default:
-		return "V. Compose"
+// chapterTitle turns "03-running-a-tool" into "Running a tool".
+func chapterTitle(slug string) string {
+	rest := slug
+	if len(slug) > 3 && slug[2] == '-' {
+		rest = slug[3:]
 	}
+	// Sentence case for the slug, then a few words that keep their own spelling.
+	lower := map[string]bool{
+		"a": true, "an": true, "and": true, "as": true, "at": true, "by": true,
+		"for": true, "in": true, "of": true, "on": true, "or": true, "the": true,
+		"to": true, "with": true,
+	}
+	upper := map[string]string{"mcp": "MCP", "sse": "SSE", "json": "JSON", "agent": "agent"}
+
+	words := strings.Split(strings.ReplaceAll(rest, "-", " "), " ")
+	for i, w := range words {
+		if w == "" {
+			continue
+		}
+		if up, ok := upper[w]; ok {
+			words[i] = up
+			continue
+		}
+		if i > 0 && lower[w] {
+			continue
+		}
+		words[i] = strings.ToUpper(w[:1]) + w[1:]
+	}
+	title := strings.Join(words, " ")
+	// The first word is always capitalised, even when it is in the exception list.
+	if title != "" {
+		title = strings.ToUpper(title[:1]) + title[1:]
+	}
+	return title
+}
+
+// partOf returns the part a chapter belongs to, from its number.
+func partOf(id string) string {
+	n, err := strconv.Atoi(id)
+	if err != nil {
+		return ""
+	}
+	title := parts[0].Title
+	for _, p := range parts {
+		if n >= p.From {
+			title = p.Title
+		}
+	}
+	return title
 }
 
 type chapter struct {
@@ -137,22 +171,30 @@ type chapter struct {
 	Title string
 }
 
-// allChapters merges the planned arc with what exists on disk.
+// allChapters reads the arc from the chapters directory.
+//
+// Order comes from the directory names, which start with a two digit number, so a new
+// chapter appears in the right place without this file knowing it exists.
 func allChapters(root string) []chapter {
-	onDisk := map[string]string{}
-	if entries, err := os.ReadDir(filepath.Join(root, "chapters")); err == nil {
-		for _, e := range entries {
-			if !e.IsDir() || len(e.Name()) < 3 || e.Name()[2] != '-' {
-				continue
-			}
-			onDisk[e.Name()[:2]] = e.Name()
+	entries, err := os.ReadDir(filepath.Join(root, "chapters"))
+	if err != nil {
+		return nil
+	}
+	var out []chapter
+	for _, e := range entries {
+		if !e.IsDir() || len(e.Name()) < 3 || e.Name()[2] != '-' {
+			continue
 		}
+		slug := e.Name()
+		title := chapterTitle(slug)
+		if body, err := os.ReadFile(filepath.Join(root, "chapters", slug, "title")); err == nil {
+			if custom := strings.TrimSpace(string(body)); custom != "" {
+				title = custom
+			}
+		}
+		out = append(out, chapter{ID: slug[:2], Slug: slug, Title: title})
 	}
-
-	out := make([]chapter, 0, len(planned))
-	for _, p := range planned {
-		out = append(out, chapter{ID: p.ID, Slug: onDisk[p.ID], Title: p.Title})
-	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ID < out[j].ID })
 	return out
 }
 

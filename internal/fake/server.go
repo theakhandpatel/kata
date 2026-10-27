@@ -75,6 +75,9 @@ type Reply struct {
 	Status int
 	Body   string
 
+	// Headers are added to the response. Used for Retry-After.
+	Headers map[string]string
+
 	// FailMidStream closes the connection after the first chunk, simulating a
 	// provider dying mid-response.
 	FailMidStream bool
@@ -275,6 +278,9 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 
 	if reply.Status != 0 {
 		w.Header().Set("Content-Type", "application/json")
+		for k, v := range reply.Headers {
+			w.Header().Set(k, v)
+		}
 		w.WriteHeader(reply.Status)
 		_, _ = fmt.Fprint(w, reply.Body)
 		return

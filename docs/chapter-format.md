@@ -93,6 +93,18 @@ got := agent.SubstituteArgs("Deploy to $0 in $1", []string{"staging", "eu"})
 A case that pins a function must say so in `problem.md` under "given surface",
 so a learner never discovers the requirement from a compile error.
 
+## Adding a chapter
+
+Create `chapters/NN-slug/` with `README.md`, `example.md`, `checks/`, and a `title` line
+inside the README's `# NN Title` heading. Then:
+
+1. `internal/hints/hints.go` gets a `"NN"` entry with three rungs per case.
+2. `reference/chNN/` holds only the files this chapter changes. Overlays apply in
+   chapter order, so a chapter that touches one file ships one file.
+
+Nothing else needs editing. The chapter list, the sidebar, the part grouping, and the
+verification order all come from the directory names.
+
 ## The build tag
 
 Chapter checks carry `//go:build kata_checks`. That keeps `go test ./...` green
