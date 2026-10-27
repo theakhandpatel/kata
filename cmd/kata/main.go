@@ -51,6 +51,8 @@ func run(args []string) error {
 		return cmdVerify(args[1:])
 	case "reset":
 		return cmdReset(args[1:])
+	case "site":
+		return cmdSite(args[1:])
 	case "progress", "p":
 		return cmdProgress()
 	case "help", "-h", "--help":
@@ -72,6 +74,7 @@ func usage() {
   kata verify                prove every chapter rejects its starter and accepts its reference
   kata reset [NN]            restore agent/ to the start of a chapter
   kata read where-next       what to build after the course
+  kata site                  render the course as a static website (site/dist)
   kata list                  the arc, with what is written and what is passed
   kata progress              summary
 

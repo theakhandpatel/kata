@@ -87,7 +87,12 @@ kata progress             what passed, and when
 kata verify               prove each chapter rejects its starter and accepts its reference
 kata reset [NN]           restore agent/ to the state before a chapter
 kata read where-next      what to build after the course
+kata site                 render the course as a static website in site/dist
 ```
+
+`kata site` writes plain HTML and one stylesheet. Open `site/dist/index.html`
+directly, or serve the directory. Diagrams load from a CDN; offline, the diagram
+source stays readable in place.
 
 ## How it works
 
