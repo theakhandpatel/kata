@@ -60,14 +60,14 @@ func itoa(n int) string { return fmt.Sprintf("%d", n) }
 
 // --- read: the three documents ---
 
-var docNames = []string{"problem", "overview", "example", "readme"}
+var docNames = []string{"chapter", "example"}
 
 func cmdRead(args []string) error {
 	root, err := findRoot()
 	if err != nil {
 		return err
 	}
-	chArg, doc := "", "problem"
+	chArg, doc := "", "chapter"
 	for _, a := range args {
 		if isDocName(a) {
 			doc = a
@@ -93,9 +93,9 @@ func cmdRead(args []string) error {
 		return err
 	}
 
-	name := doc + ".md"
-	if doc == "readme" {
-		name = "README.md"
+	name := "README.md"
+	if doc == "example" {
+		name = "example.md"
 	}
 	path := filepath.Join(root, "chapters", ch.Slug, name)
 	body, err := os.ReadFile(path)

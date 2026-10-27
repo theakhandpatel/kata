@@ -20,11 +20,8 @@ func TestConfigListsEveryChapter(t *testing.T) {
 		if !strings.Contains(config, `/chapters/`+ch.Slug+`/`) {
 			t.Errorf("sidebar is missing chapter %s (%s)", ch.ID, ch.Slug)
 		}
-		for _, page := range []string{"overview", "problem", "example"} {
-			link := `"/chapters/` + ch.Slug + `/` + page + `"`
-			if !strings.Contains(config, link) {
-				t.Errorf("sidebar is missing %s for chapter %s", page, ch.ID)
-			}
+		if !strings.Contains(config, `"/chapters/`+ch.Slug+`/example"`) {
+			t.Errorf("sidebar is missing the worked example for chapter %s", ch.ID)
 		}
 	}
 }

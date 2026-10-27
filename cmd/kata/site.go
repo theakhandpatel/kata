@@ -128,8 +128,6 @@ func prepareContent(root, srcDir string) (int, error) {
 		dir := "chapters/" + ch.Slug
 		for _, doc := range []struct{ source, target string }{
 			{dir + "/README.md", dir + "/index.md"},
-			{dir + "/overview.md", dir + "/overview.md"},
-			{dir + "/problem.md", dir + "/problem.md"},
 			{dir + "/example.md", dir + "/example.md"},
 		} {
 			if _, err := os.Stat(filepath.Join(root, doc.source)); err != nil {
@@ -217,12 +215,11 @@ func buildConfig(title, root string) string {
 			base := "/chapters/" + ch.Slug + "/"
 			items = append(items, fmt.Sprintf(
 				"        { text: %s, link: %s, collapsed: false, items: [\n"+
-					"          { text: 'Overview', link: %s },\n"+
-					"          { text: 'Problem', link: %s },\n"+
-					"          { text: 'Example', link: %s },\n"+
+					"          { text: 'The chapter', link: %s },\n"+
+					"          { text: 'Worked example', link: %s },\n"+
 					"        ] },",
 				strconv.Quote(ch.ID+" "+ch.Title), strconv.Quote(base),
-				strconv.Quote(base+"overview"), strconv.Quote(base+"problem"), strconv.Quote(base+"example")))
+				strconv.Quote(base), strconv.Quote(base+"example")))
 		}
 		if len(items) == 0 {
 			continue

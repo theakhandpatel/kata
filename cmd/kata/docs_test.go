@@ -74,7 +74,7 @@ func caseIDs(t *testing.T, slug string) []string {
 func TestChapterFilesExist(t *testing.T) {
 	root := repoRootForTests(t)
 	for _, slug := range writtenChapters(t) {
-		for _, name := range []string{"README.md", "overview.md", "problem.md", "example.md"} {
+		for _, name := range []string{"README.md", "example.md"} {
 			path := filepath.Join(root, "chapters", slug, name)
 			info, err := os.Stat(path)
 			if err != nil {
@@ -107,13 +107,9 @@ func TestStatedCaseCountsMatch(t *testing.T) {
 			}
 		}
 
-		problem, err := os.ReadFile(filepath.Join(root, "chapters", slug, "problem.md"))
-		if err != nil {
-			t.Fatalf("read problem for %s: %v", slug, err)
-		}
-		for _, m := range reportsRe.FindAllStringSubmatch(string(problem), -1) {
+		for _, m := range reportsRe.FindAllStringSubmatch(string(readme), -1) {
 			if n, _ := strconv.Atoi(m[2]); n != want {
-				t.Errorf("%s/problem.md says reports %s/%s, checks declare %d", slug, m[1], m[2], want)
+				t.Errorf("%s/README.md says reports %s/%s, checks declare %d", slug, m[1], m[2], want)
 			}
 		}
 	}
@@ -150,7 +146,7 @@ func TestDocCaseIDsExist(t *testing.T) {
 			continue
 		}
 
-		for _, doc := range []string{"overview.md", "problem.md", "example.md", "README.md"} {
+		for _, doc := range []string{"README.md", "example.md"} {
 			body, err := os.ReadFile(filepath.Join(root, "chapters", slug, doc))
 			if err != nil {
 				continue
@@ -185,7 +181,7 @@ func TestDocumentedCommandsPointAtWrittenChapters(t *testing.T) {
 	}
 
 	for _, slug := range writtenChapters(t) {
-		for _, doc := range []string{"README.md", "problem.md", "overview.md", "example.md"} {
+		for _, doc := range []string{"README.md", "example.md"} {
 			body, err := os.ReadFile(filepath.Join(root, "chapters", slug, doc))
 			if err != nil {
 				continue
@@ -261,7 +257,7 @@ func TestProseHasNoAITells(t *testing.T) {
 		if !e.IsDir() || len(e.Name()) < 3 {
 			continue
 		}
-		for _, doc := range []string{"README.md", "overview.md", "problem.md", "example.md"} {
+		for _, doc := range []string{"README.md", "example.md"} {
 			files = append(files, filepath.Join("chapters", e.Name(), doc))
 		}
 	}
