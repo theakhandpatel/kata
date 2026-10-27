@@ -1,194 +1,199 @@
 # 01 Overview
 
-*How this mechanism works, in general. Read this before you write code; it is
-deliberately free of implementation detail.*
+*How this chapter works. Read it before you write code. There is no code in it on
+purpose.*
 
 ---
 
-## Why this is chapter one
+## Why this is the first chapter
 
-This is the only page of the course where you talk to something you do not control.
+Every chapter after this one is about code you control. Your tools, your loop, your
+saved conversations, your token budget. This is the only chapter where you talk to
+something you do not control.
 
-Everything after this chapter is yours: your tools, your loop, your session file, your
-budget. The model is not. It answers differently every time you ask, it fails when
-someone else's server is busy, and each answer costs money. You cannot write a test
-against it.
+The model is a web service somebody else runs. It replies differently every time you
+ask the same question. It goes down when their server is busy. Each reply costs money.
+You cannot write a test that says "the model will say this", because it will not.
 
-That is the problem worth solving first, because every later chapter needs it solved.
-Put the model behind one function, and everything above that function becomes
-predictable enough to check. Not as a design flourish: it is what makes the next
-eleven chapters gradable at all.
+So the first thing you build is the boundary between their service and your code. One
+function, called `Chat`, that takes a request and returns a reply.
 
 ```mermaid
 flowchart LR
-    subgraph yours["your code (repeatable)"]
-        L[agent loop] --> T[tool registry]
-        T --> S[session log]
+    subgraph yours["code you write"]
+        L[loop] --> T[tools]
+        T --> S[saved conversation]
         S --> P
     end
-    P["your provider code<br/>Chat(ctx, req)"] --> M{{"the model<br/>(not yours)"}}
+    P["Chat(ctx, req)"] --> M{{"the model<br/>someone else's server"}}
     M --> P
-
-    style P fill:#1f6feb22,stroke:#1f6feb
-    style M fill:#f8514922,stroke:#f85149
 ```
 
 ```
-   yours: repeatable                   │  not yours: random, slow, paid
-   ────────────────────────────────────┼──────────────────────────────────
-   loop → tools → session → provider ──┼──▶ model ──▶ back through provider
+   yours: same every time             │  not yours: different every time,
+   ──────────────────────────────────┼──────────────────────────────
+   loop → tools → history → Chat ────┼──▶ model ──▶ back through Chat
 ```
 
-On your side of that line you can check anything. On the model's side, nothing. So the
-first thing you build is the line itself, and the first thing you learn is what travels
-across it.
+Everything on your side of that arrow can be tested, because it behaves the same way
+twice. Nothing on the other side can. That is why you build the boundary first, and
+why the rest of the course lives on your side of it.
 
-## What travels across the line
+## What you send
 
-Not a prompt string. A structure: a model name, a list of messages in order, each with
-a role, and sometimes a list of tools:
+Not a sentence. A small set of named fields:
 
 ```
 Request
-├── model        "gpt-4o-mini"
-├── messages     [ {system, "..."}, {user, "..."} ]
-├── tools        []            ← empty in this chapter
-└── stream       true
+├── model        "gpt-4o-mini"          which model to use
+├── messages     [ {system, "..."},     the conversation so far,
+│                  {user, "..."} ]       oldest first, each with a role
+├── tools        []                     empty in this chapter
+└── stream       true                   see below
 ```
 
-The response is not a structure. It arrives as **many small pieces**, and putting them
-back together is what this chapter is about.
+You will fill in `tools` in chapter 02 and add to `messages` in every chapter after
+that. For now, one user message is enough.
 
-### Why the wire is a stream
+## What comes back
 
-Two reasons, and only the second is obvious.
+This is the part that surprises people. The reply does not arrive as one object. It
+arrives as **dozens of small messages, each holding a few words**, and your job is to
+stick them back together in order.
 
-1. **Latency.** The user sees the first token in ~200 ms instead of waiting for
-   the whole answer.
-2. **Length.** A response can be longer than any single HTTP chunk can
-   comfortably carry, and the server does not know in advance how long it will
-   be.
+### Why the reply is sent in pieces
 
-So the server sends `text/event-stream`: plain text, one small JSON object at a time,
-each one saying "here is a bit more". The `delta` field inside holds only the new piece,
-not the whole answer so far.
+Two reasons.
+
+**Waiting.** Generating an answer takes a few seconds. If the server waited until it
+had the whole thing before sending anything, you would stare at a blank screen. So it
+sends each new word as soon as it exists, and the user sees the answer being typed.
+
+**Size.** The server does not know in advance how long the answer will be. It might be
+one sentence or forty pages. Sending pieces avoids promising a length it cannot keep.
 
 ```
-   request ──────────────────────────────▶
-                                            (server builds the answer
-                                             one token at a time)
-   ◀──── data: {"choices":[{"delta":{"content":"The "}}]}    ← chunk 1
-   ◀──── data: {"choices":[{"delta":{"content":"quick "}}]}  ← chunk 2
-   ◀──── data: {"choices":[{"delta":{"content":"fox."}}]}    ← chunk 3
-   ◀──── data: {...,"usage":{...}}                          ← chunk 4
-   ◀──── data: [DONE]                                       ← terminator
+   you ─────────────────────────────────▶  (server writes the answer
+                                            one word at a time)
+   ◀──── data: {"choices":[{"delta":{"content":"The "}}]}    ← 1st piece
+   ◀──── data: {"choices":[{"delta":{"content":"quick "}}]}  ← 2nd piece
+   ◀──── data: {"choices":[{"delta":{"content":"fox."}}]}    ← 3rd piece
+   ◀──── data: {"usage":{...}}                               ← the counts
+   ◀──── data: [DONE]                                        ← the end marker
 ```
 
-The text sits two levels down: one message can carry several **choices**, and each
-choice has its own `delta`. That nesting is easy to misremember, so here is the exact
-shape to decode into:
+Read those lines slowly, because the shape is the whole chapter. Each line starts with
+`data:`. After that is a small JSON object. The words you want are not at the top of
+that object. They are three levels down:
 
-```json
-{
-  "choices": [
-    { "index": 0, "delta": { "content": "The " }, "finish_reason": null }
-  ],
-  "usage": { "prompt_tokens": 42, "completion_tokens": 7, "total_tokens": 49 }
-}
+```
+   {"choices": [                 ← a list, because a request may ask for
+      {"delta": {                ←   several answers at once
+         "content": "The "       ← this is the text. one piece of it.
+      }}
+   ]}
 ```
 
-The `choices` array exists because a request can ask for several completions. This
-course asks for one, sends no `n`, and reads `choices[0]`. If a stream did carry
-several choices, adding them all together would mix up separate answers.
+`delta` means "the new part". It is never the whole answer. The first piece holds
+`"The "`, the second holds `"quick "`, and the third holds `"fox."`. Put those three
+together and you have `"The quick fox."`. That is what your function has to do, for
+every reply, no matter how many pieces it comes in.
 
-Here is the idea to hold on to. **The stream is a list of pieces, and your job is to
-stick them together.** No single message is the answer. The answer is what you get by
-joining every piece in order.
+Two smaller things in that stream:
 
-Once you see it that way, three things stop being surprising:
+**The counts arrive last.** `prompt_tokens` and `completion_tokens` tell you how much
+the call cost. The server only knows them once it has finished writing, so they come at
+the end, on a message with no text in it.
 
-- **Add to the end, never overwrite.** Joining means keeping what you already have.
-- **The token counts come last.** The server only knows them once it has finished, so
-  they arrive on the final message, which has no text in it.
-- **`[DONE]` is not data.** It marks the end of the stream. It is not part of the
-  answer.
+**`[DONE]` is not JSON.** It is the server saying "that is everything". It has no reply
+and no content. If you try to parse it as JSON, your program crashes on a perfectly
+healthy reply.
 
-## Why the failure modes cluster here
+## Three things that will bite you
 
-A provider client has an unusually bad ratio of code to failure modes, because it
-sits on a network boundary with three independent clocks: yours, the server's,
-and the connection's.
+The rest of this page is about failure, because a client like this fails in ways that
+look like success.
 
 ```mermaid
 flowchart TD
-    A[your request] --> B{server accepts?}
-    B -- no --> C["non-2xx<br/>429 / 401 / 500"]
-    B -- yes --> D{stream healthy?}
-    D -- "dies mid-way" --> E["partial answer<br/>looks complete"]
-    D -- "fine" --> F{pieces joined<br/>in order?}
-    F -- no --> G["silently truncated<br/>or wrong"]
-    F -- yes --> H[correct message]
-    C --> I[typed error → caller decides]
-    E --> J[error, never a short answer]
-    G --> K[append, don't assign]
+    A[your request] --> B{server accepts it?}
+    B -- no --> C["a 429 or a 500"]
+    B -- yes --> D{does the stream finish?}
+    D -- "connection drops" --> E["half an answer<br/>that looks complete"]
+    D -- "yes" --> F{did you join<br/>the pieces in order?}
+    F -- no --> G["an answer with<br/>words missing"]
+    F -- yes --> H[the right answer]
 ```
 
-Each branch is a graded case, and each one has a plausible-looking wrong
-implementation:
+**Overwriting instead of adding.** The most common first bug. You write
+`msg.Content = piece` instead of `msg.Content += piece`. On a one-piece reply it works
+perfectly. On a real reply you keep only the last piece, so a long answer arrives as
+`"fox."`. Your program exits 0 and looks happy, which is what makes it nasty.
 
-| Branch | The wrong implementation | The case |
+**Ignoring a broken connection.** When the connection drops halfway, the Go scanner
+stops reading and remembers why in `scanner.Err()`. If you never check it, the half
+answer you collected is returned as though it were complete. The program says
+`"The quick "` and thinks it succeeded. Always check the error after the loop.
+
+**Throwing away the caller's context.** Use `context.Background()` and the request
+still works. It works today, it works tomorrow, and it works for every case except the
+one where somebody tries to cancel the request. That is chapter 08, three chapters
+later, where Ctrl-C silently does nothing and the bug looks brand new. Pass the
+`ctx` you were given, and cancellation works from the start.
+
+| What goes wrong | The wrong version | Where it is caught |
 |---|---|---|
-| non-2xx | decode the error body as a completion | `http-error` |
-| stream dies | ignore `scanner.Err()` | `truncated-stream` |
-| pieces of text | overwrite instead of add | `prints-reply` |
-| shape | read `delta` from the top level instead of `choices[0].delta` | `prints-reply`, `sse-framing` |
-| metadata | only decode chunks that carry content | `debug-usage` |
-| request | forget `stream: true`, or build the URL by hand | `request-shape`, `request-envelope` |
-| lifetime | use `context.Background()` instead of `ctx` | `request-timeout` |
+| words overwritten | `=` instead of `+=` | `prints-reply` |
+| wrong field | reading `delta` at the top level | `prints-reply`, `sse-framing` |
+| dropped connection | skipping `scanner.Err()` | `truncated-stream` |
+| counts missing | only decoding messages with text | `debug-usage` |
+| bad request | no `"stream": true`, wrong URL | `request-shape`, `request-envelope` |
+| no cancellation | `context.Background()` | `request-timeout` |
+| any error at all | decoding the error page as a reply | `http-error` |
 
-That last one deserves a note: `context.Background()` *works*. The request
-succeeds. It only fails when someone tries to cancel you, which is exactly what
-chapter 08 (steering and abort) does, and by then the bug is three chapters old
-and invisible.
+## Why the fake server is not cheating
 
-## Why the scripted server is not a cheat
+The course hands you `internal/fake`, a small server that replays fixed replies. It is
+reasonable to suspect that you are not really talking to a model, so the chapter is not
+really about anything.
 
-It would be easy to think "they gave me a fake server, so I'm not really talking
-to a model". The opposite is true.
+The opposite is true. `internal/fake` is a real HTTP server. It opens a real socket,
+reads your request, checks your headers, and writes the same `data:` lines a real
+provider writes, in the same broken-up way, ending with the same `[DONE]`. The only
+thing it replaces is the words. That is the one thing a test could never control
+anyway.
 
-`internal/fake` is a real HTTP server. It binds a socket, parses your request,
-validates your headers, and writes real SSE bytes with real chunk boundaries and
-a real `[DONE]`. The only thing replaced is the *content* of the reply, which
-is the one thing a test can never control and never needs to. When you point
-this same client at Ollama and it works, nothing changes but the base URL,
-because the protocol was the protocol.
+When you point this same code at Ollama on your laptop, the only change is the base
+URL. Nothing else, because the protocol was never the fake's, it was the provider's.
 
-This is the course's central trick, stated plainly: **replace the model, keep
-the wire.** That is how every harness in the world tests itself, and you will do
-it again for tools, sessions, and subagents.
+This is how every real agent tests itself. You will do it again for tools, for saved
+conversations, and for the subagent.
 
-## Where the real implementations go further
+## Where real clients go further
 
-| Concern | pi | crush |
+| What they add | In pi | In crush |
 |---|---|---|
-| Retries / backoff | `packages/ai/src/api/openai-completions.ts` | `internal/agent/request_timeout.go` |
-| Prompt caching | `openai-prompt-cache.ts` | none |
-| Provider fan-out (~30 wire formats) | `packages/ai/src/providers/` | `internal/backend/` |
+| retries with backoff | `packages/ai/src/api/openai-completions.ts` | `internal/agent/request_timeout.go` |
+| prompt caching | `openai-prompt-cache.ts` | none |
+| about thirty other providers | `packages/ai/src/providers/` | `internal/backend/` |
 
-They all keep the same shape you are about to write. The extra code is
-accumulated scar tissue from production, not a different architecture. Read
-`openai-completions.ts` *after* you pass, and notice how much of it you now
-recognise.
+All of them keep the shape you are about to write. The extra code is years of
+production problems, not a different design. Read `openai-completions.ts` after you
+pass, and see how much of it you recognise.
 
-## Self-check
+## Check yourself
 
-Answer these without scrolling up. If you can't, re-read the section named.
+Answer these without scrolling up. The section that answers each is in brackets.
 
-1. Why is `[DONE]` not a message? *(Why the wire is a stream)*
-2. Usage is reported once. Why can it not be reported on the first chunk?
-   *(Why the wire is a stream)*
-3. Name the six failure branches and which one is invisible until chapter 08.
-   *(Why the failure modes cluster here)*
-4. What exactly is replaced when the scripted server stands in for a model, and
-   what is not? *(Why the scripted server is not a cheat)*
-5. Why does `assign` instead of `append` pass a naive test? *(The failure table)*
+1. Why does the reply arrive in pieces instead of one object? *(Why the reply is sent
+   in pieces)*
+2. Where in the JSON does the actual text live, and why is it not at the top?
+   *(Why the reply is sent in pieces)*
+3. Why can the cost counts not arrive on the first message? *(Why the reply is sent in
+   pieces)*
+4. Your agent answers a long question with just `"fox."`. What did you do wrong, and
+   why did the program still exit successfully? *(Three things that will bite you)*
+5. Why does `context.Background()` look fine for the next three chapters?
+   *(Three things that will bite you)*
+6. Name one thing the fake server replaces and one thing it does not. *(Why the fake
+   server is not cheating)*

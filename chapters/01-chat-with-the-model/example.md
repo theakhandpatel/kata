@@ -1,58 +1,58 @@
 # 01 Example
 
-*Full, annotated implementation. Open this after a real attempt, ideally after
-`kata submit 01` passes, then compare. Reading it first turns the exercise into
+*The finished implementation, taken apart. Open this after a real attempt, or after
+`kata submit 01` passes, and compare. Reading it first turns the exercise into
 copy-typing.*
 
-The complete compilable file is `reference/ch01/agent/provider_openai.go`. This
-document is that file taken apart, in the order the thinking happens.
+The file it describes is `reference/ch01/agent/provider_openai.go`. This page follows
+the order you would think it through, not the order the lines appear.
 
 ---
 
-## The shape, before the code
+## Split it into three jobs
 
-Four jobs, four functions. Knowing the split matters more than the code:
+One 90-line function will pass. You will regret it in chapter 02, when the same parser
+also has to handle tool calls. Three small functions cost nothing now and save a rewrite:
 
 ```
 Chat
- ├── buildRequest   Request  →  *http.Request     (translate our types → wire)
- ├── do             send, check status, or fail   (transport + error policy)
- └── readSSE        io.Reader → Message, Usage    (the pieces → one message)
+ ├── buildRequest   our Request  →  *http.Request     make the request
+ ├── do             send it, or fail                  send and check
+ └── readSSE        the stream   →  Message, Usage    read the pieces
 ```
 
-If you write `Chat` as one 90-line function it will pass, and you will hate it in
-chapter 02, when the parser also has to handle tool calls. Split into three functions,
-chapter 02 adds about 15 lines and touches nothing else.
+`Chat` builds, sends, reads. Each of the other two is short enough to hold in your head.
 
-## Step 1: translate, don't leak
+## Job 1: make the request
 
-Your `Message` and the wire's message are similar but not the same. Keep a wire
-type and a conversion function; never put `json:` tags on your domain types.
+Your own `Message` type and the JSON message are similar, but not the same. Keep them
+separate. Do not put `json:` tags on the types you use everywhere else, because in
+chapter 02 the JSON shape grows an object that your type does not have, and you would
+have to change every file that touches it.
 
 ```go
-// Why a separate type: the wire has `tool_calls` as a nested object, ours has
-// ToolCalls as a flat slice. When those diverge in chapter 02, only this file
-// changes.
 type wireRequest struct {
 	Model       string        `json:"model"`
 	Messages    []wireMessage `json:"messages"`
 	Stream      bool          `json:"stream"`
 	MaxTokens   *int          `json:"max_tokens,omitempty"`
 	Temperature *float64      `json:"temperature,omitempty"`
-	Tools       []wireTool    `json:"tools,omitempty"`
 }
-
-func toWireMessages(msgs []Message) []wireMessage { /* role + content */ }
 ```
 
-Two details that are cheap now and expensive later:
+Two small decisions that cost nothing now and a lot later:
 
-- `*int` / `*float64` for optionals. With `int`, zero means both "unset" and
-  "zero", and you will one day send `max_tokens: 0`.
-- The model falls back: `req.Model` first, then `p.Model`. Chapter 05 sends
-  requests with no model when it reuses a session's provider.
+**Use `*int` and `*float64` for the optional numbers.** With a plain `int`, you cannot
+tell "the caller did not set this" apart from "the caller set it to zero". One day you
+will send `max_tokens: 0`, which tells a real provider to produce nothing, and the
+program will look broken for no visible reason. A pointer is nil when it was not set,
+so `omitempty` drops it from the JSON.
 
-## Step 2: the request, and the three things that are graded
+**Let the model name fall back.** Use the one on the request if it is set, otherwise the
+one on the client. Chapter 06 reuses a provider across runs and does not always pass a
+model name.
+
+## Job 2: send it
 
 ```go
 url := strings.TrimRight(p.BaseURL, "/") + "/chat/completions"
@@ -67,20 +67,23 @@ if p.APIKey != "" {
 }
 ```
 
-- `TrimRight(base, "/")` so both `http://x/v1` and `http://x/v1/` work. Half the
-  "why is it 404" reports in the world are this.
-- `NewRequestWithContext`, not `NewRequest`. This is the only place `ctx` enters,
-  and it is what makes `request-timeout` pass.
-- `stream: true` in the body is **required by the case**, even though our
-  function returns a whole message. We stream because chapter 06 will want
-  incremental events, and because learning the stream is the chapter.
+**`TrimRight` on the base URL.** With it, `http://x/v1` and `http://x/v1/` both work.
+Without it, one of them silently produces a URL with a double slash and a 404 that
+takes an hour to find.
 
-## Step 3: fail the way a caller can act on
+**`NewRequestWithContext`, not `NewRequest`.** This is the only place the caller's
+context enters your code. It is what makes the timeout check pass, and what makes
+Ctrl-C work in chapter 08.
+
+**`"stream": true`.** The checks require it, and the next job depends on it. Without
+it the server sends one large reply and your line reader waits forever.
+
+## Job 3: fail in a way the caller can use
 
 ```go
 resp, err := client.Do(httpReq)
 if err != nil {
-	return Message{}, Usage{}, err   // already wraps ctx.Err() when cancelled
+	return Message{}, Usage{}, err
 }
 defer resp.Body.Close()
 
@@ -90,26 +93,28 @@ if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 }
 ```
 
-Three decisions worth defending:
+Three things here, each of which is a check.
 
-- **Return `client.Do`'s error unchanged.** It already wraps `context.Canceled`;
-  wrapping it in a string would break `errors.Is` and fail `request-timeout`.
-- **`LimitReader`, 4 KiB.** Error pages are sometimes megabytes of HTML. You want
-  a diagnostic, not a memory event.
-- **A typed error, not `fmt.Errorf`.** `*HTTPError` is what lets the loop in
-  chapter 04 distinguish "retry with backoff" from "the model is wrong".
+**Return the error from `client.Do` untouched.** It already wraps `context.Canceled`
+when the caller gives up. If you wrap it in a string to add context, then
+`errors.Is(err, context.Canceled)` stops working and the timeout check fails. Let it
+through.
 
-## Step 4: read the stream
+**Read at most 4 KiB of an error page.** Error responses are sometimes megabytes of
+HTML. You want a line you can read, not a memory spike.
+
+**Return your own `*HTTPError`, not a formatted string.** Chapter 04 needs to tell "the
+server is busy, try again" apart from "the model gave a bad answer". A typed error makes
+that a type assertion. A string makes it a regex.
+
+## Job 4: read the pieces
 
 This is the chapter. Everything above is plumbing.
 
 ```go
 func readSSE(r io.Reader) (Message, Usage, error) {
-	var (
-		content strings.Builder
-		usage   Usage
-		calls   = map[int]*callAccumulator{}   // chapter 02; unused here
-	)
+	var content strings.Builder
+	var usage Usage
 
 	scanner := bufio.NewScanner(r)
 	scanner.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
@@ -117,7 +122,7 @@ func readSSE(r io.Reader) (Message, Usage, error) {
 	for scanner.Scan() {
 		line := scanner.Text()
 
-		// SSE framing: blank separators, comments, and named fields other than data.
+		// Skip blank lines, comments, and any field that is not data.
 		if line == "" || strings.HasPrefix(line, ":") || !strings.HasPrefix(line, "data:") {
 			continue
 		}
@@ -132,15 +137,14 @@ func readSSE(r io.Reader) (Message, Usage, error) {
 			return Message{}, Usage{}, fmt.Errorf("decode stream chunk: %w", err)
 		}
 
-		if chunk.Usage != nil {          // ← arrives once, on the last chunk
-			usage = Usage{ /* ... */ }
+		if chunk.Usage != nil {
+			usage = Usage{ /* copy the three numbers */ }
 		}
 		for _, choice := range chunk.Choices {
-			content.WriteString(choice.Delta.Content)   // ← append, never assign
-			// tool_call parsing lives here from chapter 02
+			content.WriteString(choice.Delta.Content)
 		}
 	}
-	if err := scanner.Err(); err != nil {              // ← the 3rd trap
+	if err := scanner.Err(); err != nil {
 		return Message{}, Usage{}, fmt.Errorf("read stream: %w", err)
 	}
 
@@ -148,7 +152,7 @@ func readSSE(r io.Reader) (Message, Usage, error) {
 }
 ```
 
-The chunk struct it decodes into, with the nesting that trips people up:
+The struct it decodes into. Note how deep `content` sits:
 
 ```go
 type wireChunk struct {
@@ -166,49 +170,50 @@ type wireChunk struct {
 }
 ```
 
-A top-level `Delta` field compiles, decodes without error, and produces an empty
-string for every chunk. That is the failure the case `prints-reply` reports as
+If you write `Delta` as a top-level field instead, it compiles. It decodes without a
+single error. And it gives you an empty string for every message, so stdout is a blank
+line and the program exits 0. That is exactly what `prints-reply` reports as
 `actual: "\n"`.
 
-### Why `scanner.Buffer` is not optional
+### Why the scanner buffer has to be raised
 
-`bufio.Scanner` has a 64 KiB default line limit. A chunk carrying a large tool
-result argument, or a provider that batches aggressively, will exceed it. When it
-does, `Scan` returns `false` and the *only* signal is `scanner.Err()` returning
-`bufio.ErrTooLong`. You will see: a truncated answer, no error, no clue.
+`bufio.Scanner` holds a 64 KiB limit per line by default. A message carrying a large
+tool argument, or a provider that batches replies, can go over it. When it does,
+`Scan` returns `false` and the only sign is `scanner.Err()` returning
+`bufio.ErrTooLong`. Without that check you get a short answer, no error, and nothing to
+go on.
 
-Raising the cap to 4 MiB is a guess; every harness guesses. Production code
-(pi included) either raises it or replaces `Scanner` with a `Reader`-based
-framing loop that has no per-line ceiling. We raise it, and note the tradeoff.
+Raising the cap to 4 MiB is a guess, and every agent guesses. Production code either
+raises it (pi does) or replaces the scanner with a reader that has no line limit. We
+raise it and write down the trade.
 
-### Why `[DONE]` must be checked before unmarshalling
+### Why `[DONE]` is checked before parsing
 
-It is not JSON. `json.Unmarshal` on `[DONE]` returns
-`invalid character 'D' looking for beginning of value`, which the naive
-implementation wraps as "decode stream chunk" and reports as a protocol error ,
-on a completely healthy stream. This is the single most common first-run failure
-in this chapter.
+It is not JSON. `json.Unmarshal` on `[DONE]` fails with `invalid character 'D'`, which
+the naive version reports as a decoding error, on a stream that was perfectly healthy.
+This is the most common first-run failure in the chapter, and it looks like the server
+is broken.
 
-## Step 5: assemble outside the loop
+## Job 5: build the answer once
 
 ```go
 msg := Message{Role: RoleAssistant, Content: content.String()}
 return msg, usage, nil
 ```
 
-Banal, but note *where* it happens: outside. Implementations that build the
-`Message` inside the loop and return it early end up with a message that has only
-the last piece. The loop's job is to fill in the running values; the return's job is to
-snapshot them once.
+Nothing clever. The point is *where* it happens: after the loop, once. Code that builds
+the `Message` inside the loop and returns early ends up with a message holding only the
+last piece. The loop's job is to fill in the running values; the return's job is to take
+one copy at the end.
 
 ---
 
-## The four diffs
+## The four fixes
 
-Each of these is a real failure mode with a graded case. Left is what a
-competent first implementation does; right is the fix.
+Each is a real failure with a check that catches it. Left is what a careful first
+attempt does. Right is the fix.
 
-**1. Assign instead of append** (`prints-reply`)
+**1. Overwrite instead of add** (`prints-reply`)
 
 ```diff
 - msg.Content = choice.Delta.Content
@@ -225,51 +230,49 @@ competent first implementation does; right is the fix.
   return Message{Content: content.String()}, usage, nil
 ```
 
-**3. Only decode chunks with content** (`debug-usage`)
+**3. Only decode messages that carry text** (`debug-usage`)
 
 ```diff
 - if choice.Delta.Content == "" { continue }
   if chunk.Usage != nil { usage = ... }
 ```
 
-**4. Background context** (`request-timeout`)
+**4. Use the background context** (`request-timeout`)
 
 ```diff
 - http.NewRequest(http.MethodPost, url, body)
 + http.NewRequestWithContext(ctx, http.MethodPost, url, body)
 ```
 
-That is the whole chapter: one parser, one error policy, one lifetime. The other
-two cases (`request-shape`, `http-error`) are structural and you either have them
-or your first run tells you immediately.
+That is the whole chapter: one parser, one way to fail, one lifetime. The other two
+checks (`request-shape`, `http-error`) are structural. You either have them, or your
+first run says so immediately.
 
-## What production adds, and why we don't
+## What production adds
 
-| Feature | File in pi | Why it is out of scope here |
+| Feature | Where | Why it is not here |
 |---|---|---|
-| Retry with backoff + `Retry-After` | `api/openai-completions.ts` | chapter 04 gives you one retry path; a full policy is a chapter of its own |
-| Prompt caching headers | `api/openai-prompt-cache.ts` | provider-specific, no teaching value |
-| ~30 provider wire formats | `providers/*.ts` | one adapter teaches the abstraction; thirty teach maintenance |
-| Abort mid-tool-call | `agent/agent-loop.ts` | chapter 08 |
-| Token counting before send | `agent/context_tokens.go` (PiG) | chapter 07 |
+| retry with backoff and `Retry-After` | `api/openai-completions.ts` | chapter 04 gives you one retry; a full policy is its own chapter |
+| prompt caching headers | `api/openai-prompt-cache.ts` | provider-specific, nothing to learn |
+| about thirty providers | `providers/*.ts` | one teaches the idea; thirty teach maintenance |
+| abort in the middle of a tool call | `agent/agent-loop.ts` | chapter 08 |
+| counting tokens before sending | `agent/context_tokens.go` in PiG | chapter 07 |
 
-The one thing worth stealing early, when you get to chapter 07: pi estimates
-tokens *before* sending, so it can refuse a request rather than discover the
-overflow from a 400. That is a design decision, not a feature, and it is easier
-to add while `Chat` is still small.
+The one idea worth remembering for later: `pi` counts tokens *before* it sends, so it
+can refuse a request instead of learning about the overflow from a 400. That is a design
+choice, and it is much easier to add while `Chat` is still small.
 
-## Comparison checklist
+## What to compare against your own
 
-When you look at `reference/ch01`, check whether yours differs in:
+Look at `reference/ch01` and check these. Everything outside the list is style.
 
-- [ ] separate wire types vs `json` tags on domain types
-- [ ] `*int` for optionals
-- [ ] `client.Do` error returned unwrapped
-- [ ] typed `*HTTPError`
-- [ ] `scanner.Buffer` raised
-- [ ] `[DONE]` handled before `Unmarshal`
+- [ ] separate request types, not `json` tags on the types you use everywhere
+- [ ] `*int` for optional numbers
+- [ ] the `client.Do` error returned untouched
+- [ ] a typed `*HTTPError`
+- [ ] the scanner buffer raised
+- [ ] `[DONE]` handled before parsing
 - [ ] `scanner.Err()` checked
-- [ ] message assembled outside the loop
+- [ ] the message built after the loop
 
-Differences outside this list are style. Differences inside it are bugs waiting
-for a later chapter.
+Every line in that list is a bug waiting for a later chapter. That is why it is short.

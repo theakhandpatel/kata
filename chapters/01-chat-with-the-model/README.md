@@ -1,30 +1,30 @@
 # 01 Talk to the model
 
-**Part I · Wire** · Difficulty: easy-medium · 30–50 minutes · 9 graded cases
+**Part I · Wire** · Difficulty: easy-medium · 30 to 50 minutes · 9 graded cases
 
-You will build the one function everything else in this course calls: a client
-for an OpenAI-compatible endpoint that turns a Server-Sent-Events stream back
-into a single `Message`.
+You write the one function every later chapter calls. It asks a model a question and
+puts the reply back together from the pieces it arrives in.
 
 | | |
 |---|---|
-| **How it works** | [overview.md](overview.md): where the model sits, how the reply arrives, what breaks |
-| **What to build** | [problem.md](problem.md), the contract, the graded claims, the hints |
-| **Full implementation** | [example.md](example.md), annotated, after an attempt |
-| **You edit** | `agent/provider_openai.go` only |
-| **Given to you** | `agent/types.go`, `internal/fake/` (a scripted server) |
-| **Submit** | `kata submit 01` |
-| **Reference** | `reference/ch01/` |
+| **How it works** | [overview.md](overview.md): why the model sits behind a function, and how a reply arrives |
+| **What to build** | [problem.md](problem.md): the task, the nine checks, three hints if you need them |
+| **Full implementation** | [example.md](example.md): the finished code, explained |
+| **You edit** | `agent/provider_openai.go`, and nothing else |
+| **You are given** | `agent/types.go`, `agent/cmd/agent/main.go`, `internal/fake/` |
+| **Check your work** | `kata submit 01` |
 
-Read `overview.md` first. Then work from `problem.md`. Open `example.md` only
-after `kata submit 01` passes or after you have been genuinely stuck.
+Read `overview.md` first, then work from `problem.md`. Open `example.md` after you pass,
+or after you have tried something and got stuck.
 
 ## Done when
 
-`kata submit 01` reports 9/9, and you can answer the self-check at the bottom
-of `overview.md` without scrolling up.
+`kata submit 01` reports 9/9, and you can run this:
+
+```sh
+./agent -p "hello"
+```
 
 ---
 
-Next: **02 Tool calling**, where the same stream carries JSON that arrives in
-pieces and the fragments are keyed by an index rather than an id.
+Next: **02 Tool calling**, where the model starts asking you to read files.
