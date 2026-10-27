@@ -11,6 +11,8 @@
 // the ladder.
 package hints
 
+import "sort"
+
 // Table maps chapter number -> case id -> the three rungs.
 var Table = map[string]map[string][3]string{
 	"11": {
@@ -450,8 +452,8 @@ var Table = map[string]map[string][3]string{
 			"`*int` with `omitempty`: when the caller leaves MaxTokens at 0, the key must not appear in the body at all.",
 		},
 		"prints-reply": {
-			"The answer is printed, not returned. text arrives in pieces.",
-			"Accumulate every delta, then print once at the end with fmt.Println.",
+			"The answer is printed, not returned, and it arrives in pieces.",
+			"Accumulate every content delta, then print once at the end. If stdout is empty, check where content is read from: the wire nests it under choices[0].delta, not at the top level.",
 			`Assigning instead of appending keeps only the last fragment. Use strings.Builder and write it out after the stream ends.`,
 		},
 		"debug-usage": {
@@ -480,6 +482,23 @@ var Table = map[string]map[string][3]string{
 			"Do not split the stream on a blank line as a unit: scan lines, skip everything that is not data:, and let blank lines be skipped like any other non-data line.",
 		},
 	},
+}
+
+// CasesFor returns the case ids that have a ladder in a chapter, sorted.
+//
+// The CLI uses it to turn a mistyped case id into a list of the real ones instead of
+// a blank ladder.
+func CasesFor(chapter string) []string {
+	cases, ok := Table[chapter]
+	if !ok {
+		return nil
+	}
+	out := make([]string, 0, len(cases))
+	for id := range cases {
+		out = append(out, id)
+	}
+	sort.Strings(out)
+	return out
 }
 
 // Get returns the hint ladder for a case. Unknown cases return the zero value,

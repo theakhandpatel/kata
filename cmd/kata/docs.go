@@ -234,8 +234,15 @@ func cmdHint(args []string) error {
 	id := args[1]
 
 	tiers := hints.Get(ch, id)
-	if len(tiers) == 0 {
-		return fmt.Errorf("no hints for chapter %s case %q — `kata read %s` lists the case ids", ch, id, ch)
+	// A zero ladder means the id is unknown. Printing three empty rungs and exiting 0
+	// makes a typo look like a case that has no hints.
+	if tiers == ([3]string{}) {
+		known := hints.CasesFor(ch)
+		if len(known) == 0 {
+			return fmt.Errorf("no hints for chapter %q — check `kata list` for chapter numbers", ch)
+		}
+		return fmt.Errorf("no case %q in chapter %s\n  known cases: %s",
+			id, ch, strings.Join(known, ", "))
 	}
 
 	fmt.Printf("\n  %s\n\n", id)

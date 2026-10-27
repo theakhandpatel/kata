@@ -1,6 +1,6 @@
 # 01 — Talk to the model
 
-**Part I · Wire** · Difficulty: easy · 20–40 minutes · 6 graded cases
+**Part I · Wire** · Difficulty: easy-medium · 30–50 minutes · 9 graded cases
 
 You will build the one function everything else in this course calls: a client
 for an OpenAI-compatible endpoint that turns a Server-Sent-Events stream back
@@ -21,7 +21,7 @@ after `kata submit 01` passes or after you have been genuinely stuck.
 
 ## Done when
 
-`kata submit 01` reports `6/6`, and you can answer the self-check at the bottom
+`kata submit 01` reports 9/9, and you can answer the self-check at the bottom
 of `overview.md` without scrolling up.
 
 ---

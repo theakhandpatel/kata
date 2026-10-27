@@ -70,7 +70,7 @@ if p.APIKey != "" {
 - `TrimRight(base, "/")` so both `http://x/v1` and `http://x/v1/` work. Half the
   "why is it 404" reports in the world are this.
 - `NewRequestWithContext`, not `NewRequest`. This is the only place `ctx` enters,
-  and it is what makes `context-cancel` pass.
+  and it is what makes `request-timeout` pass.
 - `stream: true` in the body is **required by the case**, even though our
   function returns a whole message. We stream because chapter 06 will want
   incremental events, and because learning the stream is the chapter.
@@ -93,7 +93,7 @@ if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 Three decisions worth defending:
 
 - **Return `client.Do`'s error unchanged.** It already wraps `context.Canceled`;
-  wrapping it in a string would break `errors.Is` and fail `context-cancel`.
+  wrapping it in a string would break `errors.Is` and fail `request-timeout`.
 - **`LimitReader`, 4 KiB.** Error pages are sometimes megabytes of HTML. You want
   a diagnostic, not a memory event.
 - **A typed error, not `fmt.Errorf`.** `*HTTPError` is what lets the loop in
@@ -148,6 +148,28 @@ func readSSE(r io.Reader) (Message, Usage, error) {
 }
 ```
 
+The chunk struct it decodes into, with the nesting that trips people up:
+
+```go
+type wireChunk struct {
+	Choices []struct {
+		Delta struct {
+			Content string `json:"content"`
+		} `json:"delta"`
+		FinishReason string `json:"finish_reason"`
+	} `json:"choices"`
+	Usage *struct {
+		PromptTokens     int `json:"prompt_tokens"`
+		CompletionTokens int `json:"completion_tokens"`
+		TotalTokens      int `json:"total_tokens"`
+	} `json:"usage"`
+}
+```
+
+A top-level `Delta` field compiles, decodes without error, and produces an empty
+string for every chunk. That is the failure the case `prints-reply` reports as
+`actual: "\n"`.
+
 ### Why `scanner.Buffer` is not optional
 
 `bufio.Scanner` has a 64 KiB default line limit. A chunk carrying a large tool
@@ -186,7 +208,7 @@ snapshot them once.
 Each of these is a real failure mode with a graded case. Left is what a
 competent first implementation does; right is the fix.
 
-**1. Assign instead of append** — `text-reassembly`
+**1. Assign instead of append** — `prints-reply`
 
 ```diff
 - msg.Content = choice.Delta.Content
@@ -203,14 +225,14 @@ competent first implementation does; right is the fix.
   return Message{Content: content.String()}, usage, nil
 ```
 
-**3. Only decode chunks with content** — `usage`
+**3. Only decode chunks with content** — `debug-usage`
 
 ```diff
 - if choice.Delta.Content == "" { continue }
   if chunk.Usage != nil { usage = ... }
 ```
 
-**4. Background context** — `context-cancel`
+**4. Background context** — `request-timeout`
 
 ```diff
 - http.NewRequest(http.MethodPost, url, body)

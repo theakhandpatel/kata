@@ -60,6 +60,15 @@ func cmdSubmit(args []string) error {
 	prog := loadProgress(root)
 	failures := 0
 
+	// A learner who jumps ahead sees a wall of exit-code failures that are really the
+	// previous chapter's job. One line of context is cheaper than the confusion.
+	for _, ch := range selected {
+		if prior := firstUnmetPrerequisite(root, prog, ch.ID); prior != "" {
+			fmt.Printf("  note: chapter %s is not passing yet, and chapter %s builds on it\n", prior, ch.ID)
+			fmt.Printf("        %s\n\n", "run `kata read "+prior+"`, then `kata submit "+prior+"` first")
+		}
+	}
+
 	for _, ch := range selected {
 		// Compile triage first. A build error is not a failed case, and saying so
 		// is the single biggest UX win over raw `go test` output.

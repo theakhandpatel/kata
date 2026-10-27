@@ -21,3 +21,6 @@ skills-lock.json
 # internal research notes
 docs/research/
 .agentcraft/
+
+# throwaway copies for learner runs
+.learner-run/

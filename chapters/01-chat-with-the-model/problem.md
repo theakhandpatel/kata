@@ -43,7 +43,20 @@ func (p *OpenAICompat) Chat(ctx context.Context, req Request) (Message, Usage, e
 file first. It is short and it is scaffolding.
 
 The request goes to `{BaseURL}/chat/completions` with `"stream": true`. The server
-answers with `text/event-stream`.
+answers with `text/event-stream`, one JSON object per `data:` line. This is the
+chunk shape, and the nesting matters:
+
+```json
+{
+  "choices": [
+    { "index": 0, "delta": { "content": "The " }, "finish_reason": null }
+  ],
+  "usage": { "prompt_tokens": 42, "completion_tokens": 7, "total_tokens": 49 }
+}
+```
+
+`content` is at `choices[0].delta.content`, not at the top level. `usage` appears
+once, on the final chunk, whose `delta` is empty.
 
 ## What the verifier does
 
@@ -114,8 +127,9 @@ and is not JSON.
 Build the body and POST it with the caller's ctx. Check the status before reading
 the body; on non-2xx, read at most a few KiB and return
 `&agent.HTTPError{Status, Body}`. Otherwise scan lines, keep those starting
-`data:`, skip `[DONE]`, decode each into a chunk struct, append `delta.content`,
-and take `usage` when it is non-nil. After the loop, check `scanner.Err()` and
+`data:`, skip `[DONE]`, decode each into a chunk struct with
+`Choices[].Delta.Content` and a top-level `Usage`, append every content delta, and
+take `usage` when it is non-nil. After the loop, check `scanner.Err()` and
 return it. Assemble the returned message outside the loop.
 
 `kata hint 01 <case-id>` prints the same rungs from the CLI.

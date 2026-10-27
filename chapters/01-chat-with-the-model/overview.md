@@ -71,12 +71,30 @@ more". Each bit is a JSON object with a *delta*, meaning "the part that is new".
    request ──────────────────────────────▶
                                             (server builds the answer
                                              one token at a time)
-   ◀──── data: {"delta":{"content":"The "}}          ← chunk 1
-   ◀──── data: {"delta":{"content":"quick "}}        ← chunk 2
-   ◀──── data: {"delta":{"content":"fox."}}          ← chunk 3
-   ◀──── data: {...,"usage":{...}}                   ← chunk 4 (metadata only)
-   ◀──── data: [DONE]                                ← terminator
+   ◀──── data: {"choices":[{"delta":{"content":"The "}}]}    ← chunk 1
+   ◀──── data: {"choices":[{"delta":{"content":"quick "}}]}  ← chunk 2
+   ◀──── data: {"choices":[{"delta":{"content":"fox."}}]}    ← chunk 3
+   ◀──── data: {...,"usage":{...}}                          ← chunk 4
+   ◀──── data: [DONE]                                       ← terminator
 ```
+
+The delta is nested twice: one chunk can carry several **choices**, and each choice
+carries its own delta. That nesting is the part people get wrong from memory, so
+here is the exact shape to decode into:
+
+```json
+{
+  "choices": [
+    { "index": 0, "delta": { "content": "The " }, "finish_reason": null }
+  ],
+  "usage": { "prompt_tokens": 42, "completion_tokens": 7, "total_tokens": 49 }
+}
+```
+
+The `choices` array exists because a request can ask for several completions. This
+course asks for one, sends no `n`, and folds `choices[0]`. A stream with more than
+one choice would interleave alternatives, and folding them all would concatenate
+them.
 
 The mental model to hold: **the stream is a delta log, and your job is to fold
 it.** Every chunk is an event, not a document. Nothing in the stream is the
@@ -117,10 +135,11 @@ implementation:
 |---|---|---|
 | non-2xx | decode the error body as a completion | `http-error` |
 | stream dies | ignore `scanner.Err()` | `truncated-stream` |
-| deltas | assign instead of append | `text-reassembly` |
-| metadata | only decode chunks that carry content | `usage` |
-| request | forget `stream: true`, or build the URL by hand | `request-shape` |
-| lifetime | use `context.Background()` instead of `ctx` | `context-cancel` |
+| deltas | assign instead of append | `prints-reply` |
+| shape | read `delta` from the top level instead of `choices[0].delta` | `prints-reply`, `sse-framing` |
+| metadata | only decode chunks that carry content | `debug-usage` |
+| request | forget `stream: true`, or build the URL by hand | `request-shape`, `request-envelope` |
+| lifetime | use `context.Background()` instead of `ctx` | `request-timeout` |
 
 That last one deserves a note: `context.Background()` *works*. The request
 succeeds. It only fails when someone tries to cancel you — which is exactly what
