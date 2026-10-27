@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 )
 
 // ErrNotImplemented is returned by stubs. A check that sees this is telling you
@@ -78,6 +79,9 @@ type Request struct {
 	Tools       []ToolDef
 	MaxTokens   int
 	Temperature float64
+
+	// Stream asks for the reply as it arrives. The course always sets it.
+	Stream bool
 }
 
 // Provider is the seam. Everything above it (loop, sessions, context) is
@@ -91,6 +95,9 @@ type Provider interface {
 type HTTPError struct {
 	Status int
 	Body   string
+
+	// RetryAfter is what the server asked for in its Retry-After header, if any.
+	RetryAfter time.Duration
 }
 
 func (e *HTTPError) Error() string {

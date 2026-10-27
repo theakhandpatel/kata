@@ -16,6 +16,10 @@ import (
 	"kata/internal/grader"
 )
 
+// errBuildFailed distinguishes "the program does not compile" from "a case failed". Both
+// exit non-zero, and the message says which.
+var errBuildFailed = errors.New("the program does not compile")
+
 // cmdSubmit is the only command a learner actually needs.
 func cmdSubmit(args []string) error {
 	root, err := findRoot()
@@ -80,12 +84,15 @@ func cmdSubmit(args []string) error {
 			if !ok {
 				fmt.Printf("\n  chapter %s is not ready: the harness does not compile yet\n\n", ch.ID)
 				fmt.Print(report)
-				fmt.Printf("  no cases ran. That is not a failure — it is a build error.\n\n")
+				fmt.Printf("  no cases ran, because the program does not compile.\n")
+				fmt.Printf("  that is not a wrong answer, and it still counts as not passing.\n\n")
 				if !prog.passed(ch.ID) {
 					prog[ch.ID] = progressEntry{Status: "failed", When: timeNow(), Cases: "build error"}
 					_ = saveProgress(root, prog)
 				}
-				return nil
+				// A build error must fail the command. A script that runs `kata submit` in CI
+				// reads the exit code, and a zero here would report a broken tree as healthy.
+				return errBuildFailed
 			}
 		}
 
