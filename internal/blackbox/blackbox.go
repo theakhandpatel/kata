@@ -25,6 +25,8 @@ import (
 	"syscall"
 	"testing"
 	"time"
+
+	"kata/internal/fake"
 )
 
 // DefaultTimeout bounds one program run. A harness that blocks costs one case.
@@ -205,9 +207,53 @@ func RunWithInput(t *testing.T, dir string, env map[string]string, stdin string,
 	return finish(t, cmd, err, ctx, stdout.String(), stderr.String(), start)
 }
 
+// RunInterruptUntil starts the program, waits until the scripted server has flushed at least
+// n bytes, sends SIGINT, and collects what the program printed.
+//
+// Waiting for bytes rather than for a duration is the difference between a fact and a hope.
+// A fixed delay races process startup on a slow machine; bytes arriving means the answer is
+// genuinely mid-stream, which is exactly the moment a person presses Ctrl-C.
+func RunInterruptUntil(t *testing.T, dir string, env map[string]string, srv *fake.Server, n int, args ...string) Result {
+	t.Helper()
+	bin := Binary(t)
+
+	ctx, cancel := context.WithTimeout(context.Background(), DefaultTimeout)
+	defer cancel()
+
+	cmd := exec.CommandContext(ctx, bin, args...)
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(), flatten(env)...)
+
+	out := newSyncBuffer()
+	errOut := newSyncBuffer()
+	cmd.Stdout = out
+	cmd.Stderr = errOut
+
+	start := time.Now()
+	if err := cmd.Start(); err != nil {
+		t.Fatalf("start harness: %v", err)
+	}
+
+	if !srv.WaitForBytes(n, DefaultTimeout) {
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait()
+		t.Fatalf("the server never wrote %d bytes; the program did not reach the stream", n)
+	}
+	_ = cmd.Process.Signal(os.Interrupt)
+
+	err := cmd.Wait()
+	res := finish(t, cmd, err, ctx, out.String(), errOut.String(), start)
+	if cmd.ProcessState != nil {
+		if ws, ok := cmd.ProcessState.Sys().(syscall.WaitStatus); ok && ws.Signaled() {
+			res.ExitCode = 128 + int(ws.Signal())
+		}
+	}
+	return res
+}
+
 // RunInterrupt starts the program, waits, sends SIGINT, then collects what it
-// printed. This is how a person stops a runaway answer, so it is how the abort
-// cases are graded.
+// printed. Prefer RunInterruptUntil where a server is available: a fixed delay
+// races process startup.
 func RunInterrupt(t *testing.T, dir string, env map[string]string, after time.Duration, args ...string) Result {
 	t.Helper()
 	bin := Binary(t)

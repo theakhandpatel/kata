@@ -305,3 +305,18 @@ func FindTool(tools []map[string]any, name string) (map[string]any, bool) {
 	}
 	return nil, false
 }
+
+// SaysAny reports whether text contains any of the given words, ignoring case.
+//
+// A learner writes their own error messages. Requiring one exact phrase grades their
+// vocabulary rather than their program, so a case names the few phrasings that any
+// reasonable message would contain and accepts any of them.
+func SaysAny(text string, words ...string) bool {
+	lower := strings.ToLower(text)
+	for _, w := range words {
+		if strings.Contains(lower, strings.ToLower(w)) {
+			return true
+		}
+	}
+	return false
+}

@@ -119,8 +119,8 @@ func TestChapter05(t *testing.T) {
 				if err := grader.Eqf("requests", 3, len(srv.Requests())); err != nil {
 					return err
 				}
-				if !strings.Contains(strings.ToLower(res.Stderr), "step limit") {
-					return &grader.Mismatch{Label: "stderr", Want: "a message naming the step limit", Got: res.Stderr}
+				if !support.SaysAny(res.Stderr, "step limit", "max steps", "too many turns", "turn limit") {
+					return &grader.Mismatch{Label: "stderr", Want: "a message saying the run hit its step limit", Got: res.Stderr}
 				}
 				return nil
 			},
@@ -230,8 +230,8 @@ func TestChapter05(t *testing.T) {
 						Got:   support.Itoa(n),
 					}
 				}
-				if !strings.Contains(strings.ToLower(res.Stderr), "step limit") {
-					return &grader.Mismatch{Label: "stderr", Want: "a message naming the step limit", Got: res.Stderr}
+				if !support.SaysAny(res.Stderr, "step limit", "max steps", "too many turns", "turn limit") {
+					return &grader.Mismatch{Label: "stderr", Want: "a message saying the run hit its step limit", Got: res.Stderr}
 				}
 				return nil
 			},

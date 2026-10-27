@@ -207,7 +207,9 @@ func TestChapter09(t *testing.T) {
 					FrameDelay: 250 * time.Millisecond,
 				})
 
-				res := blackbox.RunInterrupt(t, dir, support.Env(srv.BaseURL()), 800*time.Millisecond,
+				// Interrupt once the server has flushed bytes: the answer is genuinely
+				// mid-stream, and nothing depends on how fast the machine started up.
+				res := blackbox.RunInterruptUntil(t, dir, support.Env(srv.BaseURL()), srv, 200,
 					"-p", "write a lot")
 				if res.ExitCode != 130 {
 					return &grader.Mismatch{Label: "exit code", Want: 130, Got: res.ExitCode}
@@ -236,7 +238,7 @@ func TestChapter09(t *testing.T) {
 					FrameDelay: 250 * time.Millisecond,
 				})
 
-				res := blackbox.RunInterrupt(t, dir, support.Env(srv.BaseURL()), 800*time.Millisecond,
+				res := blackbox.RunInterruptUntil(t, dir, support.Env(srv.BaseURL()), srv, 200,
 					"-p", "write a lot", "-events")
 				events := support.Events(t, res.Stderr)
 				end := support.LastEventOfType(events, "agent_end")
@@ -264,7 +266,7 @@ func TestChapter09(t *testing.T) {
 					FrameDelay: 250 * time.Millisecond,
 				})
 
-				blackbox.RunInterrupt(t, dir, support.Env(srv.BaseURL()), 800*time.Millisecond,
+				blackbox.RunInterruptUntil(t, dir, support.Env(srv.BaseURL()), srv, 200,
 					"-p", "say something", "-session", path)
 
 				body, err := os.ReadFile(path)

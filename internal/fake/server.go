@@ -143,6 +143,7 @@ type Server struct {
 	cursor   int
 	recorded []Recorded
 	overrun  int
+	written  int // bytes flushed to clients, for WaitForBytes
 }
 
 // New starts a server with the given scripted replies, in order. It shuts down
@@ -205,6 +206,29 @@ func (s *Server) AssertConsumed(t *testing.T) {
 	if n := s.Unused(); n > 0 {
 		t.Errorf("%d scripted repl(ies) were never requested; the harness stopped early", n)
 	}
+}
+
+// WaitForBytes blocks until at least n bytes have been written to any client, or the budget
+// runs out. A test uses it to interrupt mid-stream without sleeping for a guess: the bytes
+// having arrived is a fact, whereas elapsed time is a hope.
+func (s *Server) WaitForBytes(n int, budget time.Duration) bool {
+	deadline := time.Now().Add(budget)
+	for time.Now().Before(deadline) {
+		s.mu.Lock()
+		written := s.written
+		s.mu.Unlock()
+		if written >= n {
+			return true
+		}
+		time.Sleep(2 * time.Millisecond)
+	}
+	return false
+}
+
+func (s *Server) addWritten(n int) {
+	s.mu.Lock()
+	s.written += n
+	s.mu.Unlock()
 }
 
 func (s *Server) next() (Reply, bool) {
@@ -292,16 +316,19 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 	flusher, _ := w.(http.Flusher)
 	writeEvent := func(v any) {
 		b, _ := json.Marshal(v)
-		fmt.Fprintf(w, "data: %s\n\n", b)
+		line := fmt.Sprintf("data: %s\n\n", b)
+		fmt.Fprint(w, line)
 		if flusher != nil {
 			flusher.Flush()
 		}
+		s.addWritten(len(line))
 	}
-	writeRaw := func(s string) {
-		fmt.Fprint(w, s)
+	writeRaw := func(text string) {
+		fmt.Fprint(w, text)
 		if flusher != nil {
 			flusher.Flush()
 		}
+		s.addWritten(len(text))
 	}
 
 	chunk := func(delta map[string]any, finish any) map[string]any {
