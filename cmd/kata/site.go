@@ -144,6 +144,7 @@ func prepareContent(root, srcDir string) (int, error) {
 	for _, doc := range []string{
 		"docs/architecture.md", "docs/chapter-format.md",
 		"docs/writing-style.md", "docs/designs.md",
+		"docs/adr/0001-vitepress-for-the-site.md",
 		"chapters/where-next.md",
 	} {
 		if _, err := os.Stat(filepath.Join(root, doc)); err != nil {
@@ -235,6 +236,7 @@ func buildConfig(title, root string) string {
         { text: 'Chapter format', link: '/docs/chapter-format' },
         { text: 'Writing style', link: '/docs/writing-style' },
         { text: 'Designs', link: '/docs/designs' },
+        { text: 'Why VitePress', link: '/docs/adr/0001-vitepress-for-the-site' },
       ] },
 `)
 	b.WriteString("      { text: 'After the course', items: [{ text: 'Where next', link: '/chapters/where-next' }] },\n")
