@@ -100,3 +100,25 @@ leaves the internal design free.
 
 Nothing else needs editing. The chapter list, the site sidebar, the part grouping and the
 grading order all come from the directory names.
+
+## Your files: growth versus revision
+
+A chapter page names the files it touches. Two kinds of touch, and the page should make clear
+which it means:
+
+- **Growth**: a new file appears. `tool.go` in 02, `loop.go` in 05, `mcp.go` in 13.
+- **Revision**: an existing file is changed in place. `provider_openai.go` in 02, 05, 09 and 14;
+  `loop.go` in 09.
+
+The folder never changes. There is no migration step in this course: no moving files, no
+splitting packages, no new modules. That constraint is deliberate, and it is what makes a later
+chapter able to assume an earlier one: the shapes are stable even when the bodies change.
+
+A revision is not a failure of the earlier design. It is the lesson of the later chapter. When
+chapter 09 asks you to add a `Steering` field to `LoopOptions`, the point is that a loop written
+without a place for interruption cannot be interrupted, and you now know that before you needed
+it.
+
+When writing a chapter page, say which it is. "You edit" for a file that already exists, "you
+create" for one that does not. Sixteen pages got this wrong before a QA run caught it, and it
+is the single most common way a beginner gets stuck.

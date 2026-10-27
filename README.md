@@ -86,6 +86,29 @@ When the arc is done, [chapters/where-next.md](chapters/where-next.md) lists wha
 on top: recovery of pruned context, parallel tool calls, a second wire format, and the
 bigger structural changes after those.
 
+## How your workspace changes
+
+The folder does not change. `agent/` is where you work from chapter 01 to chapter 21, and you
+never move to a new directory, copy code into a new project, or re-scaffold.
+
+The contents do change, in two different ways, and the difference matters.
+
+**Growth.** Most chapters add a file: `tool.go` in 02, `loop.go` in 05, `mcp.go` in 13. Your
+earlier files stay where they are and keep doing their job.
+
+**Revision.** Some chapters make you change what you already wrote, because a later requirement
+invalidates an earlier decision. `provider_openai.go` gains tool-call folding in 02, a streaming
+callback in 05, and retries in 14. `loop.go` gains a steering hook in 09. Code is deleted and
+rewritten in place.
+
+That is normal, and it is the point. The chapter that forces a revision is teaching you
+something the earlier chapter could not: that the first design was too small. What never happens
+is a migration: no file moves, no package splits, no new repository.
+
+Verified from the reference implementations: between chapter 05 and chapter 09, `loop.go` grows
+from 93 to 114 lines of code and 39 lines change. Most of that difference is comments; the
+functional change is one field on `LoopOptions` and one block in the loop body.
+
 ## What a chapter contains
 
 One page to work from, one page to compare against.
