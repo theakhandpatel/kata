@@ -73,6 +73,15 @@ func cmdRead(args []string) error {
 		chArg = a
 	}
 
+	// The closing page is not a chapter, but it should be as easy to read.
+	if chArg == "where-next" || chArg == "next" {
+		body, err := os.ReadFile(filepath.Join(root, "chapters", "where-next.md"))
+		if err != nil {
+			return fmt.Errorf("no where-next page: %w", err)
+		}
+		return page(string(body))
+	}
+
 	ch, err := findChapter(root, chArg)
 	if err != nil {
 		return err

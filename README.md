@@ -56,8 +56,12 @@ rather than showing a diff of prose.
 | 10 | Subagent | fresh context, scoped tools, exactly one result |
 | 11 | MCP (advanced) | stdio JSON-RPC, initialize, `tools/list`, `tools/call` |
 
-Chapter 11 is optional. Chapters 01 to 04 give you a working harness you can
-point at Ollama or any OpenAI-compatible endpoint.
+Chapter 11 is optional. Chapters 01 to 04 give you a working agent you can point at
+Ollama or any OpenAI-compatible endpoint.
+
+When the arc is done, [chapters/where-next.md](chapters/where-next.md) lists what to
+build on top: recovery of pruned context, a schema budget, parallel tool calls, a
+second wire format, and the bigger structural changes after those.
 
 ## What each chapter contains
 
@@ -81,7 +85,8 @@ kata hint NN <case-id>    three rungs, from nudge to answer
 kata list                 the arc, grouped into parts
 kata progress             what passed, and when
 kata verify               prove each chapter rejects its starter and accepts its reference
-kata reset [NN]           restore agent/ from starter/
+kata reset [NN]           restore agent/ to the state before a chapter
+kata read where-next      what to build after the course
 ```
 
 ## How it works

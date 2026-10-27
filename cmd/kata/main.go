@@ -71,6 +71,7 @@ func usage() {
   kata hint NN <case-id>     the three-rung ladder for one case
   kata verify                prove every chapter rejects its starter and accepts its reference
   kata reset [NN]            restore agent/ to the start of a chapter
+  kata read where-next       what to build after the course
   kata list                  the arc, with what is written and what is passed
   kata progress              summary
 
