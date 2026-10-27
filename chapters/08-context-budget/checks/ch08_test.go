@@ -221,20 +221,23 @@ func TestChapter08(t *testing.T) {
 			Run: func(t *testing.T) error {
 				dir := support.Dir(t)
 				path := filepath.Join(dir, "s.jsonl")
+
+				// These sizes are measured, not guessed. Pruning walks backwards, so the
+				// result is kept and the call before it is the message that falls over the
+				// line. With this fixture and a 600 token budget, a fitter that does not
+				// handle the pair sends the result alone.
 				writeRawSession(t, path, []string{
-					rec("user", strings.Repeat("a", 400)),
+					rec("user", strings.Repeat("a", 200)),
+					rec("assistant", strings.Repeat("b", 200)),
 					`{"type":"message","message":{"role":"assistant","content":"","toolCalls":[{"id":"call_1","name":"read","arguments":"{\"path\":\"a.txt\"}"}]}}`,
-					`{"type":"message","message":{"role":"tool","content":"alpha","toolCallId":"call_1"}}`,
-					rec("assistant", strings.Repeat("b", 400)),
-					rec("user", strings.Repeat("c", 400)),
-					rec("assistant", strings.Repeat("d", 400)),
-					rec("user", strings.Repeat("e", 400)),
+					`{"type":"message","message":{"role":"tool","content":"` + strings.Repeat("z", 1400) + `","toolCallId":"call_1"}}`,
+					rec("user", strings.Repeat("c", 40)),
 				})
 				srv := fake.New(t, fake.Reply{Text: "ok"})
 
 				if err := grader.Eqf("exit code", 0,
 					blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "q",
-						"-session", path, "-max-context", "500").ExitCode); err != nil {
+						"-session", path, "-max-context", "600").ExitCode); err != nil {
 					return err
 				}
 

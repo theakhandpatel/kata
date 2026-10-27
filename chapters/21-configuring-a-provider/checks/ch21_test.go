@@ -100,6 +100,55 @@ func TestChapter21(t *testing.T) {
 			},
 		},
 		{
+			ID:    "all-three-sources-at-once",
+			Title: "resolves files, then environment, then flags when all three disagree",
+			Why: "Each case so far sets one source above the file. Only with all three set at " +
+				"once does the order itself get tested, and the order is the whole feature.",
+			Hints: hints.Get("21", "all-three-sources-at-once"),
+			Run: func(t *testing.T) error {
+				dir := support.Dir(t)
+				home := t.TempDir()
+				srv := fake.New(t, fake.Reply{Text: "ok"})
+
+				// Project file says one model.
+				support.WriteFile(t, filepath.Join(dir, "agent.json"),
+					`{"base_url": "http://127.0.0.1:1/v1", "model": "from-file"}`)
+
+				// The environment says another, and also points at the live server.
+				res := blackbox.RunIn(t, dir, map[string]string{
+					"OPENAI_BASE_URL": srv.BaseURL(),
+					"OPENAI_API_KEY":  "k",
+					"HARNESS_MODEL":   "from-env",
+					"HOME":            home,
+					"XDG_CONFIG_HOME": filepath.Join(home, ".config"),
+				}, "-p", "hi", "-m", "from-flag")
+				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
+					return err
+				}
+				if err := grader.Eqf("model", "from-flag", srv.Last().Model); err != nil {
+					return err
+				}
+				// And without the flag, the environment still wins over the file.
+				srv2 := fake.New(t, fake.Reply{Text: "ok"})
+				res2 := blackbox.RunIn(t, dir, map[string]string{
+					"OPENAI_BASE_URL": srv2.BaseURL(),
+					"OPENAI_API_KEY":  "k",
+					"HARNESS_MODEL":   "from-env",
+					"HOME":            home,
+					"XDG_CONFIG_HOME": filepath.Join(home, ".config"),
+				}, "-p", "hi")
+				if err := grader.Eqf("exit code", 0, res2.ExitCode); err != nil {
+					return err
+				}
+				if err := grader.Eqf("model without the flag", "from-env", srv2.Last().Model); err != nil {
+					return err
+				}
+				srv.AssertConsumed(t)
+				srv2.AssertConsumed(t)
+				return nil
+			},
+		},
+		{
 			ID:    "key-from-file",
 			Title: "reads the key from a file when asked",
 			Why: "An environment variable is visible in a process listing and a shell " +

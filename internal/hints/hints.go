@@ -31,6 +31,11 @@ var Table = map[string]map[string][3]string{
 			"Apply the environment after the files, before the flags.",
 			"applyEnv writes OPENAI_BASE_URL, OPENAI_API_KEY and HARNESS_MODEL over whatever the files set.",
 		},
+		"all-three-sources-at-once": {
+			"The order is the feature, and one source at a time does not test it.",
+			"Set the file, the environment and the flag to three different models.",
+			"With the flag, the flag wins. Without it, the environment beats the file. A resolver that applies env last fails the second half.",
+		},
 		"key-from-file": {
 			"An environment variable is visible in a process listing.",
 			"Add api_key_file, read it when no inline key was given, and trim the newline.",
@@ -648,6 +653,11 @@ var Table = map[string]map[string][3]string{
 			"Pass a callback into the provider and emit an event for every delta.",
 			"Stream(ctx, req, func(text string) { emit(Event{Type: EventText, Text: text}) }) and keep Chat as a wrapper that passes nil.",
 		},
+		"default-cap-exists": {
+			"The flag is the ceiling you set; the default is the ceiling you get.",
+			"Leave -max-steps alone and make the model ask for a tool every turn.",
+			"The run must stop at agent.DefaultMaxSteps requests, exit 1, and name the step limit.",
+		},
 		"single-turn-no-tools": {
 			"A reply without tool calls is the end of the run.",
 			"Check for tool calls before looping again, not after.",
@@ -731,6 +741,11 @@ var Table = map[string]map[string][3]string{
 			"A result and its call are two halves of one pair.",
 			"Copy the id from the call into the tool message.",
 			`The message needs role "tool", content, and tool_call_id equal to the call's id.`,
+		},
+		"two-calls-in-one-message": {
+			"One message can ask for two tools at once.",
+			"Group fragments by their index, so index 0 and index 1 stay apart.",
+			"The second call's fragments carry index 1 and no id. A map keyed by index keeps them separate; anything keyed on one slot merges the arguments.",
 		},
 		"tool-list-comes-from-the-registry": {
 			"Do not advertise a tool nothing can run.",

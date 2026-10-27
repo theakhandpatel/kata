@@ -48,6 +48,62 @@ func TestChapter02(t *testing.T) {
 			},
 		},
 		{
+			ID:    "two-calls-in-one-message",
+			Title: "keeps two calls apart when they arrive together",
+			Why: "One assistant message can ask for several tools. The fragments of the " +
+				"second call carry index 1 and no id, so a parser that keys everything on index " +
+				"zero merges the two arguments into one and loses both.",
+			Hints: hints.Get("02", "two-calls-in-one-message"),
+			Run: func(t *testing.T) error {
+				dir := support.Dir(t)
+				srv := fake.New(t,
+					fake.Reply{Frames: []fake.Frame{
+						{ToolCall: &fake.CallFrame{Index: 0, ID: "call_a", Name: "no_such_tool", Args: `{"path":`}},
+						{ToolCall: &fake.CallFrame{Index: 1, ID: "call_b", Name: "no_such_tool", Args: `{"path":`}},
+						{ToolCall: &fake.CallFrame{Index: 0, Args: `"a.txt"}`}},
+						{ToolCall: &fake.CallFrame{Index: 1, Args: `"b.txt"}`}},
+						{Finish: "tool_calls"},
+					}},
+					fake.Reply{Text: "done"},
+				)
+
+				res := blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "read both")
+				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
+					return err
+				}
+				second, err := support.Request(srv, 1)
+				if err != nil {
+					return err
+				}
+				// Both calls must reach the model, each with its own arguments intact.
+				for _, want := range []struct{ id, args string }{
+					{"call_a", `{"path":"a.txt"}`},
+					{"call_b", `{"path":"b.txt"}`},
+				} {
+					found := false
+					for _, m := range second.Messages {
+						if len(m.ToolCalls) == 0 {
+							continue
+						}
+						for _, tc := range m.ToolCalls {
+							if tc.ID == want.id && tc.Function.Arguments == want.args {
+								found = true
+							}
+						}
+					}
+					if !found {
+						return &grader.Mismatch{
+							Label: "call " + want.id,
+							Want:  "arguments " + want.args + " in the follow-up request",
+							Got:   "missing or merged",
+						}
+					}
+				}
+				srv.AssertConsumed(t)
+				return nil
+			},
+		},
+		{
 			ID:    "unknown-tool-is-a-result",
 			Title: "answers a call for a tool it does not have",
 			Why: "The model can name a tool that does not exist, and it will. If the " +

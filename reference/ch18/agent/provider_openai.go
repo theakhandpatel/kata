@@ -65,22 +65,8 @@ func (p *OpenAICompat) Stream(ctx context.Context, req Request, onText func(stri
 		model = p.Model
 	}
 
-	payload := wireRequest{
-		Model:    model,
-		Messages: toWireMessages(req.Messages),
-		Stream:   true,
-	}
-	if req.MaxTokens > 0 {
-		payload.MaxTokens = &req.MaxTokens
-	}
-	if req.Temperature > 0 {
-		payload.Temperature = &req.Temperature
-	}
-	if len(req.Tools) > 0 {
-		payload.Tools = toWireTools(req.Tools)
-	}
-
-	body, err := json.Marshal(payload)
+	// The body is built in one place, so presence rules live in one place.
+	body, err := json.Marshal(BuildRequestBody(model, req))
 	if err != nil {
 		return Message{}, Usage{}, fmt.Errorf("encode request: %w", err)
 	}

@@ -5,10 +5,14 @@ package agent
 // The translation is small and every line of it is a decision: which fields are always
 // present, which are omitted when unset, and which order they appear in.
 func BuildRequestBody(model string, req Request) map[string]any {
+	// The reply always arrives as a stream. `Request.Stream` exists so a caller can say so
+	// in the type, and this program always sets it, which is why the field is not consulted
+	// here: a bool cannot tell "unset" from "false", and sending false would hang the parser
+	// waiting for lines that never come.
 	body := map[string]any{
 		"model":    model,
 		"messages": toWireMessages(req.Messages),
-		"stream":   req.Stream,
+		"stream":   true,
 	}
 
 	// Absent, not zero. A provider reads "max_tokens": 0 as "produce nothing" and

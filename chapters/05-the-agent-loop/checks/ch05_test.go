@@ -19,6 +19,11 @@ import (
 // The program must keep going while the model asks for tools, stop when it does
 // not, and never run forever. The event stream is graded as a sequence, because
 // "it worked" is weaker than "it happened in this order".
+// defaultStepCap is the number the program uses when -max-steps is absent. It is written
+// here rather than imported because the checks are black box: they do not link against the
+// agent package, so this number is part of the contract, not an implementation detail.
+const defaultStepCap = 20
+
 func TestChapter05(t *testing.T) {
 	grader.Suite(t, "05", "the agent loop", []grader.Case{
 		{
@@ -195,6 +200,39 @@ func TestChapter05(t *testing.T) {
 					return &grader.Mismatch{Label: "text events", Want: "at least 2 deltas", Got: n}
 				}
 				srv.AssertConsumed(t)
+				return nil
+			},
+		},
+		{
+			ID:    "default-cap-exists",
+			Title: "stops on its own when no limit is given",
+			Why: "The flag is the ceiling a learner sets. The default is the ceiling they get " +
+				"when they set nothing, which is the case that protects a runaway run in the " +
+				"real world.",
+			Hints: hints.Get("05", "default-cap-exists"),
+			Run: func(t *testing.T) error {
+				dir := support.Dir(t)
+				// A model that asks for a tool forever, and no -max-steps on the command line.
+				replies := make([]fake.Reply, 0, defaultStepCap+2)
+				for i := 0; i < defaultStepCap+2; i++ {
+					replies = append(replies, support.Call(fmt.Sprintf("call_%d", i), "no_such_tool", `{}`))
+				}
+				srv := fake.New(t, replies...)
+
+				res := blackbox.RunIn(t, dir, support.Env(srv.BaseURL()), "-p", "forever")
+				if err := grader.Eqf("exit code", 1, res.ExitCode); err != nil {
+					return err
+				}
+				if n := len(srv.Requests()); n > defaultStepCap {
+					return &grader.Mismatch{
+						Label: "requests",
+						Want:  fmt.Sprintf("at most %d, the default cap", defaultStepCap),
+						Got:   support.Itoa(n),
+					}
+				}
+				if !strings.Contains(strings.ToLower(res.Stderr), "step limit") {
+					return &grader.Mismatch{Label: "stderr", Want: "a message naming the step limit", Got: res.Stderr}
+				}
 				return nil
 			},
 		},
