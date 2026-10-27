@@ -15,6 +15,43 @@ import "sort"
 
 // Table maps chapter number -> case id -> the three rungs.
 var Table = map[string]map[string][3]string{
+	"18": {
+		"required-fields-always-present": {
+			"A server needs all three to answer.",
+			"Build the body from the request, with model, messages and stream always set.",
+			"Start from a map with model, messages and stream: req.Stream, then add the rest only when they are set.",
+		},
+		"unset-optionals-absent": {
+			"Zero is a value, not an absence.",
+			"Add max_tokens and temperature only when they are greater than zero.",
+			`A provider reads "max_tokens": 0 as produce nothing and "temperature": 0 as a deliberate choice. Omit the key entirely when the caller did not set it.`,
+		},
+		"set-optionals-present": {
+			"Omitting unset fields only matters if the chosen ones still arrive.",
+			"Add both keys when the values are positive.",
+			"The check reads raw numbers from the body: max_tokens must equal 128 and temperature must equal 0.4.",
+		},
+		"messages-keep-their-order": {
+			"The conversation is a sequence.",
+			"Convert the messages in order, keeping the role and content of each.",
+			"Walk the slice and append {role, content, tool_calls, tool_call_id} without sorting or grouping. The system message must stay at index 0.",
+		},
+		"headers-decide-the-response": {
+			"Content-Type says what you sent. Accept says what you can read.",
+			"Set both headers before the request goes out.",
+			`Content-Type: application/json and Accept: text/event-stream. Without the second, a server may answer with one buffered response and the parser waits forever.`,
+		},
+		"base-url-trailing-slash": {
+			"A doubled slash is a 404 that looks like a wrong route.",
+			"Trim the trailing slash from the base URL before joining the path.",
+			"strings.TrimRight(base, \"/\") + \"/chat/completions\" works for both http://x/v1 and http://x/v1/.",
+		},
+		"empty-tool-list-is-sent": {
+			"A server distinguishes no tools from a request that never mentioned them.",
+			"Send the tools key whenever the request has a tool slice, even an empty one.",
+			"If req.Tools is not nil, build the array and set it. Only omit the key when the caller passed no slice at all.",
+		},
+	},
 	"17": {
 		"project-outranks-user": {
 			"A repository's skills are about that repository.",

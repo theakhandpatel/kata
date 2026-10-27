@@ -79,6 +79,9 @@ type Request struct {
 	Tools       []ToolDef
 	MaxTokens   int
 	Temperature float64
+
+	// Stream asks for the reply as it arrives. The course always sets it.
+	Stream bool
 }
 
 // Provider is the seam. Everything above it (loop, sessions, context) is

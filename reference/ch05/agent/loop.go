@@ -27,6 +27,10 @@ type LoopOptions struct {
 	MaxSteps int
 	// Emit receives events. Nil discards them.
 	Emit Emitter
+	// MaxTokens and Temperature are copied into every request. Zero means unset, and
+	// an unset value is left out of the request body rather than sent as zero.
+	MaxTokens   int
+	Temperature float64
 }
 
 // Result is what a finished run produced.
@@ -78,8 +82,10 @@ func RunLoop(
 		emit(Event{Type: EventTurnStart, Turn: turn})
 
 		msg, usage, err := provider.Stream(ctx, Request{
-			Messages: history,
-			Tools:    tools.Defs(),
+			Messages:    history,
+			Tools:       tools.Defs(),
+			MaxTokens:   opts.MaxTokens,
+			Temperature: opts.Temperature,
 		}, func(text string) {
 			emit(Event{Type: EventText, Turn: turn, Text: text})
 		})
