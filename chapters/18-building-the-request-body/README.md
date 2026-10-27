@@ -19,9 +19,7 @@ $ ./agent -p "hi" -m a-model -max-tokens 128 -temperature 0.4
 
 Seven fields, and every one of them is a decision about presence.
 
-You may edit `agent/request.go`, `agent/provider_openai.go` and
-`agent/cmd/agent/main.go`.
-
+You edit `agent/provider_openai.go` and `agent/cmd/agent/main.go`. You also create one new file, `agent/request.go`, holding `BuildRequestBody`.
 ## Three fields are always there
 
 ```

@@ -15,9 +15,7 @@ The quick brown fox jumps over the lazy dog.
 The server answered `429 Too Many Requests` the first time and worked the second. The
 person asking the question never sees that.
 
-You may edit `agent/retry.go`, `agent/provider_openai.go` and
-`agent/cmd/agent/main.go`.
-
+You edit `agent/provider_openai.go` and `agent/cmd/agent/main.go`. You also create one new file, `agent/retry.go`, holding the policy, the retry loop and the `Retry-After` parse.
 ## Two kinds of failure
 
 Not every error deserves another attempt.

@@ -14,9 +14,7 @@ Three TODOs: two in agent/loop.go, one in README.md.
 That takes several turns. List the files, read one, read another, then answer. The
 number of turns is not known in advance, so the straight line you have becomes a loop.
 
-You may edit `agent/loop.go`, `agent/events.go`, `agent/provider_openai.go` and
-`agent/cmd/agent/main.go`.
-
+You edit `agent/provider_openai.go` and `agent/cmd/agent/main.go`. You also create two new files, `agent/loop.go` and `agent/events.go`, holding the `RunLoop` and the event type this page describes.
 ## The loop
 
 One exit condition, and one ceiling.

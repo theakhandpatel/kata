@@ -14,8 +14,7 @@ Three TODOs: two in the loop, one in the README.
 The parent asked once. The child read twenty files. The parent's conversation grew by
 one message.
 
-You may edit `agent/subagent.go` and `agent/cmd/agent/main.go`.
-
+You edit `agent/cmd/agent/main.go`. You also create one new file, `agent/subagent.go`, holding the `task` tool and the child loop it starts.
 ## Why a child
 
 A parent conversation has one budget and one purpose. "Find every TODO" produces

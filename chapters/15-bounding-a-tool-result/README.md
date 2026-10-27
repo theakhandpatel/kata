@@ -17,8 +17,7 @@ Read it with the read_result tool: {"handle": "3f2a91c4b7de0011", "offset": 8000
 
 The model received a summary, the beginning, and a way to ask for more.
 
-You may edit `agent/spill.go` and `agent/cmd/agent/main.go`.
-
+You edit `agent/cmd/agent/main.go`. You also create one new file, `agent/spill.go`, holding the store, the handle and the `read_result` tool.
 ## Why not just cut it
 
 The previous chapters cap output at 20,000 bytes. That keeps the budget and loses the

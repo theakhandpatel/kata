@@ -15,8 +15,7 @@ release
 The second run is a new process. Everything it knows about the first run comes from a
 file.
 
-You may edit `agent/session.go` and `agent/cmd/agent/main.go`.
-
+You edit `agent/cmd/agent/main.go`. You also create one new file, `agent/session.go`, holding the `Recorder` interface, the JSONL format and `OpenSession`.
 ## A log, not a snapshot
 
 There are two ways to save a conversation. Write down the current state, or write

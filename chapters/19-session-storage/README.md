@@ -21,8 +21,7 @@ $ ./agent -continue -p "and what about the audit job?"
 
 Three commands: start a conversation, list what you have, pick up where you left off.
 
-You may edit `agent/store.go` and `agent/cmd/agent/main.go`.
-
+You edit `agent/cmd/agent/main.go`. You also create one new file, `agent/store.go`, holding the schema, the queries and `TitleFromPrompt`.
 ## A file per conversation is not enough
 
 The previous chapters wrote one JSONL file that you named yourself. That works for a

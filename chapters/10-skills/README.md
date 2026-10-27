@@ -16,8 +16,7 @@ I can review the current diff.
 The model did not read that file. It read a one-line description the program put in
 front of it. The body arrives later, when the skill is used.
 
-You may edit `agent/skill.go` and `agent/cmd/agent/main.go`.
-
+You edit `agent/cmd/agent/main.go`. You also create one new file, `agent/skill.go`, holding the parser, the loader and the catalogue.
 ## One file, two audiences
 
 A skill is a folder with a `SKILL.md`:

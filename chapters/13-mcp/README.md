@@ -14,8 +14,7 @@ The server said: echo: hello
 The tool was never compiled into your program. A server process described it, and your
 program offered it to the model.
 
-You may edit `agent/mcp.go` and `agent/cmd/agent/main.go`.
-
+You edit `agent/cmd/agent/main.go`. You also create one new file, `agent/mcp.go`, holding the client, the JSON-RPC framing and the tool adapter.
 ## A pipe and lines
 
 MCP is described in terms of capabilities, resources and sampling. The transport is

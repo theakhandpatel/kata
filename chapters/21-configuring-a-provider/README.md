@@ -29,8 +29,7 @@ $ ./agent -p "hello"
 Three sources, one resolved set of settings, and a report that says where each value came
 from.
 
-You may edit `agent/config.go` and `agent/cmd/agent/main.go`.
-
+You edit `agent/cmd/agent/main.go`. You also create one new file, `agent/config.go`, holding the two config types, the loader and `Describe`.
 ## Three sources, in order
 
 ```

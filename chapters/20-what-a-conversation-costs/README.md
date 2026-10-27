@@ -18,8 +18,7 @@ total                                                     12      24500       28
 The counts come from the provider. The money comes from a rate table in your code. Both
 are stored with the conversation, so the report survives the process that produced it.
 
-You may edit `agent/usage.go`, `agent/store.go` and `agent/cmd/agent/main.go`.
-
+You edit `agent/store.go` and `agent/cmd/agent/main.go`. You also create one new file, `agent/usage.go`, holding the cost types, the price table and the two report queries.
 ## Where the numbers come from
 
 The provider reports usage once, on the final message of the stream:

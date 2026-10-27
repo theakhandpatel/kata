@@ -19,9 +19,7 @@ Added the flag, and the test passes.
 The first run stops and keeps the text you already read. The second receives a message
 typed during the run, and acts on it in the same run.
 
-You may edit `agent/loop.go`, `agent/steering.go`, `agent/provider_openai.go`,
-`agent/events.go` and `agent/cmd/agent/main.go`.
-
+You edit `agent/loop.go`, `agent/provider_openai.go`, `agent/events.go` and `agent/cmd/agent/main.go`. You also create one new file, `agent/steering.go`, holding the queue.
 ## Where an interruption lands
 
 A run takes seconds or minutes, with a person in front of it. Two things become

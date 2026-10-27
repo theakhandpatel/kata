@@ -15,8 +15,7 @@ Your AGENTS.md says to use tabs, not spaces.
 Nothing in your code knew about that file. The program reads it before the first
 request and puts it in front of the model.
 
-You may edit `agent/prompt.go` and `agent/cmd/agent/main.go`.
-
+You edit `agent/cmd/agent/main.go`. You also create one new file, `agent/prompt.go`, holding `BasePrompt`, the `Contributor` interface, `BuildSystemPrompt` and `AgentsFile`.
 ## The shape of a request
 
 Every request is a list of messages, and the first one is special:

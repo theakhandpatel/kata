@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -16,6 +17,14 @@ import (
 // "grade this chapter". Everything it shows comes from the same functions the plain
 // commands use, so the interface cannot disagree with `kata list` or `kata submit`.
 func cmdUI(args []string) error {
+	// A full-screen interface needs a terminal on both ends. Without one, Bubble Tea waits
+	// for events that never come, and a script or a pipe hangs forever with no message.
+	// Say so and exit instead.
+	if !isTTY() || !stdinIsTTY() {
+		return fmt.Errorf("the terminal interface needs a terminal on stdin and stdout; " +
+			"for a script use `kata submit`, `kata list` or `kata progress`")
+	}
+
 	root, err := findRoot()
 	if err != nil {
 		return err
@@ -269,6 +278,16 @@ func failingCases(rep grader.Report) []string {
 		}
 	}
 	return out
+}
+
+// stdinIsTTY reports whether standard input is a terminal. A person's keyboard is; a pipe
+// or /dev/null is not.
+func stdinIsTTY() bool {
+	fi, err := os.Stdin.Stat()
+	if err != nil {
+		return false
+	}
+	return fi.Mode()&os.ModeCharDevice != 0
 }
 
 func truncate(s string, max int) string {

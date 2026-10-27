@@ -14,8 +14,7 @@ a long answer that still knows what you were doing
 
 The session is longer than the window. The request is not.
 
-You may edit `agent/budget.go`, `agent/events.go` and `agent/cmd/agent/main.go`.
-
+You edit `agent/events.go` and `agent/cmd/agent/main.go`. You also create one new file, `agent/budget.go`, holding the estimate, the fit and the provider wrapper.
 ## Two budgets
 
 A request costs tokens in three places:

@@ -14,8 +14,7 @@ The four Go files have 812 lines in total.
 The registry knows eleven tools. The request advertised four, and named the rest so the
 model could ask for one.
 
-You may edit `agent/mount.go` and `agent/cmd/agent/main.go`.
-
+You edit `agent/cmd/agent/main.go`. You also create one new file, `agent/mount.go`, holding the ceiling, the mount set and the `load_tool` tool.
 ## The cost of a tool
 
 Every request carries the schema of every tool it advertises: name, description, and the

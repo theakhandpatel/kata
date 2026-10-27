@@ -20,8 +20,7 @@ Deploying to eu-west using the staging cluster.
 Two files, one name. The repository's copy is the one that ran, and the catalogue said
 so.
 
-You may edit `agent/scoped.go` and `agent/cmd/agent/main.go`.
-
+You edit `agent/cmd/agent/main.go`. You also create one new file, `agent/scoped.go`, holding the scopes, the precedence rule and the resolution.
 ## Why more than one directory
 
 Skills live at two levels for the same reason configuration does. A repository's skills
