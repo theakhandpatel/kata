@@ -15,7 +15,7 @@ import "sort"
 
 // Table maps chapter number -> case id -> the three rungs.
 var Table = map[string]map[string][3]string{
-	"12": {
+	"13": {
 		"mcp-tools-advertised": {
 			"A tool the model cannot see is a tool it will never call.",
 			"After initialize and tools/list, wrap each server tool and add it to the registry the loop sends.",
@@ -57,7 +57,7 @@ var Table = map[string]map[string][3]string{
 			"If the model asked for no tool, no tools/call should appear in the server's log.",
 		},
 	},
-	"11": {
+	"12": {
 		"task-tool-advertised": {
 			"Delegation has to be a tool the model can call.",
 			"Register a task tool whose schema takes the full instruction for the child.",
@@ -99,7 +99,7 @@ var Table = map[string]map[string][3]string{
 			"Nothing special is needed beyond a correct result: the parent loop keeps going while there are tool calls, including further task calls.",
 		},
 	},
-	"10": {
+	"11": {
 		"loads-body-on-invoke": {
 			"Invocation is when the body enters the request.",
 			"Scan the prompt for /name and replace the token with that skill's body.",
@@ -131,7 +131,7 @@ var Table = map[string]map[string][3]string{
 			"Split on the closing '---' fence and take what follows; the body must not start with '---' or contain 'description:'.",
 		},
 	},
-	"09": {
+	"10": {
 		"advertises-skills": {
 			"A model cannot invoke what it has not been told about.",
 			"Read skills/*/SKILL.md, and add a section to the system prompt naming each skill and its description.",
@@ -153,7 +153,7 @@ var Table = map[string]map[string][3]string{
 			"If os.ReadDir returns os.ErrNotExist, return nil, nil; Contribute then renders nothing and the base prompt is sent alone.",
 		},
 	},
-	"08": {
+	"09": {
 		"steer-continues-after-done": {
 			"A steered message is a reason to keep going, not a new run.",
 			"After each turn, drain the queue; if anything arrived, append it and loop again even when the model asked for no tools.",
@@ -195,7 +195,7 @@ var Table = map[string]map[string][3]string{
 			"Append the new history to the session first, then handle the cancellation and exit.",
 		},
 	},
-	"07": {
+	"08": {
 		"budget-event-reported": {
 			"A budget nobody can see is a number in a comment.",
 			"Emit one event per request carrying the estimate and the configured ceiling.",
@@ -237,7 +237,7 @@ var Table = map[string]map[string][3]string{
 			"Keep msgs[0] when it is a system message, walk backwards over the rest, and always keep at least the last message even if it alone exceeds the budget.",
 		},
 	},
-	"06": {
+	"07": {
 		"creates-session-file": {
 			"A session path is a promise that the conversation outlives the process.",
 			"Open the file for append, creating it and its parent directory when absent.",
@@ -279,7 +279,7 @@ var Table = map[string]map[string][3]string{
 			"Check errors.Is(err, os.ErrNotExist) before opening, write the header only when the file is new.",
 		},
 	},
-	"05": {
+	"06": {
 		"system-message-first": {
 			"The system message is assembled before the loop starts, and it comes first.",
 			"Build the string, then prepend a message with role system to the history you pass to the loop.",
@@ -321,7 +321,7 @@ var Table = map[string]map[string][3]string{
 			"Messages: {system, prompt}. Do not trim, prefix, or wrap the prompt.",
 		},
 	},
-	"04": {
+	"05": {
 		"loops-until-done": {
 			"A one-hop program handles one tool. A loop handles a task.",
 			"Wrap the request and the tool batch in a for loop; decide to continue from the reply, not from a counter.",
@@ -363,7 +363,7 @@ var Table = map[string]map[string][3]string{
 			"Emit agent_end with Turns set to the number of requests made, and compare it with the recorded requests.",
 		},
 	},
-	"03": {
+	"04": {
 		"advertises-three-tools": {
 			"Registering a tool and advertising it are two steps, and only the second one is visible to the model.",
 			"Build the registry with all three tools and pass Registry.Defs() into every request.",
@@ -406,25 +406,52 @@ var Table = map[string]map[string][3]string{
 		},
 	},
 	"02": {
+		"advertises-tools": {
+			"The request carries the list of tools the model may ask for.",
+			"Send a tools array, even when it is empty, and keep the field name exact.",
+			`The body needs "tools": [] in this chapter. Chapter 03 fills it with the read tool.`,
+		},
+		"unknown-tool-is-a-result": {
+			"The model can name a tool that does not exist, and it will.",
+			"Look the name up, and when it is missing return a result instead of an error.",
+			`Return a ToolResult with IsError set and text like "no such tool: <name>", so the model reads it and tries something else.`,
+		},
+		"invalid-arguments": {
+			"The arguments are text the model wrote, and text can be malformed.",
+			"Check that the arguments are valid JSON before decoding them.",
+			`json.Valid([]byte(args)) fails; return a result saying the arguments are not valid JSON instead of calling the tool.`,
+		},
+		"folds-arguments": {
+			"One call arrives as several fragments.",
+			"Group fragments by their index, not by their id, and add the argument text together.",
+			"Only the first fragment for a call has an id and a name. Map by index, append function.arguments, then emit in index order.",
+		},
+		"result-carries-call-id": {
+			"A result and its call are two halves of one pair.",
+			"Copy the id from the call into the tool message.",
+			`The message needs role "tool", content, and tool_call_id equal to the call's id.`,
+		},
+		"tool-list-comes-from-the-registry": {
+			"Do not advertise a tool nothing can run.",
+			"Build the tool list from the registry instead of writing schemas by hand.",
+			"Registry.Defs() walks the registered tools. A name in the request that is not in the registry is a tool the model will call and lose a turn on.",
+		},
+	},
+	"03": {
 		"advertises-read": {
 			"A tool the model cannot see is a tool it will never call.",
-			"Send the schema list in the request body, with name, description and a JSON Schema for the parameters.",
-			"Registry.Defs() must return the read tool with parameters {type:object, properties:{path:{type:string}}, required:[path]}.",
+			"Add the read tool to the registry and send its schema in the request.",
+			"The schema needs name read, a description, and parameters {type:object, properties:{path:{type:string}}, required:[path]}.",
 		},
 		"reads-a-file": {
 			"The result of a call is a message, not a return value.",
 			"Append a message with role tool, the file contents, and the id of the call it answers.",
-			"tool_call_id must equal the id from the assistant message. Order the results the same way as the calls.",
-		},
-		"folds-arguments": {
-			"Argument text arrives in pieces, and only the first piece names the call.",
-			"Key the accumulator by the index field, not by the id.",
-			"Append every fragment's function.arguments into one buffer per index, then join the calls in index order.",
+			"Read the file named by the path argument, return the text, and let the registry turn it into a tool message with the right id.",
 		},
 		"missing-file": {
 			"A tool that fails is information, not a fatal error.",
 			"Return the failure text as a tool result and let the model continue.",
-			"os.IsNotExist becomes a result like 'no such file: <path>', with IsError set; the program still exits 0 after the model's next reply.",
+			"os.IsNotExist becomes a result like 'no such file: <path>' with IsError set, and the program still exits 0 after the model's next reply.",
 		},
 		"refuses-escape": {
 			"The model's path argument is untrusted input.",
@@ -435,11 +462,6 @@ var Table = map[string]map[string][3]string{
 			"Context is the scarce resource, so a file read is bounded.",
 			"Read at most N bytes plus one, and if there is a byte left, cut and mark the cut.",
 			"Return the first 20000 bytes followed by a marker such as '... [truncated: N of M bytes shown]'.",
-		},
-		"invalid-arguments": {
-			"The model writes the arguments as text, and text can be malformed.",
-			"Validate before decoding, and turn a malformed call into an error result.",
-			"json.Valid([]byte(args)) fails; return a result saying the arguments are not valid JSON instead of calling the tool.",
 		},
 		"text-only-single-request": {
 			"Most replies are not tool calls.",

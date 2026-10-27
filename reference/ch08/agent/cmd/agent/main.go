@@ -2,11 +2,12 @@
 //
 // Contract, which later chapters keep:
 //
-//	agent -p "<prompt>"            the answer goes to stdout
-//	agent -p "..." -events         one JSON event per line on stderr
-//	agent -p "..." -steer-stdin    lines on stdin join the run at turn boundaries
-//	HARNESS_DEBUG=1                token usage goes to stderr
-//	exit 0 success, 1 error, 130 interrupted
+//	agent -p "<prompt>"          the answer goes to stdout
+//	agent -p "..." -events       one JSON event per line on stderr
+//	HARNESS_DEBUG=1              token usage goes to stderr
+//	exit 0 on success, 1 on error
+//
+// stdout carries the answer and nothing else, so a caller can pipe it.
 package main
 
 import (
@@ -23,17 +24,13 @@ import (
 )
 
 func main() {
-	code, err := run()
-	if err != nil {
+	if err := run(); err != nil {
 		fmt.Fprintf(os.Stderr, "agent: %v\n", err)
-		if code == 0 {
-			code = 1
-		}
+		os.Exit(1)
 	}
-	os.Exit(code)
 }
 
-func run() (int, error) {
+func run() error {
 	var (
 		prompt      = flag.String("p", "", "the prompt to send (required)")
 		model       = flag.String("m", "", "model name; defaults to $HARNESS_MODEL")
@@ -43,12 +40,11 @@ func run() (int, error) {
 		wantEvent   = flag.Bool("events", false, "write one JSON event per line to stderr")
 		sessionPath = flag.String("session", "", "resume or create a session file")
 		maxContext  = flag.Int("max-context", agent.DefaultMaxContext, "token budget per request; 0 disables pruning")
-		steerStdin  = flag.Bool("steer-stdin", false, "treat lines on stdin as steering messages")
 	)
 	flag.Parse()
 
 	if *prompt == "" {
-		return 2, errors.New(`-p is required, for example: agent -p "list the files"`)
+		return errors.New(`-p is required, for example: agent -p "list the files"`)
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -58,7 +54,7 @@ func run() (int, error) {
 
 	root, err := os.Getwd()
 	if err != nil {
-		return 1, err
+		return err
 	}
 	tools := agent.NewRegistry(
 		&agent.ReadTool{Root: root},
@@ -71,6 +67,8 @@ func run() (int, error) {
 		emit = agent.JSONEmitter(os.Stderr)
 	}
 
+	// The budget is a wrapper, not a change to the loop. Every request passes
+	// through it, including the ones the loop makes on later turns.
 	provider := agent.WithBudget(
 		agent.NewOpenAICompat(
 			envOr("OPENAI_BASE_URL", "http://localhost:11434/v1"),
@@ -80,26 +78,28 @@ func run() (int, error) {
 		*maxContext, emit,
 	)
 
+	// The system message is assembled, not pasted. Contributors decide what goes
+	// in it, so later chapters add sections without touching the loop.
 	system, err := agent.BuildSystemPrompt(ctx, agent.BasePrompt,
 		&agent.AgentsFile{Root: root},
 	)
 	if err != nil {
-		return 1, err
+		return err
 	}
 
-	// Conversation is loaded from the session; the system message is rebuilt. The
-	// two never mix.
+	// The session stores conversation, never the system message. The system
+	// message is rebuilt on every run so that AGENTS.md changes take effect.
 	var recorder agent.Recorder
 	prior := []agent.Message{}
 	if *sessionPath != "" {
 		rec, err := agent.OpenSession(*sessionPath)
 		if err != nil {
-			return 1, err
+			return err
 		}
 		defer rec.Close()
 		recorder = rec
 		if prior, err = rec.Load(); err != nil {
-			return 1, err
+			return err
 		}
 	}
 
@@ -108,16 +108,12 @@ func run() (int, error) {
 	history = append(history, prior...)
 	history = append(history, agent.Message{Role: agent.RoleUser, Content: *prompt})
 
-	opts := agent.LoopOptions{MaxSteps: *maxSteps, Emit: emit}
-	if *steerStdin {
-		steering := agent.NewStdinSteering(os.Stdin)
-		steering.Start()
-		opts.Steering = steering.Drain
-	}
+	res, err := agent.RunLoop(ctx, provider, tools, history,
+		agent.LoopOptions{MaxSteps: *maxSteps, Emit: emit},
+	)
 
-	res, err := agent.RunLoop(ctx, provider, tools, history, opts)
-
-	// Persist before deciding, so an interrupted run still leaves a usable session.
+	// Persist what this run added, even when the run failed part way. A session
+	// that forgets a failed attempt cannot be resumed sensibly.
 	if recorder != nil {
 		for _, m := range res.History[len(prior)+1:] {
 			if appendErr := recorder.Append(m); appendErr != nil && err == nil {
@@ -125,24 +121,13 @@ func run() (int, error) {
 			}
 		}
 	}
-
 	if err != nil {
-		// Ctrl-C is a normal way to stop a long answer. Print what arrived, say so,
-		// and use the shell's convention for an interrupted process.
-		if errors.Is(err, context.Canceled) {
-			if res.Message.Content != "" {
-				fmt.Println(res.Message.Content)
-			}
-			debugUsage(res.Usage)
-			fmt.Fprintln(os.Stderr, "agent: aborted")
-			return 130, nil
-		}
-		return 1, err
+		return err
 	}
 
 	fmt.Println(res.Message.Content)
 	debugUsage(res.Usage)
-	return 0, nil
+	return nil
 }
 
 func debugUsage(u agent.Usage) {

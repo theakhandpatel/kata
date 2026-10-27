@@ -80,16 +80,8 @@ func run() (int, error) {
 		*maxContext, emit,
 	)
 
-	// Skills: descriptions go in the system prompt, bodies wait until invoked.
-	skills, err := agent.LoadSkills(root)
-	if err != nil {
-		return 1, err
-	}
-	catalog := agent.NewCatalog(skills)
-
 	system, err := agent.BuildSystemPrompt(ctx, agent.BasePrompt,
 		&agent.AgentsFile{Root: root},
-		catalog,
 	)
 	if err != nil {
 		return 1, err

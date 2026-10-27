@@ -11,7 +11,7 @@ around it was.
 
 This is a course about the program around it.
 
-Over twelve chapters you write one in Go, from an empty stub to something that can
+Over thirteen chapters you write one in Go, from an empty stub to something that can
 read a file, run a test, remember yesterday's conversation, and hand a whole job to a
 second copy of itself. You start by making a single HTTP request to a model. You end
 with 2,000 lines you understand completely, and you can point at the line that decides
@@ -76,25 +76,26 @@ rather than showing a diff of prose.
 
 ## The arc
 
-Twelve chapters. Each one ends with something you can run and a sentence you can say
+Thirteen chapters. Each one ends with something you can run and a sentence you can say
 about it.
 
 | # | Chapter | By the end |
 |---|---|---|
 | 01 | Talk to the model | `agent -p hello` prints a reply, and you know why it needed a stream parser |
-| 02 | Tool calling | it reads a file you named, after asking for the tool by name |
-| 03 | Tools that touch disk | it writes what you asked for, and a runaway command cannot hang it |
-| 04 | The agent loop | it finishes a task that needs three tool calls, and stops |
-| 05 | Prompt assembly | it follows the instructions in your repo's `AGENTS.md` |
-| 06 | Sessions | it remembers yesterday, without repeating itself |
-| 07 | Context budget | a long session still fits the window, and says what it dropped |
-| 08 | Steer and abort | Ctrl-C keeps the half answer you already read |
-| 09 | Skills: advertise | the model can see the skills in `skills/` by name |
-| 10 | Skills: invoke | `/deploy staging` expands into the skill you wrote |
-| 11 | Subagent | it hands a whole job to a fresh context and gets one answer back |
-| 12 | MCP (advanced) | it calls a tool that lives in another process |
+| 02 | Tool calling | the model can ask for a tool, and you can answer one you do not have |
+| 03 | Running a tool | it reads a file you named, refuses one outside the project, and caps a huge one |
+| 04 | Tools that touch disk | it writes a file, and a command that never ends cannot hang it |
+| 05 | The agent loop | it finishes a task that needs three tool calls, and stops |
+| 06 | Prompt assembly | it follows the instructions in your repo's `AGENTS.md` |
+| 07 | Sessions | it remembers yesterday, without repeating itself |
+| 08 | Context budget | a long session still fits the window, and says what it dropped |
+| 09 | Steer and abort | Ctrl-C keeps the half answer you already read |
+| 10 | Skills: advertise | the model can see the skills in `skills/` by name |
+| 11 | Skills: invoke | `/deploy staging` expands into the skill you wrote |
+| 12 | Subagent | it hands a whole job to a fresh context and gets one answer back |
+| 13 | MCP (advanced) | it calls a tool that lives in another process |
 
-Chapter 12 is optional. Chapters 01 to 04 already give you an agent you can point at
+Chapter 13 is optional. Chapters 01 to 05 already give you an agent you can point at
 Ollama or any OpenAI-compatible endpoint and use.
 
 When the arc is done, [chapters/where-next.md](chapters/where-next.md) lists what to
@@ -159,7 +160,7 @@ Design notes, diagrams, and the grading pipeline are in
 Go 1.26 or newer.
 
 The agent you build uses only the standard library, and keeps doing so through all
-twelve chapters. The `kata` tool depends on Bubble Tea and Lip Gloss for the terminal
+thirteen chapters. The `kata` tool depends on Bubble Tea and Lip Gloss for the terminal
 interface. Publishing the site additionally needs Node, for VitePress; nothing you do
 as a learner does.
 

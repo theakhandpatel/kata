@@ -3,9 +3,6 @@
 package checks
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -15,81 +12,107 @@ import (
 	"kata/internal/hints"
 )
 
-// Chapter 02 -- tool calling.
+// Chapter 02 -- tool calling: the protocol.
 //
-// The program must advertise a tool, receive a call, run it, and ask the model
-// again with the result. Every case runs the real binary in a temporary
-// workspace, so the file tools operate on real files.
+// The model can now ask for a tool, and the program can answer the request without
+// crashing. This chapter is only about the conversation: what a call looks like on the
+// wire, how its pieces are grouped, and what happens when the model asks for something
+// that does not exist. Chapter 03 puts a real tool behind it.
 func TestChapter02(t *testing.T) {
 	grader.Suite(t, "02", "tool calling", []grader.Case{
 		{
-			ID:    "advertises-read",
-			Title: "advertises the read tool on the first request",
-			Why: "A model only calls what it can see. The schema has to travel with the " +
-				"request, and it has to name the parameter the tool actually reads.",
-			Hints: hints.Get("02", "advertises-read"),
+			ID:    "advertises-tools",
+			Title: "sends a tools field even when it is empty",
+			Why: "The request shape is the protocol. A server reads the list of tools to " +
+				"decide what the model may ask for. Getting the field name or position " +
+				"wrong means the model never sees any tool at all.",
+			Hints: hints.Get("02", "advertises-tools"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, map[string]string{"a.txt": "alpha"})
-				srv := fake.New(t, fake.Reply{Text: "nothing to do"})
+				dir := workspace(t)
+				srv := fake.New(t, fake.Reply{Text: "ok"})
 
-				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "say hi").ExitCode); err != nil {
+				res := blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "hi")
+				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
 				}
-
-				tools := srv.Last().Tools
-				if len(tools) == 0 {
-					return &grader.Mismatch{Label: "tools", Want: "at least one tool definition", Got: "none"}
-				}
-				fn, ok := findTool(tools, "read")
-				if !ok {
-					return &grader.Mismatch{Label: "tools", Want: "a tool named read", Got: toolNames(tools)}
-				}
-				params, _ := fn["function"].(map[string]any)
-				schema, _ := params["parameters"].(map[string]any)
-				props, _ := schema["properties"].(map[string]any)
-				if _, ok := props["path"]; !ok {
-					return &grader.Mismatch{Label: "read.parameters", Want: "a path property", Got: props}
+				raw := srv.Last().Raw
+				if _, present := raw["tools"]; present {
+					// An empty list is fine; a wrong type is not.
+					if _, ok := raw["tools"].([]any); !ok {
+						return &grader.Mismatch{Label: "tools", Want: "an array", Got: raw["tools"]}
+					}
 				}
 				srv.AssertConsumed(t)
 				return nil
 			},
 		},
 		{
-			ID:    "reads-a-file",
-			Title: "runs the call and sends the file back to the model",
-			Why: "The second request must carry the file contents as a tool message that " +
-				"names the call it answers. A result that is not paired with its call is " +
-				"rejected by every real provider.",
-			Hints: hints.Get("02", "reads-a-file"),
+			ID:    "unknown-tool-is-a-result",
+			Title: "answers a call for a tool it does not have",
+			Why: "The model can name a tool that does not exist, and it will. If the " +
+				"program exits, the conversation is over and the model never learns what " +
+				"went wrong. The answer has to be a result it can read.",
+			Hints: hints.Get("02", "unknown-tool-is-a-result"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, map[string]string{"hello.txt": "hello from the workspace"})
+				dir := workspace(t)
 				srv := fake.New(t,
-					callRead("call_1", "read", `{"path":"hello.txt"}`),
-					fake.Reply{Text: "The file says hello."},
+					callTool("call_1", "no_such_tool", `{"path":"a.txt"}`),
+					fake.Reply{Text: "I could not do that."},
 				)
 
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "read hello.txt")
+				res := blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "do it")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
 				}
-				if err := grader.Eqf("stdout", "The file says hello.\n", res.Stdout); err != nil {
+				if err := grader.Eqf("stdout", "I could not do that.\n", res.Stdout); err != nil {
 					return err
 				}
-
 				second, err := requestN(srv, 1)
 				if err != nil {
 					return err
 				}
-				toolMsg, err := lastToolMessage(second)
+				toolMsg, err := toolByID(second, "call_1")
 				if err != nil {
 					return err
 				}
-				if err := grader.Eqf("tool content", "hello from the workspace", toolMsg.Content); err != nil {
+				if !strings.Contains(toolMsg.Content, "no such tool") {
+					return &grader.Mismatch{Label: "tool result", Want: "a message naming the unknown tool", Got: toolMsg.Content}
+				}
+				srv.AssertConsumed(t)
+				return nil
+			},
+		},
+		{
+			ID:    "invalid-arguments",
+			Title: "answers a call whose arguments are not JSON",
+			Why: "The arguments are text the model wrote, so they can be malformed. " +
+				"Passing them straight to a decoder crashes the program on a mistake the " +
+				"model can fix if you tell it.",
+			Hints: hints.Get("02", "invalid-arguments"),
+			Run: func(t *testing.T) error {
+				dir := workspace(t)
+				srv := fake.New(t,
+					fake.Reply{Frames: []fake.Frame{
+						{ToolCall: &fake.CallFrame{Index: 0, ID: "call_1", Name: "read", Args: `{"path":`}},
+						{Finish: "tool_calls"},
+					}},
+					fake.Reply{Text: "That call was malformed."},
+				)
+
+				res := blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "do it")
+				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
 				}
-				if err := grader.Eqf("tool_call_id", "call_1", toolMsg.ToolCallID); err != nil {
+				second, err := requestN(srv, 1)
+				if err != nil {
 					return err
+				}
+				toolMsg, err := toolByID(second, "call_1")
+				if err != nil {
+					return err
+				}
+				if !strings.Contains(toolMsg.Content, "not valid JSON") {
+					return &grader.Mismatch{Label: "tool result", Want: "a message about invalid JSON", Got: toolMsg.Content}
 				}
 				srv.AssertConsumed(t)
 				return nil
@@ -97,16 +120,16 @@ func TestChapter02(t *testing.T) {
 		},
 		{
 			ID:    "folds-arguments",
-			Title: "reassembles arguments split across chunks",
-			Why: "Argument text arrives in fragments. Continuation fragments carry only the " +
-				"index, never the id or the name, so folding by index is the only reliable " +
-				"way to rebuild one call.",
+			Title: "reassembles arguments split across several messages",
+			Why: "Argument text arrives in pieces. The first piece names the call; the " +
+				"rest carry only the group number. A parser that keys on the id loses " +
+				"everything after the first piece.",
 			Hints: hints.Get("02", "folds-arguments"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, map[string]string{"notes.txt": "split across chunks"})
+				dir := workspace(t)
 				srv := fake.New(t,
 					fake.Reply{Frames: []fake.Frame{
-						{ToolCall: &fake.CallFrame{Index: 0, ID: "call_9", Name: "read", Args: ""}},
+						{ToolCall: &fake.CallFrame{Index: 0, ID: "call_9", Name: "no_such_tool", Args: ""}},
 						{ToolCall: &fake.CallFrame{Index: 0, Args: `{"pa`}},
 						{ToolCall: &fake.CallFrame{Index: 0, Args: `th":"no`}},
 						{ToolCall: &fake.CallFrame{Index: 0, Args: `tes.txt"}`}},
@@ -123,180 +146,92 @@ func TestChapter02(t *testing.T) {
 				if err != nil {
 					return err
 				}
-				toolMsg, err := lastToolMessage(second)
+				toolMsg, err := toolByID(second, "call_9")
 				if err != nil {
 					return err
 				}
-				if err := grader.Eqf("tool content", "split across chunks", toolMsg.Content); err != nil {
-					return err
+				if !strings.Contains(toolMsg.Content, "no such tool") {
+					return &grader.Mismatch{Label: "tool result", Want: "a result for call_9", Got: toolMsg.Content}
 				}
 				srv.AssertConsumed(t)
 				return nil
 			},
 		},
 		{
-			ID:    "missing-file",
-			Title: "reports a missing file as a tool result, not a crash",
-			Why: "A failed tool is information the model can act on. Exiting instead " +
-				"removes the agent's chance to try a different path.",
-			Hints: hints.Get("02", "missing-file"),
+			ID:    "result-carries-call-id",
+			Title: "pairs every result with the call it answers",
+			Why: "A result without its call id is a conversation a provider rejects. The " +
+				"id is the only thing tying the two halves together.",
+			Hints: hints.Get("02", "result-carries-call-id"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, nil)
+				dir := workspace(t)
 				srv := fake.New(t,
-					callRead("call_2", "read", `{"path":"nope.txt"}`),
-					fake.Reply{Text: "I could not find that file."},
+					callTool("call_abc", "no_such_tool", `{}`),
+					fake.Reply{Text: "done"},
 				)
 
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "read nope.txt")
-				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
-					return err
-				}
-				if err := grader.Eqf("stdout", "I could not find that file.\n", res.Stdout); err != nil {
+				if err := grader.Eqf("exit code", 0,
+					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "x").ExitCode); err != nil {
 					return err
 				}
 				second, err := requestN(srv, 1)
 				if err != nil {
 					return err
 				}
-				toolMsg, err := lastToolMessage(second)
-				if err != nil {
-					return err
+				found := false
+				for _, m := range second.Messages {
+					if m.Role == "tool" && m.ToolCallID == "call_abc" {
+						found = true
+					}
 				}
-				if !strings.Contains(toolMsg.Content, "no such file") {
-					return &grader.Mismatch{Label: "tool content", Want: "a 'no such file' message", Got: toolMsg.Content}
-				}
-				srv.AssertConsumed(t)
-				return nil
-			},
-		},
-		{
-			ID:    "refuses-escape",
-			Title: "refuses a path outside the workspace",
-			Why: "The model's arguments are untrusted input. A path that climbs out of the " +
-				"workspace turns a demo into a data leak.",
-			Hints: hints.Get("02", "refuses-escape"),
-			Run: func(t *testing.T) error {
-				dir := workspace(t, map[string]string{"ok.txt": "fine"})
-				srv := fake.New(t,
-					callRead("call_3", "read", `{"path":"../../etc/passwd"}`),
-					fake.Reply{Text: "I cannot read that."},
-				)
-
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "read passwd")
-				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
-					return err
-				}
-				second, err := requestN(srv, 1)
-				if err != nil {
-					return err
-				}
-				toolMsg, err := lastToolMessage(second)
-				if err != nil {
-					return err
-				}
-				if strings.Contains(toolMsg.Content, "root:") {
-					return &grader.Mismatch{Label: "tool content", Want: "a refusal", Got: "file contents leaked"}
-				}
-				if !strings.Contains(toolMsg.Content, "escape") {
-					return &grader.Mismatch{Label: "tool content", Want: "a message naming the escape", Got: toolMsg.Content}
+				if !found {
+					return &grader.Mismatch{Label: "tool message", Want: "tool_call_id call_abc", Got: "none"}
 				}
 				srv.AssertConsumed(t)
 				return nil
 			},
 		},
 		{
-			ID:    "truncates-large-file",
-			Title: "truncates a large file and says so",
-			Why: "Model context is the scarce resource. Pasting a large file costs the " +
-				"whole budget, and cutting it silently teaches the model that it saw " +
-				"everything.",
-			Hints: hints.Get("02", "truncates-large-file"),
+			ID:    "tool-list-comes-from-the-registry",
+			Title: "builds the tool list from what is registered",
+			Why: "A hardcoded schema advertises tools nothing can run, and the model " +
+				"wastes a turn on them. The list has to come from the registry, so it " +
+				"matches what exists.",
+			Hints: hints.Get("02", "tool-list-comes-from-the-registry"),
 			Run: func(t *testing.T) error {
-				dir := workspace(t, map[string]string{"big.txt": strings.Repeat("a", 50_000)})
-				srv := fake.New(t,
-					callRead("call_4", "read", `{"path":"big.txt"}`),
-					fake.Reply{Text: "read it"},
-				)
+				dir := workspace(t)
+				srv := fake.New(t, fake.Reply{Text: "ok"})
 
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "read big.txt")
-				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
+				if err := grader.Eqf("exit code", 0,
+					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "x").ExitCode); err != nil {
 					return err
 				}
-				second, err := requestN(srv, 1)
-				if err != nil {
-					return err
+				// Whatever is advertised, a call to it must resolve.
+				for _, name := range toolNames(srv.Last().Tools) {
+					reply := fake.New(t,
+						callTool("call_x", name, `{}`),
+						fake.Reply{Text: "done"},
+					)
+					if err := grader.Eqf("exit code", 0,
+						blackbox.RunIn(t, dir, env(reply.BaseURL()), "-p", "x").ExitCode); err != nil {
+						return err
+					}
+					second, err := requestN(reply, 1)
+					if err != nil {
+						return err
+					}
+					toolMsg, err := toolByID(second, "call_x")
+					if err != nil {
+						return err
+					}
+					if strings.Contains(toolMsg.Content, "no such tool") {
+						return &grader.Mismatch{
+							Label: "advertised tool " + name,
+							Want:  "a tool that exists in the registry",
+							Got:   toolMsg.Content,
+						}
+					}
 				}
-				toolMsg, err := lastToolMessage(second)
-				if err != nil {
-					return err
-				}
-				if len(toolMsg.Content) > 25_000 {
-					return &grader.Mismatch{Label: "tool content length", Want: "at most 25000 bytes", Got: len(toolMsg.Content)}
-				}
-				if !strings.Contains(toolMsg.Content, "truncated") {
-					return &grader.Mismatch{Label: "tool content", Want: "a truncation marker", Got: "no marker"}
-				}
-				srv.AssertConsumed(t)
-				return nil
-			},
-		},
-		{
-			ID:    "invalid-arguments",
-			Title: "survives arguments that are not valid JSON",
-			Why: "The model produces the arguments as text, and text can be malformed. " +
-				"Passing it to json.Unmarshal without a check crashes the program on a " +
-				"model mistake.",
-			Hints: hints.Get("02", "invalid-arguments"),
-			Run: func(t *testing.T) error {
-				dir := workspace(t, nil)
-				srv := fake.New(t,
-					fake.Reply{Frames: []fake.Frame{
-						{ToolCall: &fake.CallFrame{Index: 0, ID: "call_5", Name: "read", Args: `{"path":`}},
-						{Finish: "tool_calls"},
-					}},
-					fake.Reply{Text: "That call was malformed."},
-				)
-
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "read it")
-				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
-					return err
-				}
-				second, err := requestN(srv, 1)
-				if err != nil {
-					return err
-				}
-				toolMsg, err := lastToolMessage(second)
-				if err != nil {
-					return err
-				}
-				if !strings.Contains(toolMsg.Content, "not valid JSON") {
-					return &grader.Mismatch{Label: "tool content", Want: "a message about invalid JSON", Got: toolMsg.Content}
-				}
-				srv.AssertConsumed(t)
-				return nil
-			},
-		},
-		{
-			ID:    "text-only-single-request",
-			Title: "makes one request when no tool is needed",
-			Why: "A program that always runs a second turn doubles the cost of every " +
-				"answer and hides the difference between a tool call and a plain reply.",
-			Hints: hints.Get("02", "text-only-single-request"),
-			Run: func(t *testing.T) error {
-				dir := workspace(t, map[string]string{"a.txt": "alpha"})
-				srv := fake.New(t, fake.Reply{Text: "No tools needed."})
-
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "say hi")
-				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
-					return err
-				}
-				if err := grader.Eqf("stdout", "No tools needed.\n", res.Stdout); err != nil {
-					return err
-				}
-				if err := grader.Eqf("requests", 1, len(srv.Requests())); err != nil {
-					return err
-				}
-				srv.AssertConsumed(t)
 				return nil
 			},
 		},
@@ -312,8 +247,7 @@ func env(baseURL string) map[string]string {
 	}
 }
 
-// callRead scripts one assistant message that requests the read tool.
-func callRead(id, name, args string) fake.Reply {
+func callTool(id, name, args string) fake.Reply {
 	return fake.Reply{Frames: []fake.Frame{
 		{ToolCall: &fake.CallFrame{Index: 0, ID: id, Name: name}},
 		{ToolCall: &fake.CallFrame{Index: 0, Args: args}},
@@ -321,58 +255,23 @@ func callRead(id, name, args string) fake.Reply {
 	}}
 }
 
-// workspace creates a temporary directory with the given files.
-func workspace(t *testing.T, files map[string]string) string {
-	t.Helper()
-	dir := t.TempDir()
-	for name, body := range files {
-		full := filepath.Join(dir, name)
-		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
-			t.Fatalf("mkdir: %v", err)
-		}
-		if err := os.WriteFile(full, []byte(body), 0o644); err != nil {
-			t.Fatalf("write %s: %v", name, err)
-		}
-	}
-	return dir
-}
+func workspace(t *testing.T) string { return t.TempDir() }
 
 func requestN(srv *fake.Server, n int) (fake.Recorded, error) {
 	reqs := srv.Requests()
 	if len(reqs) <= n {
-		return fake.Recorded{}, fmt.Errorf("expected at least %d requests, got %d", n+1, len(reqs))
+		return fake.Recorded{}, &grader.Mismatch{Label: "requests", Want: "at least " + itoa(n+1), Got: itoa(len(reqs))}
 	}
 	return reqs[n], nil
 }
 
-func lastToolMessage(req fake.Recorded) (fake.RecordedMessage, error) {
-	for i := len(req.Messages) - 1; i >= 0; i-- {
-		if req.Messages[i].Role == "tool" {
-			return req.Messages[i], nil
+func toolByID(req fake.Recorded, id string) (fake.RecordedMessage, error) {
+	for _, m := range req.Messages {
+		if m.Role == "tool" && m.ToolCallID == id {
+			return m, nil
 		}
 	}
-	return fake.RecordedMessage{}, fmt.Errorf("no tool message in the second request; messages were %v", roles(req.Messages))
-}
-
-func roles(msgs []fake.RecordedMessage) []string {
-	out := make([]string, len(msgs))
-	for i, m := range msgs {
-		out[i] = m.Role
-	}
-	return out
-}
-
-func findTool(tools []map[string]any, name string) (map[string]any, bool) {
-	for _, t := range tools {
-		fn, ok := t["function"].(map[string]any)
-		if !ok {
-			continue
-		}
-		if fn["name"] == name {
-			return t, true
-		}
-	}
-	return nil, false
+	return fake.RecordedMessage{}, &grader.Mismatch{Label: "tool result " + id, Want: "present", Got: "missing"}
 }
 
 func toolNames(tools []map[string]any) []string {
@@ -385,4 +284,16 @@ func toolNames(tools []map[string]any) []string {
 		}
 	}
 	return out
+}
+
+func itoa(n int) string {
+	if n == 0 {
+		return "0"
+	}
+	var digits []byte
+	for n > 0 {
+		digits = append([]byte{byte('0' + n%10)}, digits...)
+		n /= 10
+	}
+	return string(digits)
 }

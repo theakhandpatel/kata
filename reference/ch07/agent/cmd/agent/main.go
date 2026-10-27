@@ -39,7 +39,6 @@ func run() error {
 		maxSteps    = flag.Int("max-steps", agent.DefaultMaxSteps, "stop after this many model requests")
 		wantEvent   = flag.Bool("events", false, "write one JSON event per line to stderr")
 		sessionPath = flag.String("session", "", "resume or create a session file")
-		maxContext  = flag.Int("max-context", agent.DefaultMaxContext, "token budget per request; 0 disables pruning")
 	)
 	flag.Parse()
 
@@ -51,6 +50,12 @@ func run() error {
 	defer stop()
 	ctx, cancel := context.WithTimeout(ctx, *timeout)
 	defer cancel()
+
+	provider := agent.NewOpenAICompat(
+		envOr("OPENAI_BASE_URL", "http://localhost:11434/v1"),
+		os.Getenv("OPENAI_API_KEY"),
+		firstNonEmpty(*model, os.Getenv("HARNESS_MODEL"), "gpt-4o-mini"),
+	)
 
 	root, err := os.Getwd()
 	if err != nil {
@@ -66,17 +71,6 @@ func run() error {
 	if *wantEvent {
 		emit = agent.JSONEmitter(os.Stderr)
 	}
-
-	// The budget is a wrapper, not a change to the loop. Every request passes
-	// through it, including the ones the loop makes on later turns.
-	provider := agent.WithBudget(
-		agent.NewOpenAICompat(
-			envOr("OPENAI_BASE_URL", "http://localhost:11434/v1"),
-			os.Getenv("OPENAI_API_KEY"),
-			firstNonEmpty(*model, os.Getenv("HARNESS_MODEL"), "gpt-4o-mini"),
-		),
-		*maxContext, emit,
-	)
 
 	// The system message is assembled, not pasted. Contributors decide what goes
 	// in it, so later chapters add sections without touching the loop.

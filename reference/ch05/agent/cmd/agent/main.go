@@ -71,21 +71,8 @@ func run() error {
 		emit = agent.JSONEmitter(os.Stderr)
 	}
 
-	// The system message is assembled, not pasted. Contributors decide what goes
-	// in it, so later chapters add sections without touching the loop.
-	system, err := agent.BuildSystemPrompt(ctx, agent.BasePrompt,
-		&agent.AgentsFile{Root: root},
-	)
-	if err != nil {
-		return err
-	}
-
-	history := []agent.Message{
-		{Role: agent.RoleSystem, Content: system},
-		{Role: agent.RoleUser, Content: *prompt},
-	}
-
-	res, err := agent.RunLoop(ctx, provider, tools, history,
+	res, err := agent.RunLoop(ctx, provider, tools,
+		[]agent.Message{{Role: agent.RoleUser, Content: *prompt}},
 		agent.LoopOptions{MaxSteps: *maxSteps, Emit: emit},
 	)
 	if err != nil {

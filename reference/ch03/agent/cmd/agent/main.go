@@ -34,7 +34,6 @@ func run() error {
 		prompt  = flag.String("p", "", "the prompt to send (required)")
 		model   = flag.String("m", "", "model name; defaults to $HARNESS_MODEL")
 		timeout = flag.Duration("timeout", 60*time.Second, "cancel the request after this long")
-		toolTTL = flag.Duration("tool-timeout", 10*time.Second, "cancel one tool call after this long")
 	)
 	flag.Parse()
 
@@ -59,11 +58,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	tools := agent.NewRegistry(
-		&agent.ReadTool{Root: root},
-		&agent.WriteTool{Root: root},
-		&agent.BashTool{Root: root, Timeout: *toolTTL},
-	)
+	tools := agent.NewRegistry(&agent.ReadTool{Root: root})
 
 	history := []agent.Message{{Role: agent.RoleUser, Content: *prompt}}
 

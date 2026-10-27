@@ -60,6 +60,11 @@ func run() (int, error) {
 	if err != nil {
 		return 1, err
 	}
+	tools := agent.NewRegistry(
+		&agent.ReadTool{Root: root},
+		&agent.WriteTool{Root: root},
+		&agent.BashTool{Root: root, Timeout: *toolTTL},
+	)
 
 	var emit agent.Emitter
 	if *wantEvent {
@@ -89,23 +94,6 @@ func run() (int, error) {
 	if err != nil {
 		return 1, err
 	}
-
-	// The child's registry is built first and does not contain the task tool, so a
-	// subagent cannot start another one. The restriction is structural, not a rule
-	// the child could ignore.
-	baseTools := []agent.Tool{
-		&agent.ReadTool{Root: root},
-		&agent.WriteTool{Root: root},
-		&agent.BashTool{Root: root, Timeout: *toolTTL},
-	}
-	childTools := agent.NewRegistry(baseTools...)
-	task := &agent.TaskTool{
-		Provider: provider,
-		Tools:    childTools,
-		System:   system,
-		MaxSteps: agent.DefaultSubagentSteps,
-	}
-	tools := agent.NewRegistry(append(baseTools, task)...)
 
 	// Conversation is loaded from the session; the system message is rebuilt. The
 	// two never mix.

@@ -2,9 +2,8 @@
 //
 // Contract, which later chapters keep:
 //
-//	agent -p "<prompt>"          the answer goes to stdout
-//	agent -p "..." -events       one JSON event per line on stderr
-//	HARNESS_DEBUG=1              token usage goes to stderr
+//	agent -p "<prompt>"        the answer goes to stdout
+//	HARNESS_DEBUG=1            token usage goes to stderr
 //	exit 0 on success, 1 on error
 //
 // stdout carries the answer and nothing else, so a caller can pipe it.
@@ -32,12 +31,10 @@ func main() {
 
 func run() error {
 	var (
-		prompt    = flag.String("p", "", "the prompt to send (required)")
-		model     = flag.String("m", "", "model name; defaults to $HARNESS_MODEL")
-		timeout   = flag.Duration("timeout", 60*time.Second, "cancel the request after this long")
-		toolTTL   = flag.Duration("tool-timeout", 10*time.Second, "cancel one tool call after this long")
-		maxSteps  = flag.Int("max-steps", agent.DefaultMaxSteps, "stop after this many model requests")
-		wantEvent = flag.Bool("events", false, "write one JSON event per line to stderr")
+		prompt  = flag.String("p", "", "the prompt to send (required)")
+		model   = flag.String("m", "", "model name; defaults to $HARNESS_MODEL")
+		timeout = flag.Duration("timeout", 60*time.Second, "cancel the request after this long")
+		toolTTL = flag.Duration("tool-timeout", 10*time.Second, "cancel one tool call after this long")
 	)
 	flag.Parse()
 
@@ -56,6 +53,8 @@ func run() error {
 		firstNonEmpty(*model, os.Getenv("HARNESS_MODEL"), "gpt-4o-mini"),
 	)
 
+	// Tools are resolved against the directory the program was started in, so
+	// the workspace is whatever the user meant by running it here.
 	root, err := os.Getwd()
 	if err != nil {
 		return err
@@ -66,22 +65,53 @@ func run() error {
 		&agent.BashTool{Root: root, Timeout: *toolTTL},
 	)
 
-	var emit agent.Emitter
-	if *wantEvent {
-		emit = agent.JSONEmitter(os.Stderr)
-	}
+	history := []agent.Message{{Role: agent.RoleUser, Content: *prompt}}
 
-	res, err := agent.RunLoop(ctx, provider, tools,
-		[]agent.Message{{Role: agent.RoleUser, Content: *prompt}},
-		agent.LoopOptions{MaxSteps: *maxSteps, Emit: emit},
-	)
+	msg, usage, err := provider.Chat(ctx, agent.Request{
+		Messages: history,
+		Tools:    tools.Defs(),
+	})
 	if err != nil {
 		return err
 	}
+	history = append(history, msg)
 
-	fmt.Println(res.Message.Content)
-	debugUsage(res.Usage)
+	// One hop. If the model asked for tools, run them and give it one more
+	// chance to answer. Chapter 04 replaces this with a loop, which is why the
+	// limit is stated here rather than hidden.
+	if len(msg.ToolCalls) > 0 {
+		history = append(history, runTools(ctx, tools, msg.ToolCalls)...)
+
+		msg, usage, err = provider.Chat(ctx, agent.Request{
+			Messages: history,
+			Tools:    tools.Defs(),
+		})
+		if err != nil {
+			return err
+		}
+		history = append(history, msg)
+	}
+
+	fmt.Println(msg.Content)
+	debugUsage(usage)
 	return nil
+}
+
+// runTools executes every call in one assistant message and returns the results
+// in the same order. Order matters: the next request pairs each result with its
+// call by id, and providers reject a conversation where the pairing is broken.
+func runTools(ctx context.Context, tools *agent.Registry, calls []agent.ToolCall) []agent.Message {
+	out := make([]agent.Message, 0, len(calls))
+	for _, call := range calls {
+		res := tools.Run(ctx, call)
+		out = append(out, agent.Message{
+			Role:       agent.RoleTool,
+			Content:    res.Content,
+			ToolCallID: call.ID,
+			Name:       call.Name,
+		})
+	}
+	return out
 }
 
 func debugUsage(u agent.Usage) {

@@ -102,16 +102,17 @@ var planned = []struct {
 }{
 	{"01", "Talk to the model"},
 	{"02", "Tool calling"},
-	{"03", "Tools that touch disk"},
-	{"04", "The agent loop"},
-	{"05", "Prompt assembly"},
-	{"06", "Sessions"},
-	{"07", "Context budget"},
-	{"08", "Interrupt and steering"},
-	{"09", "Skills: advertise"},
-	{"10", "Skills: invoke"},
-	{"11", "Subagent"},
-	{"12", "MCP"},
+	{"03", "Running a tool"},
+	{"04", "Tools that touch disk"},
+	{"05", "The agent loop"},
+	{"06", "Prompt assembly"},
+	{"07", "Sessions"},
+	{"08", "Context budget"},
+	{"09", "Interrupt and steering"},
+	{"10", "Skills: advertise"},
+	{"11", "Skills: invoke"},
+	{"12", "Subagent"},
+	{"13", "MCP"},
 }
 
 func partOf(id string) string {
@@ -119,11 +120,11 @@ func partOf(id string) string {
 	switch {
 	case n <= 2:
 		return "I. Wire"
-	case n <= 4:
+	case n <= 5:
 		return "II. Act"
-	case n <= 7:
+	case n <= 8:
 		return "III. Remember"
-	case n <= 9:
+	case n <= 10:
 		return "IV. Extend"
 	default:
 		return "V. Compose"

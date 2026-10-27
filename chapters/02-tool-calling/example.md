@@ -3,8 +3,8 @@
 *Full, annotated implementation. Read it after `kata submit 02` passes, then
 compare.*
 
-The compilable files are `reference/ch02/agent/`. This document takes them apart
-in the order the thinking happens.
+The compilable files are `reference/ch02/agent/`. This page follows the order you would
+think it through.
 
 ---
 

@@ -51,7 +51,6 @@ const (
 	EventTurnEnd    = "turn_end"
 	EventAgentEnd   = "agent_end"
 	EventBudget     = "budget"
-	EventSteer      = "steer"
 )
 
 // Emitter receives events. A nil Emitter discards them, which is what a caller

@@ -32,13 +32,12 @@ func main() {
 
 func run() error {
 	var (
-		prompt      = flag.String("p", "", "the prompt to send (required)")
-		model       = flag.String("m", "", "model name; defaults to $HARNESS_MODEL")
-		timeout     = flag.Duration("timeout", 60*time.Second, "cancel the request after this long")
-		toolTTL     = flag.Duration("tool-timeout", 10*time.Second, "cancel one tool call after this long")
-		maxSteps    = flag.Int("max-steps", agent.DefaultMaxSteps, "stop after this many model requests")
-		wantEvent   = flag.Bool("events", false, "write one JSON event per line to stderr")
-		sessionPath = flag.String("session", "", "resume or create a session file")
+		prompt    = flag.String("p", "", "the prompt to send (required)")
+		model     = flag.String("m", "", "model name; defaults to $HARNESS_MODEL")
+		timeout   = flag.Duration("timeout", 60*time.Second, "cancel the request after this long")
+		toolTTL   = flag.Duration("tool-timeout", 10*time.Second, "cancel one tool call after this long")
+		maxSteps  = flag.Int("max-steps", agent.DefaultMaxSteps, "stop after this many model requests")
+		wantEvent = flag.Bool("events", false, "write one JSON event per line to stderr")
 	)
 	flag.Parse()
 
@@ -81,40 +80,14 @@ func run() error {
 		return err
 	}
 
-	// The session stores conversation, never the system message. The system
-	// message is rebuilt on every run so that AGENTS.md changes take effect.
-	var recorder agent.Recorder
-	prior := []agent.Message{}
-	if *sessionPath != "" {
-		rec, err := agent.OpenSession(*sessionPath)
-		if err != nil {
-			return err
-		}
-		defer rec.Close()
-		recorder = rec
-		if prior, err = rec.Load(); err != nil {
-			return err
-		}
+	history := []agent.Message{
+		{Role: agent.RoleSystem, Content: system},
+		{Role: agent.RoleUser, Content: *prompt},
 	}
-
-	history := make([]agent.Message, 0, len(prior)+2)
-	history = append(history, agent.Message{Role: agent.RoleSystem, Content: system})
-	history = append(history, prior...)
-	history = append(history, agent.Message{Role: agent.RoleUser, Content: *prompt})
 
 	res, err := agent.RunLoop(ctx, provider, tools, history,
 		agent.LoopOptions{MaxSteps: *maxSteps, Emit: emit},
 	)
-
-	// Persist what this run added, even when the run failed part way. A session
-	// that forgets a failed attempt cannot be resumed sensibly.
-	if recorder != nil {
-		for _, m := range res.History[len(prior)+1:] {
-			if appendErr := recorder.Append(m); appendErr != nil && err == nil {
-				err = appendErr
-			}
-		}
-	}
 	if err != nil {
 		return err
 	}

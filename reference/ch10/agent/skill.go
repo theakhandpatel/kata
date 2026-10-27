@@ -1,6 +1,7 @@
-// Reference implementation for chapter 10: invoking a skill.
+// Reference implementation for chapter 09: the skill catalogue.
 //
-// The catalogue from chapter 09 is here too, because every chapter is cumulative.
+// Skills are discovered and advertised by name and description. Loading a body when
+// one is invoked is chapter 10; this file keeps the advertisement side only.
 package agent
 
 import (
@@ -9,9 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
-	"strconv"
 	"strings"
 )
 
@@ -157,76 +156,4 @@ func (c *Catalog) Contribute(ctx context.Context) (string, error) {
 		fmt.Fprintf(&b, "\n- %s: %s\n", s.Name, s.Description)
 	}
 	return b.String(), nil
-}
-
-// Expansion records one skill that was invoked in a prompt.
-type Expansion struct {
-	Name string
-	Args string
-}
-
-var slashCommand = regexp.MustCompile(`(^|\s)/([a-z0-9][a-z0-9-]*)`)
-var positional = regexp.MustCompile(`\$([0-9]+)`)
-
-// Expand replaces every `/name args` in the prompt with that skill's body.
-//
-// Arguments run from the skill name to the next slash command, so several skills
-// can share one prompt. An unknown name is left exactly as the person typed it: a
-// typo should not delete their words.
-func (c *Catalog) Expand(prompt string) (string, []Expansion) {
-	matches := slashCommand.FindAllStringSubmatchIndex(prompt, -1)
-	if len(matches) == 0 {
-		return prompt, nil
-	}
-
-	var (
-		b    strings.Builder
-		used []Expansion
-		last int
-	)
-
-	for i, m := range matches {
-		name := prompt[m[4]:m[5]]
-
-		argsEnd := len(prompt)
-		if i+1 < len(matches) {
-			argsEnd = matches[i+1][0]
-		}
-		args := strings.TrimSpace(prompt[m[1]:argsEnd])
-
-		skill, ok := c.byName[name]
-		if !ok {
-			// Preserve the original text, spacing included.
-			b.WriteString(prompt[last:argsEnd])
-			last = argsEnd
-			continue
-		}
-
-		// Keep whatever came before the command, without the leading space.
-		b.WriteString(strings.TrimRight(prompt[last:m[0]], " \t"))
-		b.WriteString(expandBody(skill.Body, args))
-		used = append(used, Expansion{Name: name, Args: args})
-		last = argsEnd
-	}
-	b.WriteString(prompt[last:])
-
-	return strings.TrimSpace(b.String()), used
-}
-
-// expandBody substitutes $ARGUMENTS and $0, $1, ... into a skill body.
-//
-// $ARGUMENTS is replaced first, because it shares the `$` prefix and the shortest
-// match would otherwise leave `ARGUMENTS` behind.
-func expandBody(body, args string) string {
-	out := strings.ReplaceAll(body, "$ARGUMENTS", args)
-
-	words := strings.Fields(args)
-	out = positional.ReplaceAllStringFunc(out, func(m string) string {
-		idx, err := strconv.Atoi(m[1:])
-		if err != nil || idx >= len(words) {
-			return ""
-		}
-		return words[idx]
-	})
-	return out
 }

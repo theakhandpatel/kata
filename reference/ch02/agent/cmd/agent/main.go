@@ -58,7 +58,10 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	tools := agent.NewRegistry(&agent.ReadTool{Root: root})
+	// No tools yet. The registry exists so the request can carry an empty tool list,
+	// and so chapter 03 has somewhere to add one.
+	_ = root
+	tools := agent.NewRegistry(&agent.StubTool{})
 
 	history := []agent.Message{{Role: agent.RoleUser, Content: *prompt}}
 
