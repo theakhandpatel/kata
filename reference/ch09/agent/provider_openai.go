@@ -101,7 +101,7 @@ func (p *OpenAICompat) Stream(ctx context.Context, req Request, onText func(stri
 		return Message{}, Usage{}, &HTTPError{Status: resp.StatusCode, Body: string(snippet)}
 	}
 
-	return readSSE(resp.Body, onText)
+	return readSSE(ctx, resp.Body, onText)
 }
 
 // readSSE reassembles a streamed completion. Three things are easy to get
@@ -111,7 +111,13 @@ func (p *OpenAICompat) Stream(ctx context.Context, req Request, onText func(stri
 //   - tool-call fragments are keyed by index, not by id (later fragments omit
 //     the id entirely)
 //   - the scanner's error is a real error
-func readSSE(r io.Reader, onText func(string)) (Message, Usage, error) {
+//
+// readSSE joins the stream into one message.
+//
+// It takes the context because cancellation has to be noticed while reading, not after the
+// stream ends. A person who presses Ctrl-C has read part of the answer already, and the
+// request has to stop there rather than finishing the reply they asked to stop.
+func readSSE(ctx context.Context, r io.Reader, onText func(string)) (Message, Usage, error) {
 	var (
 		content strings.Builder
 		usage   Usage
@@ -122,6 +128,10 @@ func readSSE(r io.Reader, onText func(string)) (Message, Usage, error) {
 	scanner.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
 
 	for scanner.Scan() {
+		if err := ctx.Err(); err != nil {
+			return Message{Role: RoleAssistant, Content: content.String()}, usage, err
+		}
+
 		line := scanner.Text()
 
 		// SSE framing: comments, and named fields other than data.

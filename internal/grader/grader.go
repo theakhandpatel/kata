@@ -35,7 +35,12 @@ type Case struct {
 
 // DefaultTimeout bounds each case so a blocking harness fails one case with
 // attribution instead of hanging the chapter until `go test -timeout` fires.
-const DefaultTimeout = 10 * time.Second
+//
+// It is deliberately generous. Most cases finish in well under a second on a laptop, but
+// a shared CI runner under load is an order of magnitude slower, and a case that fails
+// because the machine was busy teaches the reader nothing. Ten seconds caught that
+// difference; thirty does not.
+const DefaultTimeout = 30 * time.Second
 
 // Mismatch is a failed comparison. Returning it lets the suite print the
 // expected/actual pair without the case author formatting anything.

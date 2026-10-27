@@ -204,10 +204,10 @@ func TestChapter09(t *testing.T) {
 				// Eight slow frames give the test a wide window to interrupt inside.
 				srv := fake.New(t, fake.Reply{
 					Text:       "the first part of a long answer that keeps going",
-					FrameDelay: 120 * time.Millisecond,
+					FrameDelay: 250 * time.Millisecond,
 				})
 
-				res := blackbox.RunInterrupt(t, dir, env(srv.BaseURL()), 250*time.Millisecond,
+				res := blackbox.RunInterrupt(t, dir, env(srv.BaseURL()), 800*time.Millisecond,
 					"-p", "write a lot")
 				if res.ExitCode != 130 {
 					return &grader.Mismatch{Label: "exit code", Want: 130, Got: res.ExitCode}
@@ -233,10 +233,10 @@ func TestChapter09(t *testing.T) {
 				dir := workspace(t, nil)
 				srv := fake.New(t, fake.Reply{
 					Text:       "a long answer that will be cut short by the interrupt",
-					FrameDelay: 120 * time.Millisecond,
+					FrameDelay: 250 * time.Millisecond,
 				})
 
-				res := blackbox.RunInterrupt(t, dir, env(srv.BaseURL()), 250*time.Millisecond,
+				res := blackbox.RunInterrupt(t, dir, env(srv.BaseURL()), 800*time.Millisecond,
 					"-p", "write a lot", "-events")
 				events := parseEvents(t, res.Stderr)
 				end := lastOfType(events, "agent_end")
@@ -261,10 +261,10 @@ func TestChapter09(t *testing.T) {
 				path := filepath.Join(dir, "s.jsonl")
 				srv := fake.New(t, fake.Reply{
 					Text:       "a partial answer that should be recorded somewhere",
-					FrameDelay: 120 * time.Millisecond,
+					FrameDelay: 250 * time.Millisecond,
 				})
 
-				blackbox.RunInterrupt(t, dir, env(srv.BaseURL()), 250*time.Millisecond,
+				blackbox.RunInterrupt(t, dir, env(srv.BaseURL()), 800*time.Millisecond,
 					"-p", "say something", "-session", path)
 
 				body, err := os.ReadFile(path)

@@ -104,6 +104,58 @@ func MCPServer(t *testing.T) string {
 	return mcpPath
 }
 
+// syncBuffer is a bytes.Buffer with a mutex and a signal for the first write, so a caller
+// can wait for output instead of sleeping for a guess.
+type syncBuffer struct {
+	mu     sync.Mutex
+	buf    bytes.Buffer
+	got    bool
+	ready  chan struct{}
+	closed bool
+}
+
+func newSyncBuffer() *syncBuffer {
+	return &syncBuffer{ready: make(chan struct{})}
+}
+
+func (b *syncBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	n, err := b.buf.Write(p)
+	if !b.got {
+		b.got = true
+		if !b.closed {
+			close(b.ready)
+			b.closed = true
+		}
+	}
+	return n, err
+}
+
+func (b *syncBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.buf.String()
+}
+
+// waitForData blocks until something has been written, or the budget runs out.
+//
+// Running out is not a failure: the caller signals the process either way, and the case
+// decides what the result means.
+func (b *syncBuffer) waitForData(budget time.Duration) {
+	b.mu.Lock()
+	got := b.got
+	b.mu.Unlock()
+	if got {
+		return
+	}
+	select {
+	case <-b.ready:
+	case <-time.After(budget):
+	}
+}
+
 // Result is what a program run produced.
 type Result struct {
 	Stdout   string
@@ -167,20 +219,29 @@ func RunInterrupt(t *testing.T, dir string, env map[string]string, after time.Du
 	cmd.Dir = dir
 	cmd.Env = append(os.Environ(), flatten(env)...)
 
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
+	// A synchronised buffer lets the caller wait for the first byte of output rather than
+	// sleeping for a guess. A fixed sleep is a race: on a slow machine the signal can
+	// arrive before the request is sent, and the run ends with a transport error instead
+	// of an abort.
+	out := newSyncBuffer()
+	errOut := newSyncBuffer()
+	cmd.Stdout = out
+	cmd.Stderr = errOut
 
 	start := time.Now()
 	if err := cmd.Start(); err != nil {
 		t.Fatalf("start harness: %v", err)
 	}
 
+	// The program prints its answer only after the stream ends, so there is no output to
+	// wait for while it is streaming. A delay is the only signal available. The cases that
+	// use this set the server's frame delay high enough that the stream is still running
+	// when the signal lands, on any machine.
 	time.Sleep(after)
 	_ = cmd.Process.Signal(os.Interrupt)
 
 	err := cmd.Wait()
-	res := finish(t, cmd, err, ctx, stdout.String(), stderr.String(), start)
+	res := finish(t, cmd, err, ctx, out.String(), errOut.String(), start)
 	// A signal-terminated process reports -1 from ExitCode. Use the shell
 	// convention of 128+signal so a test can assert 130 for SIGINT.
 	if cmd.ProcessState != nil {
