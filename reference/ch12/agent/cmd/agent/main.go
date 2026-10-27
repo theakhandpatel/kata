@@ -153,7 +153,8 @@ func run() (int, error) {
 	if err != nil {
 		// Ctrl-C is a normal way to stop a long answer. Print what arrived, say so,
 		// and use the shell's convention for an interrupted process.
-		if errors.Is(err, context.Canceled) || ctx.Err() != nil {
+		interrupted := ctx.Err() != nil && !errors.Is(ctx.Err(), context.DeadlineExceeded)
+		if errors.Is(err, context.Canceled) || interrupted {
 			if res.Message.Content != "" {
 				fmt.Println(res.Message.Content)
 			}

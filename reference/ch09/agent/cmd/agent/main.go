@@ -130,11 +130,15 @@ func run() (int, error) {
 		// Ctrl-C is a normal way to stop a long answer. Print what arrived, say so,
 		// and use the shell's convention for an interrupted process.
 		//
-		// The check is on the context, not the error. An interrupt that lands while the
-		// response is being read surfaces as a transport error from net/http, and does
-		// not satisfy errors.Is(err, context.Canceled) on every platform. The context
-		// always knows.
-		if errors.Is(err, context.Canceled) || ctx.Err() != nil {
+		// An interrupt is exit 130. A timeout is exit 1: the run failed, nobody stopped it,
+		// and a script that treats the two the same cannot tell "I stopped this" from
+		// "this gave up".
+		//
+		// The interrupt check is on the context, not only the error. A signal that lands
+		// while the response is being read surfaces as a transport error from net/http,
+		// which does not satisfy errors.Is(err, context.Canceled) on every platform.
+		interrupted := ctx.Err() != nil && !errors.Is(ctx.Err(), context.DeadlineExceeded)
+		if errors.Is(err, context.Canceled) || interrupted {
 			if res.Message.Content != "" {
 				fmt.Println(res.Message.Content)
 			}
