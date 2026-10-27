@@ -1,6 +1,6 @@
 # 21 Configuring a provider
 
-**Part VII · Store** · Difficulty: medium · 45 to 60 minutes · 8 graded cases
+**Part VII · Store** · Difficulty: medium · 45 to 60 minutes · 9 graded cases
 
 ## What you are building
 
@@ -140,6 +140,8 @@ temporary home directory, and runs it with a scripted endpoint.
 - `config-from-file`: `agent.json` supplies the endpoint and model, and the request uses
   them.
 - `flag-beats-file`: `-base-url` and `-m` override the file.
+- `all-three-sources-at-once`: with a file, an environment variable and a flag all set, the
+  flag wins; without the flag, the environment still beats the file.
 - `env-beats-file`: `OPENAI_BASE_URL` and `HARNESS_MODEL` override the file.
 - `key-from-file`: `api_key_file` supplies the bearer token.
 - `missing-key-file-is-reported`: a missing key file exits non-zero, names the path, and
@@ -186,6 +188,6 @@ key as four characters, an ellipsis, and four characters.
 
 ## Done when
 
-`kata submit 21` reports 8/8, and `./agent -config` tells you where every setting came from.
+`kata submit 21` reports 9/9, and `./agent -config` tells you where every setting came from.
 
 [example.md](example.md) has the finished code, after you pass.

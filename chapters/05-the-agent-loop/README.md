@@ -1,6 +1,6 @@
 # 05 The agent loop
 
-**Part II · Act** · Difficulty: medium · 60 to 90 minutes · 8 graded cases
+**Part II · Act** · Difficulty: medium · 60 to 90 minutes · 9 graded cases
 
 ## What you are building
 
@@ -161,6 +161,8 @@ the events on stderr, stdout and the exit code.
   answer.
 - `preserves-result-order`: two calls in one message return two results in the same
   order with matching ids.
+- `default-cap-exists`: with no `-max-steps`, a model that always asks for a tool stops at
+  the built-in cap, exits 1, and names the limit.
 - `step-cap-stops`: with `-max-steps 3` and a model that always asks for a tool, exactly
   three requests, exit 1, and a message naming the limit.
 - `events-sequence`: every `tool_call` id has exactly one `tool_result`, and `agent_end`
@@ -203,7 +205,7 @@ error.
 
 ## Done when
 
-`kata submit 05` reports 8/8, and the agent completes a task that needs three tool
+`kata submit 05` reports 9/9, and the agent completes a task that needs three tool
 calls.
 
 [example.md](example.md) has the finished code, after you pass.

@@ -1,6 +1,6 @@
 # 02 Tool calling
 
-**Part I · Wire** · Difficulty: medium · 40 to 60 minutes · 6 graded cases
+**Part I · Wire** · Difficulty: medium · 40 to 60 minutes · 7 graded cases
 
 ## What you are building
 
@@ -99,6 +99,8 @@ your program printed.
 - `invalid-arguments`: arguments that are not JSON produce `arguments are not valid
   JSON`.
 - `folds-arguments`: four pieces, id only on the first, become one call.
+- `two-calls-in-one-message`: two calls arriving together keep their own arguments, so
+  index 0 and index 1 do not merge.
 - `result-carries-call-id`: the tool message carries the id of the call it answers.
 - `tool-list-comes-from-the-registry`: every advertised tool can actually be called.
 
@@ -132,7 +134,7 @@ argument text, emit in index order. A tool message needs `role: "tool"` and
 
 ## Done when
 
-`kata submit 02` reports 6/6, and a model asking for a tool you do not have receives a
+`kata submit 02` reports 7/7, and a model asking for a tool you do not have receives a
 readable answer.
 
 [example.md](example.md) has the finished code, after you pass.

@@ -388,3 +388,21 @@ func TestCheckCommentsNameTheirChapter(t *testing.T) {
 		}
 	}
 }
+
+// Every case id must appear in its chapter's page. A case with no claim is a test the
+// reader was not told about, and three shipped like that when cases were added late.
+func TestEveryCaseHasAClaim(t *testing.T) {
+	root := repoRootForTests(t)
+	for _, slug := range writtenChapters(t) {
+		body, err := os.ReadFile(filepath.Join(root, "chapters", slug, "README.md"))
+		if err != nil {
+			continue
+		}
+		page := string(body)
+		for _, id := range caseIDs(t, slug) {
+			if !strings.Contains(page, id) {
+				t.Errorf("%s: case %q has no claim in README.md", slug, id)
+			}
+		}
+	}
+}
