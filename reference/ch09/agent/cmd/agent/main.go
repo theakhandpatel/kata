@@ -114,11 +114,7 @@ func run() (int, error) {
 	history := make([]agent.Message, 0, len(prior)+2)
 	history = append(history, agent.Message{Role: agent.RoleSystem, Content: system})
 	history = append(history, prior...)
-	// Expand slash commands before the prompt becomes history, so a resumed session
-	// records what was actually sent rather than the shorthand.
-	userText, _ := catalog.Expand(*prompt)
-
-	history = append(history, agent.Message{Role: agent.RoleUser, Content: userText})
+	history = append(history, agent.Message{Role: agent.RoleUser, Content: *prompt})
 
 	opts := agent.LoopOptions{MaxSteps: *maxSteps, Emit: emit}
 	if *steerStdin {

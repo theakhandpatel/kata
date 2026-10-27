@@ -3,7 +3,7 @@
 **Part III · Remember** · Difficulty: easy-medium · 45 to 60 minutes · 8 graded cases
 
 The agent learns to read the project's own instructions before it starts. It also
-stops pasting a prompt and starts assembling one, which is what makes chapter 09
+stops pasting a prompt and starts assembling one, which is what makes chapters 09 and 10
 possible later.
 
 | | |

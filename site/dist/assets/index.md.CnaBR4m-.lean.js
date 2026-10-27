@@ -1,0 +1,1 @@
+import{_ as a,o as i,c as t,a2 as e}from"./chunks/framework.Ci_RTJJ5.js";const F=JSON.parse('{"title":"Kata","description":"","frontmatter":{},"headers":[],"relativePath":"index.md","filePath":"index.md"}'),n={name:"index.md"};function h(r,s,l,p,d,k){return i(),t("div",null,[...s[0]||(s[0]=[e("",40)])])}const c=a(n,[["render",h]]);export{F as __pageData,c as default};

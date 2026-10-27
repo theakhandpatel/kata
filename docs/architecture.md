@@ -140,11 +140,11 @@ of them; they do not rewrite the loop.
 |---|---|---|
 | `Provider` | `Chat(ctx, Request) (Message, Usage, error)` | chapter 01, extended in 02 |
 | `Tool` | `Name`, `Description`, `Schema`, `Execute` | chapter 03 |
-| `Contributor` | `Contribute(ctx) (string, error)`, appended to the system prompt | chapter 05 (context files), 09 (skills) |
+| `Contributor` | `Contribute(ctx) (string, error)`, appended to the system prompt | chapter 05 (context files), 09 (skill catalogue) |
 | `Trimmer` | `Fit([]Message, budget) ([]Message, error)` | chapter 07 |
 | `Steering` | `Drain() []Message`, polled after each tool batch | chapter 08 |
 | `Recorder` | `Append(Event) error`, `Load(id) ([]Message, error)` | chapter 06 |
-| `ToolSource` | `Tools(ctx) ([]Tool, error)`, merged into the registry | chapter 10 (subagent), 11 (MCP) |
+| `ToolSource` | `Tools(ctx) ([]Tool, error)`, merged into the registry | chapter 11 (subagent), 12 (MCP) |
 
 ```mermaid
 flowchart TD

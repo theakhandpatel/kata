@@ -23,5 +23,5 @@ printf 'also check the tests\n' | ./agent -p "add a flag" -steer-stdin
 
 ---
 
-Next: **09 — Skills**, where the agent starts reading instructions you wrote for
-it, on demand.
+Next: **09 — Skills: advertise**, where the agent starts listing the instructions you
+wrote for it, without loading them.

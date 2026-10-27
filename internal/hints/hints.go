@@ -15,7 +15,7 @@ import "sort"
 
 // Table maps chapter number -> case id -> the three rungs.
 var Table = map[string]map[string][3]string{
-	"11": {
+	"12": {
 		"mcp-tools-advertised": {
 			"A tool the model cannot see is a tool it will never call.",
 			"After initialize and tools/list, wrap each server tool and add it to the registry the loop sends.",
@@ -57,7 +57,7 @@ var Table = map[string]map[string][3]string{
 			"If the model asked for no tool, no tools/call should appear in the server's log.",
 		},
 	},
-	"10": {
+	"11": {
 		"task-tool-advertised": {
 			"Delegation has to be a tool the model can call.",
 			"Register a task tool whose schema takes the full instruction for the child.",
@@ -99,17 +99,7 @@ var Table = map[string]map[string][3]string{
 			"Nothing special is needed beyond a correct result: the parent loop keeps going while there are tool calls, including further task calls.",
 		},
 	},
-	"09": {
-		"advertises-skills": {
-			"A model cannot invoke what it has not been told about.",
-			"Read skills/*/SKILL.md, and add a section to the system prompt naming each skill and its description.",
-			"Implement the Contributor interface: render '# Skills', a line on how to invoke, then '- name: description' per skill.",
-		},
-		"body-not-advertised": {
-			"The catalogue's value is that it is small.",
-			"Advertise name and description only; keep Body out of the system prompt.",
-			"If the system prompt contains the body of an uninvoked skill, chapter 07's budget pays for work nobody asked for.",
-		},
+	"10": {
 		"loads-body-on-invoke": {
 			"Invocation is when the body enters the request.",
 			"Scan the prompt for /name and replace the token with that skill's body.",
@@ -139,6 +129,28 @@ var Table = map[string]map[string][3]string{
 			"The header is metadata for the agent, not instructions for the model.",
 			"Parse the frontmatter, keep the body, and substitute into the body only.",
 			"Split on the closing '---' fence and take what follows; the body must not start with '---' or contain 'description:'.",
+		},
+	},
+	"09": {
+		"advertises-skills": {
+			"A model cannot invoke what it has not been told about.",
+			"Read skills/*/SKILL.md, and add a section to the system prompt naming each skill and its description.",
+			"Implement the Contributor interface: render '# Skills', a line on how to invoke, then '- name: description' per skill.",
+		},
+		"body-not-advertised": {
+			"The catalogue's value is that it is small.",
+			"Advertise name and description only; keep Body out of the system prompt.",
+			"If the system prompt contains the body of an uninvoked skill, chapter 07's budget pays for work nobody asked for.",
+		},
+		"malformed-skill-skipped": {
+			"A file that cannot be parsed is not a skill.",
+			"Treat a SKILL.md without a usable name and description as absent, not as a fatal error.",
+			"If ParseSkill returns an error, skip that directory and keep loading the rest; the agent still has to start.",
+		},
+		"missing-skills-dir": {
+			"Most projects have no skills directory.",
+			"Return an empty catalogue when skills/ does not exist, and do not add a section to the system prompt.",
+			"If os.ReadDir returns os.ErrNotExist, return nil, nil; Contribute then renders nothing and the base prompt is sent alone.",
 		},
 	},
 	"08": {

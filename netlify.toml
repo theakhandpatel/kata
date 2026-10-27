@@ -3,7 +3,7 @@
 #
 # After changing prose or chapters:
 #
-#   kata site --diagrams=render
+#   kata site
 #   git add site/dist && git commit -m "site: rebuild"
 #
 # Then push, and Netlify publishes the committed directory.

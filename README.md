@@ -4,7 +4,7 @@ Build a coding-agent harness in Go, with a grader that tells you what is broken.
 
 Read it online at **[kata.akhand.cc](https://kata.akhand.cc)**.
 
-Kata is a course of eleven chapters and one local tool. You write the harness:
+Kata is a course of twelve chapters and one local tool. You write the harness:
 the provider client, the tools, the loop, sessions, the context budget,
 steering, skills, subagents, and an MCP client. The tool runs your code against a
 scripted model and reports which claim failed and why.
@@ -95,15 +95,16 @@ kata watch [NN]           re-grade on every save
 kata doctor               check the environment
 ```
 
-`kata site` writes plain HTML and one stylesheet. Open `site/dist/index.html`
-directly, or serve the directory. Diagrams load from a CDN; offline, the diagram
-source stays readable in place.
+`kata site` generates a VitePress project from the same markdown and builds it into
+`site/dist`: search, dark mode, heading anchors, nested navigation, syntax
+highlighting and diagrams all come from the theme. It needs Node once, to install
+VitePress; taking the course does not.
 
 ## How it works
 
 Every chapter leaves you with a program you can run. Chapter 01 gives you an
 application that answers a prompt; chapter 04 gives you one that completes a
-multi-step task; chapter 09 one that follows skills you write.
+multi-step task; chapter 10 one that follows skills you write.
 
 The checks build `./agent/cmd/agent`, start a scripted server, point
 `OPENAI_BASE_URL` at it, and run your binary. They assert on stdout, stderr, exit
@@ -123,9 +124,9 @@ Design notes, diagrams, and the grading pipeline are in
 Go 1.26 or newer.
 
 The agent you build uses only the standard library, and keeps doing so through all
-eleven chapters. The `kata` tool itself depends on Bubble Tea and Lip Gloss for the
-terminal interface. That is the whole dependency list, and it belongs to the tool,
-not to your code.
+twelve chapters. The `kata` tool depends on Bubble Tea and Lip Gloss for the terminal
+interface. Publishing the site additionally needs Node, for VitePress; nothing you do
+as a learner does.
 
 ## What Kata is not
 
@@ -141,9 +142,12 @@ For a full harness, read [pi](https://github.com/earendil-works/pi),
 The site is committed, so a deploy never needs Go or a browser on the build machine.
 
 ```sh
-kata site --diagrams=render   # writes site/dist, pre-renders every diagram
+kata site                     # writes site/dist through VitePress
 git add site/dist && git commit -m "site: rebuild"
 ```
+
+VitePress also validates every internal link, so a broken cross-reference fails the
+build instead of shipping.
 
 Netlify serves `site/dist` through `netlify.toml`. To deploy by hand:
 
@@ -160,4 +164,4 @@ case without a ladder fails the test suite. Prose follows
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT. See [LICENSE](https://github.com/theakhandpatel/kata/blob/main/LICENSE).

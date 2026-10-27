@@ -44,7 +44,6 @@ func run() (int, error) {
 		sessionPath = flag.String("session", "", "resume or create a session file")
 		maxContext  = flag.Int("max-context", agent.DefaultMaxContext, "token budget per request; 0 disables pruning")
 		steerStdin  = flag.Bool("steer-stdin", false, "treat lines on stdin as steering messages")
-		mcpCommand  = flag.String("mcp", "", "command that starts an MCP server over stdio")
 	)
 	flag.Parse()
 
@@ -99,27 +98,6 @@ func run() (int, error) {
 		&agent.WriteTool{Root: root},
 		&agent.BashTool{Root: root, Timeout: *toolTTL},
 	}
-	// An MCP server is optional. If it cannot start, say so and carry on: an
-	// unavailable extension must not stop the agent from answering.
-	allTools := append([]agent.Tool{}, baseTools...)
-	if *mcpCommand != "" {
-		client, err := agent.StartMCP(ctx, *mcpCommand)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "agent: mcp unavailable: %v\n", err)
-		} else {
-			defer client.Close()
-			if err := client.Initialize(ctx); err != nil {
-				fmt.Fprintf(os.Stderr, "agent: mcp handshake failed: %v\n", err)
-			} else if err := client.ListTools(ctx); err != nil {
-				fmt.Fprintf(os.Stderr, "agent: mcp tools/list failed: %v\n", err)
-			} else {
-				allTools = append(allTools, client.Tools()...)
-			}
-		}
-	}
-
-	// The child's registry is built from the built-in tools only, so a subagent
-	// cannot recurse and does not inherit MCP tools it was not given.
 	childTools := agent.NewRegistry(baseTools...)
 	task := &agent.TaskTool{
 		Provider: provider,
@@ -127,8 +105,7 @@ func run() (int, error) {
 		System:   system,
 		MaxSteps: agent.DefaultSubagentSteps,
 	}
-	allTools = append(allTools, task)
-	tools := agent.NewRegistry(allTools...)
+	tools := agent.NewRegistry(append(baseTools, task)...)
 
 	// Conversation is loaded from the session; the system message is rebuilt. The
 	// two never mix.

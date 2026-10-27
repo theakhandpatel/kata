@@ -1,14 +1,14 @@
-# 09 — Skills
+# 09 — Skills: advertise
 
-**Part IV · Extend** · Difficulty: medium · 75 to 100 minutes · 8 graded cases
+**Part IV · Extend** · Difficulty: easy-medium · 30 to 40 minutes · 4 graded cases
 
-The agent starts reading instructions you wrote for it. A skill is a markdown file
-with a one-line description; the description travels with every request, the body
-only when you invoke it.
+The agent learns to read instructions you wrote for it. A skill is a markdown file
+with a one-line description. This chapter finds those files and puts their names in
+the system message; **chapter 10 makes them runnable**.
 
 | | |
 |---|---|
-| **How it works** | [overview.md](overview.md) — catalogue versus body, placeholders, and stacking |
+| **How it works** | [overview.md](overview.md) — one file, two audiences |
 | **What to build** | [problem.md](problem.md) — the contract, the graded claims, the hints |
 | **Full implementation** | [example.md](example.md) — annotated, after an attempt |
 | **You edit** | `agent/skill.go`, `agent/cmd/agent/main.go` |
@@ -16,15 +16,17 @@ only when you invoke it.
 
 ## Done when
 
-`kata submit 09` reports 8/8, and this works against a real endpoint:
+`kata submit 09` reports 4/4, and this works against a real endpoint:
 
 ```sh
-mkdir -p skills/deploy
-printf -- '---\nname: deploy\ndescription: Deploy to a region.\n---\nDeploy to $0 in $1.\n' \
-  > skills/deploy/SKILL.md
-./agent -p "/deploy staging eu-west"
+mkdir -p skills/review
+printf -- '---\nname: review\ndescription: Review the current diff.\n---\nRead the diff.\n' \
+  > skills/review/SKILL.md
+./agent -p "what skills do you have?"
 ```
+
+The model should be able to tell you about `review` without reading its body.
 
 ---
 
-Next: **10 — Subagent**, where the agent can hand a whole job to a fresh context.
+Next: **10 — Skills: invoke**, where `/name args` turns into the body.

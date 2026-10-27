@@ -26,3 +26,7 @@ docs/research/
 
 # Local Netlify folder
 .netlify
+
+# generated VitePress project and its dependencies
+/site/src/
+/site/node_modules/

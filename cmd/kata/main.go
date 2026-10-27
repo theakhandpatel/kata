@@ -108,9 +108,10 @@ var planned = []struct {
 	{"06", "Sessions"},
 	{"07", "Context budget"},
 	{"08", "Interrupt and steering"},
-	{"09", "Skills"},
-	{"10", "Subagent"},
-	{"11", "MCP"},
+	{"09", "Skills: advertise"},
+	{"10", "Skills: invoke"},
+	{"11", "Subagent"},
+	{"12", "MCP"},
 }
 
 func partOf(id string) string {

@@ -3,7 +3,6 @@
 package checks
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,23 +14,18 @@ import (
 	"kata/internal/hints"
 )
 
-const (
-	deployBody = "BODY-DEPLOY: Deploy to $0 in $1. Full request was: $ARGUMENTS"
-	reviewBody = "BODY-REVIEW: Read the diff and list risks."
-)
-
-// Chapter 09 -- skills.
+// Chapter 09 -- the skill catalogue.
 //
-// The catalogue is advertised by description; the body arrives only when invoked.
-// Every case inspects the system message and the user message, because the split
-// between the two is the feature.
+// A skill is a file. This chapter teaches finding those files and advertising them,
+// and deliberately stops before anything is invoked. Invocation is chapter 10, so the
+// two halves can be finished in two sittings.
 func TestChapter09(t *testing.T) {
-	grader.Suite(t, "09", "skills", []grader.Case{
+	grader.Suite(t, "09", "the skill catalogue", []grader.Case{
 		{
 			ID:    "advertises-skills",
 			Title: "lists skill names and descriptions in the system message",
 			Why: "A model cannot invoke what it has not been told about. The catalogue " +
-				"has to name each skill and say what it is for.",
+				"carries each skill's name and what it is for, and nothing else.",
 			Hints: hints.Get("09", "advertises-skills"),
 			Run: func(t *testing.T) error {
 				dir := skillsWorkspace(t,
@@ -56,9 +50,10 @@ func TestChapter09(t *testing.T) {
 		},
 		{
 			ID:    "body-not-advertised",
-			Title: "does not send skill bodies it was not asked for",
-			Why: "The point of a catalogue is that fifty skills cost fifty lines. " +
-				"Sending every body makes the advertisement as expensive as the work.",
+			Title: "advertises descriptions without sending bodies",
+			Why: "The catalogue staying small is the whole reason it exists. A project " +
+				"with fifty skills should cost fifty lines on every request, not fifty " +
+				"documents.",
 			Hints: hints.Get("09", "body-not-advertised"),
 			Run: func(t *testing.T) error {
 				dir := skillsWorkspace(t,
@@ -75,8 +70,7 @@ func TestChapter09(t *testing.T) {
 				if !strings.Contains(systemContent(srv.Last()), "Deploy the app to a region.") {
 					return &grader.Mismatch{Label: "system content", Want: "the skill description", Got: systemContent(srv.Last())}
 				}
-				joined := allContent(srv.Last())
-				if strings.Contains(joined, "BODY-DEPLOY") {
+				if strings.Contains(allContent(srv.Last()), "BODY-DEPLOY") {
 					return &grader.Mismatch{Label: "request content", Want: "no skill body", Got: "body present"}
 				}
 				srv.AssertConsumed(t)
@@ -84,176 +78,62 @@ func TestChapter09(t *testing.T) {
 			},
 		},
 		{
-			ID:    "loads-body-on-invoke",
-			Title: "loads the body when the skill is invoked",
-			Why: "Invocation is the moment the body earns its place in the request. " +
-				"Without it the model has a name and nothing to do with it.",
-			Hints: hints.Get("09", "loads-body-on-invoke"),
+			ID:    "malformed-skill-skipped",
+			Title: "skips a SKILL.md it cannot parse",
+			Why: "One broken file must not stop the agent from starting. A skill with no " +
+				"name and no description cannot be advertised, so there is nothing useful " +
+				"to do with it except leave it out.",
+			Hints: hints.Get("09", "malformed-skill-skipped"),
 			Run: func(t *testing.T) error {
 				dir := skillsWorkspace(t,
 					skill("deploy", "Deploy the app to a region.", deployBody),
 				)
-				srv := fake.New(t, fake.Reply{Text: "ok"})
+				// No frontmatter: this file must be ignored, not fatal.
+				writeFile(t, filepath.Join(dir, "skills", "broken", "SKILL.md"),
+					"BODY-BROKEN just markdown with no header\n")
 
-				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "/deploy staging eu-west").ExitCode); err != nil {
-					return err
-				}
-				user := lastUserContent(srv.Last())
-				if !strings.Contains(user, "BODY-DEPLOY") {
-					return &grader.Mismatch{Label: "user message", Want: "the skill body", Got: user}
-				}
-				srv.AssertConsumed(t)
-				return nil
-			},
-		},
-		{
-			ID:    "substitutes-arguments",
-			Title: "substitutes $ARGUMENTS and positional placeholders",
-			Why: "A skill that cannot take input always does the same thing. Both " +
-				"placeholder forms appear in real skills, often in the same body.",
-			Hints: hints.Get("09", "substitutes-arguments"),
-			Run: func(t *testing.T) error {
-				dir := skillsWorkspace(t,
-					skill("deploy", "Deploy the app to a region.", deployBody),
-				)
-				srv := fake.New(t, fake.Reply{Text: "ok"})
-
-				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "/deploy staging eu-west").ExitCode); err != nil {
-					return err
-				}
-				user := lastUserContent(srv.Last())
-				for _, want := range []string{
-					"Deploy to staging in eu-west.",
-					"Full request was: staging eu-west",
-				} {
-					if !strings.Contains(user, want) {
-						return &grader.Mismatch{Label: "user message", Want: want, Got: user}
-					}
-				}
-				if strings.Contains(user, "$0") || strings.Contains(user, "$ARGUMENTS") {
-					return &grader.Mismatch{Label: "user message", Want: "placeholders substituted", Got: user}
-				}
-				srv.AssertConsumed(t)
-				return nil
-			},
-		},
-		{
-			ID:    "stacks-skills",
-			Title: "expands several skills from one prompt, in order",
-			Why: "People combine instructions: review this, then deploy it. Each skill " +
-				"takes its own arguments and the order has to survive.",
-			Hints: hints.Get("09", "stacks-skills"),
-			Run: func(t *testing.T) error {
-				dir := skillsWorkspace(t,
-					skill("deploy", "Deploy the app to a region.", deployBody),
-					skill("review", "Review the current diff.", reviewBody),
-				)
-				srv := fake.New(t, fake.Reply{Text: "ok"})
-
-				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "/review /deploy production eu-west").ExitCode); err != nil {
-					return err
-				}
-				user := lastUserContent(srv.Last())
-				reviewAt := strings.Index(user, "BODY-REVIEW")
-				deployAt := strings.Index(user, "BODY-DEPLOY")
-				if reviewAt < 0 || deployAt < 0 {
-					return &grader.Mismatch{Label: "user message", Want: "both bodies", Got: user}
-				}
-				if reviewAt > deployAt {
-					return &grader.Mismatch{Label: "order", Want: "review before deploy", Got: "deploy came first"}
-				}
-				if !strings.Contains(user, "Deploy to production in eu-west.") {
-					return &grader.Mismatch{Label: "user message", Want: "deploy arguments applied", Got: user}
-				}
-				srv.AssertConsumed(t)
-				return nil
-			},
-		},
-		{
-			ID:    "no-invocation-no-body",
-			Title: "leaves a prompt without slash commands untouched",
-			Why: "Expansion must be a no-op for ordinary text. A prompt that grows a " +
-				"header or loses its punctuation is a prompt the user cannot debug.",
-			Hints: hints.Get("09", "no-invocation-no-body"),
-			Run: func(t *testing.T) error {
-				dir := skillsWorkspace(t,
-					skill("deploy", "Deploy the app to a region.", deployBody),
-				)
-				srv := fake.New(t, fake.Reply{Text: "ok"})
-				const prompt = `find the "todo" marker and fix it`
-
-				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", prompt).ExitCode); err != nil {
-					return err
-				}
-				if !strings.Contains(systemContent(srv.Last()), "Deploy the app to a region.") {
-					return &grader.Mismatch{Label: "system content", Want: "the skill description", Got: systemContent(srv.Last())}
-				}
-				if err := grader.Eqf("user message", prompt, lastUserContent(srv.Last())); err != nil {
-					return err
-				}
-				if strings.Contains(allContent(srv.Last()), "BODY-DEPLOY") {
-					return &grader.Mismatch{Label: "request content", Want: "no body", Got: "body present"}
-				}
-				srv.AssertConsumed(t)
-				return nil
-			},
-		},
-		{
-			ID:    "unknown-skill-preserved",
-			Title: "keeps the text of an unknown slash command",
-			Why: "A typo must not delete the person's words. Passing the text through " +
-				"means the model can still answer, and the user can see what happened.",
-			Hints: hints.Get("09", "unknown-skill-preserved"),
-			Run: func(t *testing.T) error {
-				dir := skillsWorkspace(t,
-					skill("deploy", "Deploy the app to a region.", deployBody),
-				)
-				srv := fake.New(t, fake.Reply{Text: "I do not have that skill."})
-
-				res := blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "/nosuch please help")
+				srv := fake.New(t, fake.Reply{Text: "still works"})
+				res := blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "hello")
 				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
 				}
-				if err := grader.Eqf("stdout", "I do not have that skill.\n", res.Stdout); err != nil {
+				if err := grader.Eqf("stdout", "still works\n", res.Stdout); err != nil {
 					return err
 				}
-				if !strings.Contains(systemContent(srv.Last()), "deploy") {
-					return &grader.Mismatch{Label: "system content", Want: "the known skill advertised", Got: systemContent(srv.Last())}
+				system := systemContent(srv.Last())
+				if !strings.Contains(system, "deploy") {
+					return &grader.Mismatch{Label: "system content", Want: "the valid skill", Got: system}
 				}
-				user := lastUserContent(srv.Last())
-				if !strings.Contains(user, "/nosuch please help") {
-					return &grader.Mismatch{Label: "user message", Want: "the original text", Got: user}
+				if strings.Contains(system, "broken") {
+					return &grader.Mismatch{Label: "system content", Want: "no entry for the broken file", Got: system}
 				}
 				srv.AssertConsumed(t)
 				return nil
 			},
 		},
 		{
-			ID:    "frontmatter-not-leaked",
-			Title: "sends the skill body without its frontmatter",
-			Why: "The header is metadata for the agent, not instructions for the model. " +
-				"Sending it wastes tokens and teaches the model to write headers back.",
-			Hints: hints.Get("09", "frontmatter-not-leaked"),
+			ID:    "missing-skills-dir",
+			Title: "runs normally when there is no skills directory",
+			Why: "Most projects have no skills. A catalogue that treats a missing " +
+				"directory as an error makes the agent refuse to work in an empty folder.",
+			Hints: hints.Get("09", "missing-skills-dir"),
 			Run: func(t *testing.T) error {
-				dir := skillsWorkspace(t,
-					skill("deploy", "Deploy the app to a region.", deployBody),
-				)
-				srv := fake.New(t, fake.Reply{Text: "ok"})
+				dir := workspace(t)
+				srv := fake.New(t, fake.Reply{Text: "no skills here"})
 
-				if err := grader.Eqf("exit code", 0,
-					blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "/deploy staging eu").ExitCode); err != nil {
+				res := blackbox.RunIn(t, dir, env(srv.BaseURL()), "-p", "hello")
+				if err := grader.Eqf("exit code", 0, res.ExitCode); err != nil {
 					return err
 				}
-				user := lastUserContent(srv.Last())
-				if !strings.Contains(user, "BODY-DEPLOY") {
-					return &grader.Mismatch{Label: "user message", Want: "the expanded body", Got: user}
+				if err := grader.Eqf("stdout", "no skills here\n", res.Stdout); err != nil {
+					return err
 				}
-				if strings.Contains(user, "description:") || strings.HasPrefix(user, "---") {
-					return &grader.Mismatch{Label: "user message", Want: "body only", Got: user}
+				system := systemContent(srv.Last())
+				if !strings.Contains(system, "coding agent") {
+					return &grader.Mismatch{Label: "system content", Want: "the base instruction", Got: system}
+				}
+				if strings.Contains(system, "# Skills") {
+					return &grader.Mismatch{Label: "system content", Want: "no skills section", Got: system}
 				}
 				srv.AssertConsumed(t)
 				return nil
@@ -271,10 +151,12 @@ func env(baseURL string) map[string]string {
 	}
 }
 
-// skill renders a SKILL.md with frontmatter.
-func skill(name, description, body string) struct {
-	Name, Description, Body string
-} {
+const (
+	deployBody = "BODY-DEPLOY: Deploy to $0 in $1. Full request was: $ARGUMENTS"
+	reviewBody = "BODY-REVIEW: Read the diff and list risks."
+)
+
+func skill(name, description, body string) struct{ Name, Description, Body string } {
 	return struct{ Name, Description, Body string }{name, description, body}
 }
 
@@ -283,30 +165,28 @@ func skillsWorkspace(t *testing.T, skills ...struct{ Name, Description, Body str
 	dir := t.TempDir()
 	for _, s := range skills {
 		full := filepath.Join(dir, "skills", s.Name, "SKILL.md")
-		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
-			t.Fatalf("mkdir: %v", err)
-		}
 		content := "---\nname: " + s.Name + "\ndescription: " + s.Description + "\n---\n" + s.Body + "\n"
-		if err := os.WriteFile(full, []byte(content), 0o644); err != nil {
-			t.Fatalf("write skill: %v", err)
-		}
+		writeFile(t, full, content)
 	}
 	return dir
+}
+
+func workspace(t *testing.T) string { return t.TempDir() }
+
+func writeFile(t *testing.T, path, body string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		t.Fatalf("write: %v", err)
+	}
 }
 
 func systemContent(req fake.Recorded) string {
 	for _, m := range req.Messages {
 		if m.Role == "system" {
 			return m.Content
-		}
-	}
-	return ""
-}
-
-func lastUserContent(req fake.Recorded) string {
-	for i := len(req.Messages) - 1; i >= 0; i-- {
-		if req.Messages[i].Role == "user" {
-			return req.Messages[i].Content
 		}
 	}
 	return ""
@@ -319,21 +199,4 @@ func allContent(req fake.Recorded) string {
 		b.WriteString("\n")
 	}
 	return b.String()
-}
-
-func parseEvents(t *testing.T, stderr string) []map[string]any {
-	t.Helper()
-	var out []map[string]any
-	for _, line := range strings.Split(stderr, "\n") {
-		line = strings.TrimSpace(line)
-		if !strings.HasPrefix(line, "{") {
-			continue
-		}
-		var m map[string]any
-		if err := json.Unmarshal([]byte(line), &m); err != nil {
-			t.Fatalf("event line is not JSON: %q: %v", line, err)
-		}
-		out = append(out, m)
-	}
-	return out
 }

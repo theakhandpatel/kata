@@ -81,5 +81,5 @@ budgets.
 
 Extensions and plugins, a terminal UI beyond a chapter list, editor integration,
 image input, provider authentication, background subagents, and evaluation harnesses.
-[Where next](where-next.md) lists which of those is worth building on top of what you
+[Where next](../chapters/where-next.md) lists which of those is worth building on top of what you
 have, and which is a different project.
