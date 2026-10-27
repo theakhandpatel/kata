@@ -8,9 +8,7 @@ the system message; **chapter 10 makes them runnable**.
 
 | | |
 |---|---|
-| **How it works** | [overview.md](overview.md), one file, two audiences |
-| **What to build** | [problem.md](problem.md), the contract, the graded claims, the hints |
-| **Full implementation** | [example.md](example.md), annotated, after an attempt |
+| **Worked example** | [example.md](example.md): the finished code, after an attempt |
 | **You edit** | `agent/skill.go`, `agent/cmd/agent/main.go` |
 | **Submit** | `kata submit 09` |
 

@@ -7,9 +7,7 @@ runs it against a real file, and sends the result back so the model can answer.
 
 | | |
 |---|---|
-| **How it works** | [overview.md](overview.md), the call/result pairing and why arguments arrive in pieces |
-| **What to build** | [problem.md](problem.md), the contract, the graded claims, the hints |
-| **Full implementation** | [example.md](example.md), annotated, after an attempt |
+| **Worked example** | [example.md](example.md): the finished code, after an attempt |
 | **You edit** | `agent/provider_openai.go`, `agent/tool.go`, `agent/tools.go`, `agent/cmd/agent/main.go` |
 | **Given** | `agent/types.go` (including the `Tool` interface) |
 | **Submit** | `kata submit 02` |

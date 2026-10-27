@@ -7,9 +7,7 @@ skill's own words, with the arguments filled in.
 
 | | |
 |---|---|
-| **How it works** | [overview.md](overview.md), substitution, not a tool call; stacking |
-| **What to build** | [problem.md](problem.md), the contract, the graded claims, the hints |
-| **Full implementation** | [example.md](example.md), annotated, after an attempt |
+| **Worked example** | [example.md](example.md): the finished code, after an attempt |
 | **You edit** | `agent/skill.go`, `agent/cmd/agent/main.go` |
 | **Submit** | `kata submit 10` |
 

@@ -8,9 +8,7 @@ never sees the detail.
 
 | | |
 |---|---|
-| **How it works** | [overview.md](overview.md), isolation, structural recursion limits, and why the parent blocks |
-| **What to build** | [problem.md](problem.md), the contract, the graded claims, the hints |
-| **Full implementation** | [example.md](example.md), annotated, after an attempt |
+| **Worked example** | [example.md](example.md): the finished code, after an attempt |
 | **You edit** | `agent/subagent.go`, `agent/cmd/agent/main.go` |
 | **Submit** | `kata submit 11` |
 

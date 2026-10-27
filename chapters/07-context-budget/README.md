@@ -7,9 +7,7 @@ drop, and be able to say why.
 
 | | |
 |---|---|
-| **How it works** | [overview.md](overview.md), two budgets, ceilings versus thresholds, and why pruning is a decorator |
-| **What to build** | [problem.md](problem.md), the contract, the graded claims, the hints |
-| **Full implementation** | [example.md](example.md), annotated, after an attempt |
+| **Worked example** | [example.md](example.md): the finished code, after an attempt |
 | **You edit** | `agent/budget.go`, `agent/events.go`, `agent/cmd/agent/main.go` |
 | **Submit** | `kata submit 07` |
 

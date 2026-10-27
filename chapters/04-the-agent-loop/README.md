@@ -8,9 +8,7 @@ starts reporting what it does, as events.
 
 | | |
 |---|---|
-| **How it works** | [overview.md](overview.md), the loop as a state machine, and the event grammar |
-| **What to build** | [problem.md](problem.md), the contract, the graded claims, the hints |
-| **Full implementation** | [example.md](example.md), annotated, after an attempt |
+| **Worked example** | [example.md](example.md): the finished code, after an attempt |
 | **You edit** | `agent/loop.go`, `agent/events.go`, `agent/provider_openai.go`, `agent/cmd/agent/main.go` |
 | **Submit** | `kata submit 04` |
 

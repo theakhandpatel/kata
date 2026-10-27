@@ -7,9 +7,7 @@ arrived, or say something while it works and have it land at the turn boundary.
 
 | | |
 |---|---|
-| **How it works** | [overview.md](overview.md), where an interrupt lands, and why steering is a boundary problem |
-| **What to build** | [problem.md](problem.md), the contract, the graded claims, the hints |
-| **Full implementation** | [example.md](example.md), annotated, after an attempt |
+| **Worked example** | [example.md](example.md): the finished code, after an attempt |
 | **You edit** | `agent/loop.go`, `agent/steering.go`, `agent/provider_openai.go`, `agent/events.go`, `agent/cmd/agent/main.go` |
 | **Submit** | `kata submit 08` |
 
