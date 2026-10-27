@@ -1,137 +1,102 @@
 # Chapter format
 
-Every chapter is one directory with **three reader-facing documents**, one
-grader, and one reference solution. The three documents answer three different
-questions and are read at three different times; merging any two of them produces
-a page that is simultaneously too long to work from and too thin to learn from.
+Every chapter is one directory with **one page to work from** and **one page to compare
+against**, plus the checks and a title.
 
 ```
 chapters/NN-slug/
-  README.md      one-screen index: goal, time, difficulty, edit list, doc links
-  overview.md    how the mechanism works, in general. Concept + diagrams.
-  problem.md     what you must build, what exactly is graded, and the hints.
-  example.md     a complete, annotated implementation. Implementation-heavy.
-  checks/        Go test suite, the only thing that defines "done"
-reference/chNN/  reference implementation, cumulative, separate Go module
+  README.md      the task, how it works, the graded claims, three hints
+  example.md     the finished implementation, annotated
+  title          one line, the chapter's name, used by `kata list` and the site
+  checks/        the Go test suite: the only thing that defines "done"
 ```
 
-## The three documents
+`reference/chNN/` holds the code, and only the files that chapter changes.
 
-| | `overview.md` | `problem.md` | `example.md` |
-|---|---|---|---|
-| Question | *how does this work?* | *what must I do?* | *what does a full one look like?* |
-| Read when | before you start | at the keyboard | after a real attempt |
-| Shape | prose, diagrams, worked byte-level examples | tables, claims, hints | code, diffs, annotations |
-| Length | long, discursive | short, scannable | as long as the code |
-| Spoilers | none, concept only | none | total, by design |
-| Ends with | self-check questions | done-when | comparison checklist |
+## Why two pages and not three
 
-The rule that keeps them honest: **`overview.md` may not contain a working
-implementation, and `example.md` may not contain new concepts.** If an idea only
-appears in the example, it belongs in the overview first.
+There were three for most of this course's life: `overview.md` for the concept,
+`problem.md` for the task, and `example.md` for the answer. It was a mistake, and the reason
+is worth recording.
 
-### `overview.md`: the general doc
+A reader at the keyboard needs the task and the idea together. Splitting them means holding
+two windows open, or scrolling between two files to answer one question. The merged page
+also has a natural order that the split fought against: what you are building, then how it
+works, then what is checked, then hints.
 
-Free-form, but must contain:
+`example.md` stays separate, because it is spoilers. That distinction is real and the
+others were not.
 
-1. **Why it exists**: the mechanism in the domain's terms, not Go's.
-2. **A diagram** (`mermaid` for GitHub/HTML, plus a short ASCII version when the
-   diagram is load-bearing, because the terminal cannot render mermaid.
-3. **Real bytes**: an actual SSE chunk, an actual JSON body, an actual file.
-   Not "the model returns chunks"; the chunk.
-4. **A failure map**: the ways this goes wrong, drawn as a tree, each branch
-   labelled with the case id that catches it. This is the link between teaching
-   and grading.
-5. **Where the real implementations go further**: pi/crush/PiG file paths, and
-   what they add that we skipped.
-6. **Self-check**: 3–5 questions answerable only if the concept landed, each
-   pointing at the section that answers it.
+## `README.md`: the page to work from
 
-### `problem.md`: the contract
+Sections in this order. A chapter missing one of them is incomplete.
 
-Fixed sections, in this order. No freestyle.
+1. **What you are building.** A command and its output, in a shell block. If the reader
+   cannot picture the result, nothing after this helps.
+2. **The mechanism.** How it works, in the domain's terms. Diagrams and real bytes.
+3. **The claims.** A table or list of every case id and what it asserts.
+4. **What you need to build.** Signatures and types, and which files you may edit.
+5. **Notes.** The traps. What is deliberately left out.
+6. **If you get stuck.** Three collapsible hints: the shape of the problem, the tools you
+   will need, and what the finished code does.
+7. **Done when.** The number of cases, and one sentence of self-check.
 
-1. **Your task**: one sentence, naming a capability, never a function.
-2. **The contract**: the signature, the wire shape, the file format. Tables.
-3. **What the verifier does**: what it runs, and *that it inspects requests*,
-   and not output alone.
-4. **The verifier will assert that**: one bullet per graded case, phrased as a
-   promise, named by case id. Must match `checks/` exactly; if they diverge the
-   checks are truth and this page is a bug.
-5. **Notes**: edge cases you must handle; deliberate omissions with a link to
-   the real implementation; the output contract (stdout vs stderr, exit codes).
-6. **Hints**: three rungs, spoiler-collapsed, identical to `internal/hints`.
-7. **Done when** (`kata submit NN` green, plus one self-check sentence.
+## `example.md`: the page to compare against
 
-### `example.md`: the implementation doc
+1. **The shape**, before any code: the function split.
+2. **Steps**, in the order you would think them through.
+3. **The fixes.** Wrong version and right version, side by side, each labelled with the case
+   id that catches it.
+4. **What to compare against your own.** A checklist. Differences inside it are bugs,
+   outside it is style.
 
-The full annotated answer, structured as the *thinking order*, not the file
-order:
+## Rules
 
-1. **The shape**: the function split, before any code.
-2. **Steps**: one section per decision, each with the code and *why*.
-3. **The diffs**: wrong vs right for each trap, labelled with the case id.
-4. **The complete file**: or a pointer to `reference/chNN/`.
-5. **Production delta**: a table of what pi/crush add and why we skipped it.
-6. **Comparison checklist**: differences that are bugs vs differences that are
-   style.
+**Every claim names a case id.** A claim with no case is prose, and a case with no claim is
+a test the reader was not told about. Both are bugs, and `cmd/kata/docs_test.go` fails on
+both.
 
-## Which driver
+**No course commentary.** No "this chapter will teach you", no defence of the fictional
+server, no warnings about what a later chapter does. State the mechanism and the check. A
+reader who understands the mechanism will recognise the trap when it arrives.
 
-Each case names its driver, and the chapter's `problem.md` groups the claims by
-it. The rule is in [architecture.md](architecture.md#grading-policy): black box
-by default, function level only for pure transforms with awkward inputs.
+**No forward references by number.** Chapters move. Say "the Steer and abort chapter", not
+"chapter 08".
+
+**The example is not a copy of the reference.** It is the reference taken apart in the order
+the thinking happens, which is almost never the order the lines appear.
+
+## Checks
+
+Every case is one claim, with an id, a one-line title, a `Why` naming the mechanism, three
+hints, and a function that returns an error or nil.
 
 ```go
-// black box: build and run ./agent/cmd/agent
-res := blackbox.Run(t, env(srv.BaseURL()), "-p", "list the files")
-
-// function level: a pinned, deliberately small surface
-got := agent.SubstituteArgs("Deploy to $0 in $1", []string{"staging", "eu"})
+{
+	ID:    "missing-file",
+	Title: "reports a missing file as a result, not a crash",
+	Why:   "A failed tool is information the model can act on.",
+	Hints: hints.Get("03", "missing-file"),
+	Run: func(t *testing.T) error { ... },
+}
 ```
 
-A case that pins a function must say so in `problem.md` under "given surface",
-so a learner never discovers the requirement from a compile error.
+Cases do not stop each other, each is bounded by a timeout, and a panic fails one case
+rather than the chapter.
+
+## Drivers
+
+Almost every case is black box: build the binary, run it, read stdout, the exit code, and
+the requests it sent. That is the only way to prove the program works when invoked, and it
+leaves the internal design free.
 
 ## Adding a chapter
 
-Create `chapters/NN-slug/` with `README.md`, `example.md`, `checks/`, and a `title` line
-inside the README's `# NN Title` heading. Then:
+1. Create `chapters/NN-slug/` with `README.md`, `example.md`, `title`, `checks/chNN_test.go`.
+2. Add an `"NN"` entry to `internal/hints/hints.go`, three hints per case.
+3. Add `reference/chNN/` with only the files the chapter changes.
+4. `kata verify`. It must be clean: the reference passes every case and the state before the
+   chapter fails at least one.
 
-1. `internal/hints/hints.go` gets a `"NN"` entry with three rungs per case.
-2. `reference/chNN/` holds only the files this chapter changes. Overlays apply in
-   chapter order, so a chapter that touches one file ships one file.
-
-Nothing else needs editing. The chapter list, the sidebar, the part grouping, and the
-verification order all come from the directory names.
-
-## The build tag
-
-Chapter checks carry `//go:build kata_checks`. That keeps `go test ./...` green
-in a fresh clone, where `agent/` is still the starter and every case is
-supposed to fail. `kata submit` and `kata verify` add the tag themselves, so
-you never pass it by hand.
-
-```sh
-go test -tags=kata_checks ./chapters/01-chat-with-the-model/checks/
-```
-
-## Indexing
-
-CodeCrafters indexes stages globally with sections as headers. We do not: **a
-chapter is the unit**, `NN` is its identity, and cases inside a chapter are
-addressable only by case id (for hints). Inserting a chapter never renumbers a
-learner's progress, and the arc stays editable while it is being written.
-
-## Grouping into parts
-
-| Part | Chapters | The leap |
-|---|---|---|
-| I. Wire | 01–02 | talk to a model, survive its output |
-| II. Act | 03–04 | tools, then the loop that drives them |
-| III. Remember | 05–07 | prompt, sessions, budget |
-| IV. Extend | 08–09 | steering, skills |
-| V. Compose | 10–11 | subagents, MCP |
-
-Part boundaries are where the mental model changes, and where a learner can stop
-and still have something useful.
+Nothing else needs editing. The chapter list, the site sidebar, the part grouping and the
+grading order all come from the directory names.

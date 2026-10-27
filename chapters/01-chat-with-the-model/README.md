@@ -99,12 +99,19 @@ Three properties of the stream:
   not know the counts until it has finished writing.
 - **`data: [DONE]` is not JSON.** It terminates the stream.
 
-## What you are given
+## What you need to build
 
-`Request`, `Message`, `Usage` and `HTTPError` in `agent/types.go`. `Request` carries the
+One function, and four types that are already declared:
+
+```go
+func (p *OpenAICompat) Chat(ctx context.Context, req Request) (Message, Usage, error)
+```
+
+`Request`, `Message`, `Usage` and `HTTPError` are in `agent/types.go`. `Request` carries the
 model, the messages, the tool list, the token limit and the temperature. `Message` has a
-role, content, tool calls and a tool call id. `HTTPError` holds a status and a body
-excerpt.
+role, content, tool calls and a tool call id. `HTTPError` holds a status and a body excerpt.
+
+Edit `agent/provider_openai.go`. Nothing else.
 
 ## How you are checked
 

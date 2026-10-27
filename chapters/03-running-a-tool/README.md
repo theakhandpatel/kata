@@ -23,7 +23,7 @@ You may edit `agent/tool.go`, `agent/tools.go`, and `agent/cmd/agent/main.go`. T
 registry and the wire format already exist from the Tool calling chapter. You are adding the part
 that touches the disk.
 
-## How it works
+## A tool is four things
 
 **A tool is a name, a description, a schema, and a function.** The model reads the name
 and description to decide whether to call it. The schema tells it what arguments to

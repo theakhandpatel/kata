@@ -284,3 +284,54 @@ func lineContaining(body, needle string) string {
 	}
 	return ""
 }
+
+// Every chapter page has the same shape: open with the thing you are building, close with
+// what finished looks like, and keep the four named sections in between. Chapters drift when
+// they are written at different times, and a reader notices the inconsistency even when they
+// cannot name it.
+func TestChapterPagesHaveTheSameShape(t *testing.T) {
+	root := repoRootForTests(t)
+	required := []string{"What you are building", "What you need to build", "How you are checked", "If you get stuck"}
+
+	for _, slug := range writtenChapters(t) {
+		body, err := os.ReadFile(filepath.Join(root, "chapters", slug, "README.md"))
+		if err != nil {
+			continue
+		}
+
+		// Headings outside fenced blocks only, or an example file's contents count.
+		var heads []string
+		inFence := false
+		for _, line := range strings.Split(string(body), "\n") {
+			if strings.HasPrefix(line, "```") {
+				inFence = !inFence
+				continue
+			}
+			if !inFence && strings.HasPrefix(line, "## ") {
+				heads = append(heads, strings.TrimSpace(strings.TrimPrefix(line, "## ")))
+			}
+		}
+		if len(heads) == 0 {
+			t.Errorf("%s has no sections", slug)
+			continue
+		}
+
+		if heads[0] != "What you are building" {
+			t.Errorf("%s opens with %q; it should open with 'What you are building'", slug, heads[0])
+		}
+		if heads[len(heads)-1] != "Done when" {
+			t.Errorf("%s ends with %q; it should end with 'Done when'", slug, heads[len(heads)-1])
+		}
+		for _, want := range required {
+			found := false
+			for _, h := range heads {
+				if h == want {
+					found = true
+				}
+			}
+			if !found {
+				t.Errorf("%s has no %q section", slug, want)
+			}
+		}
+	}
+}

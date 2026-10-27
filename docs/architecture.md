@@ -1,8 +1,8 @@
 # Architecture
 
-Kata has two halves. One is the application you build. The other is the tool that
-checks it. The checks build your binary and run it, so nothing reaches inside your
-code and your internal design is yours.
+Kata has two halves. One is the agent you build in `agent/`. The other is the tool that
+checks it. The tool builds your binary and runs it, so nothing reaches inside your code
+and the internal design is yours.
 
 ```mermaid
 flowchart LR
@@ -36,24 +36,24 @@ flowchart LR
     G --> H
 ```
 
-The fake server is a real HTTP server. It binds a socket, parses your request,
-checks your headers, and writes Server-Sent Events with real chunk boundaries.
-Only the content of the reply is scripted. That is the whole design: replace the
-model, keep the wire.
+`internal/fake` is a real HTTP server. It binds a socket, reads your request, checks your
+headers, and writes Server-Sent Events with real chunk boundaries. Only the words in the
+reply are fixed. When you point the same client at Ollama, nothing changes but the address.
 
 ## Repository layout
 
 | Path | Role |
 |---|---|
 | `agent/` | The agent you build. The only directory a learner edits. |
-| `starter/` | The initial state of `agent/`. Used to grade chapter 01 and by `kata reset`. |
-| `reference/chNN/` | Overlay of the files as they must be after chapter NN. |
-| `chapters/NN-slug/` | `README.md`, `overview.md`, `problem.md`, `example.md`, `checks/`. |
-| `internal/fake/` | Scripted OpenAI-compatible server. It stands in for the model. |
-| `internal/grader/` | Case DSL, bounded execution, report, diffs. |
-| `internal/hints/` | The three-rung hint ladder, keyed by chapter and case. |
-| `cmd/kata/` | The CLI: `submit`, `read`, `hint`, `list`, `progress`, `verify`, `reset`. |
-| `docs/` | Architecture, chapter format, writing style. |
+| `starter/` | The state of `agent/` before chapter 01. Used to grade chapter 01 and by `kata reset`. |
+| `reference/chNN/` | Only the files chapter NN changes. Applied in order. |
+| `chapters/NN-slug/` | `README.md` (task, mechanism, checks, hints), `example.md` (the finished code), `checks/`, `title`. |
+| `internal/fake/` | Scripted OpenAI-compatible server, and a scripted MCP server. |
+| `internal/blackbox/` | Builds your binary and runs it, so checks see a program and not a package. |
+| `internal/grader/` | Cases, bounded execution, the report, the diff. |
+| `internal/hints/` | Three hints per case, keyed by chapter and case id. |
+| `cmd/kata/` | The CLI: `submit`, `read`, `hint`, `list`, `progress`, `verify`, `reset`, `site`, `ui`, `watch`, `doctor`. |
+| `docs/` | Architecture, chapter format, writing style, and how other harnesses are built. |
 
 ## A submit run
 
@@ -81,34 +81,30 @@ sequenceDiagram
     end
 ```
 
-A build error is reported as "not ready". It never counts as a failed case,
-because a learner who mistyped an import has not got the logic wrong.
+A build error is reported as "not ready", never as failed cases. Someone who mistyped an
+import has not got the logic wrong, and the two failures need different responses.
 
 ## How chapters relate
 
-Chapters are cumulative. Chapter NN's code is a subset of chapter NN+1's. That
-property is what makes "your earlier chapters stay green" a guarantee instead of
-a hope.
+Chapters are cumulative. Chapter NN's code contains everything chapter NN-1 established.
+That is what makes "your earlier chapters stay green" a fact rather than a hope.
 
 ```mermaid
 flowchart LR
     S["starter/<br/>all stubs"] --> A1["reference/ch01"]
     A1 --> A2["reference/ch02"]
     A2 --> A3["reference/ch03"]
-    A3 --> A4["reference/ch04"]
-    A4 --> D["..."]
-
-    A1 -. "before state for ch02" .-> A2
-    A2 -. "before state for ch03" .-> A3
+    A3 --> D["..."]
 ```
 
 The state before chapter NN is derived by applying `reference/ch01` through
-`reference/chNN-1`. It is not stored, so it cannot drift.
+`reference/chNN-1`. Nothing is stored, so nothing can drift. `reference/chNN` holds only
+the files that chapter changes: chapter 14 ships one file, chapter 10 ships one.
 
-`kata verify` grades every chapter twice: once against its after state, which
-must pass, and once against its before state, which must fail at least one case.
-A chapter whose starter passes grades nothing. A chapter whose reference fails
-cannot be completed. Both are caught offline.
+`kata verify` grades every chapter twice: once against its after state, which must pass,
+and once against its before state, which must fail at least one case. A chapter whose
+starter passes grades nothing. A chapter whose reference fails cannot be completed. Both
+are caught offline, and both have happened during development.
 
 ## The grading pipeline
 
@@ -124,58 +120,35 @@ flowchart TD
     G --> I["report JSON<br/>cases, durations, errors"]
     H --> I
     I --> J{all passed?}
-    J -- yes --> K["record progress<br/>print next chapter"]
+    J -- yes --> K["record progress<br/>print the next chapter"]
     J -- no --> L["list failed case ids<br/>point at hints"]
 ```
 
-Every case runs with a timeout and a panic barrier. A harness that blocks costs
-one case with its name attached, not the whole chapter.
+Every case runs with a timeout and a panic barrier. A program that blocks costs one case,
+with its name attached, rather than the whole chapter.
 
 ## The interfaces
 
-The harness is built around six interfaces. Chapters 05 to 11 add implementations
-of them; they do not rewrite the loop.
+Four interfaces carry the agent, and each exists because a later chapter needed it.
 
-| Interface | Method | Implemented by |
+| Interface | Where | What it allows |
 |---|---|---|
-| `Provider` | `Chat(ctx, Request) (Message, Usage, error)` | chapter 01, extended in 02 |
-| `Tool` | `Name`, `Description`, `Schema`, `Execute` | chapter 03 |
-| `Contributor` | `Contribute(ctx) (string, error)`, appended to the system prompt | chapter 05 (context files), 09 (skill catalogue) |
-| `Trimmer` | `Fit([]Message, budget) ([]Message, error)` | chapter 07 |
-| `Steering` | `Drain() []Message`, polled after each tool batch | chapter 08 |
-| `Recorder` | `Append(Event) error`, `Load(id) ([]Message, error)` | chapter 06 |
-| `ToolSource` | `Tools(ctx) ([]Tool, error)`, merged into the registry | chapter 11 (subagent), 12 (MCP) |
+| `Provider` | `agent/types.go` | one method, `Chat`. The interface the checks use. |
+| `StreamingProvider` | `agent/loop.go` | `Provider` plus `Stream`, so a caller can see text as it arrives |
+| `Tool` | `agent/types.go` | a name, a description, a schema, and `Execute` |
+| `Contributor` | `agent/prompt.go` | a section for the system prompt, so skills and `AGENTS.md` do not edit the builder |
+| `Recorder` | `agent/session.go` | append and load a conversation, so the loop does not know about files |
 
-```mermaid
-flowchart TD
-    LOOP["loop"]
-    LOOP -->|"request"| PROV["Provider"]
-    LOOP -->|"dispatch"| REG["tool registry"]
-    REG --> TOOLS["Tool: read, write, bash"]
-    REG --> SRC["ToolSource: subagent, MCP"]
-    LOOP -->|"system prompt"| CONTRIB["Contributor"]
-    LOOP -->|"before send"| TRIM["Trimmer"]
-    LOOP -->|"after tool batch"| STEER["Steering"]
-    LOOP -->|"every event"| REC["Recorder"]
-```
+Two properties matter more than the list.
 
-A change that makes a later chapter edit `loop.go` is a design error, not a
-scheduling problem. These interfaces exist so the course stays additive.
+**The interfaces are narrow on purpose.** `Provider` has one method. Streaming was added by
+declaring a wider interface beside it, so a provider that cannot stream is still a provider
+and chapters 01 to 03 keep compiling.
 
-Two honest notes about these interfaces.
-
-**Production harnesses do not define most of them.** pi and PiG use concrete
-session types, not a session interface. crush exposes services
-(`session.Service`, `message.Service`) rather than a registry. The interfaces
-here are interfaces for teaching, chosen so that chapters stay additive and so a
-check can substitute a scripted implementation. They are good design, not
-doctrine.
-
-**The provider interface hides the stream on purpose.** `Chat` returns one finished message,
-which hides the stream. That is the right compression for chapters 01 to 03.
-Chapter 04 refactors the same parser into a `Stream` call that reports deltas as
-they arrive, and keeps `Chat` as a thin collect-the-stream wrapper. Nothing about
-the wire changes; only what the caller can see while it arrives.
+**Production harnesses do not define most of these.** pi and PiG use concrete session
+types rather than a session interface. crush exposes services instead of a registry. These
+are interfaces for teaching: they keep the chapters additive and they let a check swap in a
+scripted implementation.
 
 Where to read the real thing, by concern:
 
@@ -183,45 +156,24 @@ Where to read the real thing, by concern:
 |---|---|---|
 | the loop, event order, tool batching | PiG `agent/agent_loop.go` | crush, whose loop lives in `charm.land/fantasy` |
 | permission policy as a first-class service | crush `internal/permission/` | pi or PiG, which expose hooks only |
-| MCP over stdio, hand-rolled | PiG/pi MCP clients | crush, which uses the official Go SDK |
+| MCP over stdio, hand-rolled | PiG and pi MCP clients | crush, which uses the official Go SDK |
 | provider adapters | pi `packages/ai/src/api/` | none |
 
 ## Grading policy
 
-Two drivers, one rule. Grade the largest thing that can carry the claim.
+Two drivers, one rule: grade the largest thing that can carry the claim.
 
-| Claim type | Driver | Why |
+| Claim | Driver | Why |
 |---|---|---|
-| "the program answers a prompt" | black box | only the process proves it is an application |
-| "the program runs a tool and continues" | black box | the loop, the registry and the wire all participate |
-| "the session resumes with prior turns" | black box | needs a real process, a real file, a second run |
-| "the request stays under the budget" | black box | inspect the third request the program sent |
-| "this pure transform is correct" | function | no process needed, and the diff is far more precise |
-| "all 40 combinations of chunk boundaries" | function | one process per split is 40 processes for no realism |
+| the program answers a prompt | black box | only a process proves it is an application |
+| the program runs a tool and continues | black box | the loop, the registry and the wire all participate |
+| the session resumes with prior turns | black box | needs a real process, a real file, a second run |
+| the request stays under the budget | black box | inspect the third request the program sent |
+| this pure transform is correct | function | no process needed, and the diff is more precise |
+| all 40 combinations of chunk boundaries | function | 40 processes buys no realism |
 
-Black box is the default. It is the only driver that can prove the thing you
-built runs, and it leaves the internal design free.
-
-Function level is the exception, and it needs a pinned surface: a small exported
-function whose signature the chapter states up front. Two rules keep it honest:
-
-1. The pinned surface is the smallest possible type. If a `[]Message` in and
-   `[]Message` out can express it, do not pin anything larger.
-2. A pinned function is a contract, not an architecture. The chapter says what
-   it must do, never how it is built.
-
-A chapter that mixes the two declares both, case by case:
-
-```
-checks/ch07_test.go
-  budget-ceiling      black box   run the program, inspect request 3
-  budget-orphans      black box   inspect every request for unpaired calls
-  estimate-tokens     function    EstimateTokens, pinned in agent/contract.go
-```
-
-Neither driver is allowed to weaken the other. A black-box case never asserts on
-a log line the program could fake, and a function case never stands in for a
-behaviour a user would notice.
+The course uses black box almost everywhere. Every chapter's checks build the binary and
+run it.
 
 ## Determinism
 
@@ -229,20 +181,20 @@ behaviour a user would notice.
 |---|---|---|
 | Process | nothing: your binary runs for real | the program works when invoked |
 | Transport | HTTP server speaking SSE | your wire code is correct |
-| Behaviour | scripted model decisions | your loop, tools, and context logic |
+| Behaviour | scripted model decisions | your loop, tools and context logic |
 | Output | full request traces, per case | nothing drifted silently |
 
-There is no layer that proves the agent is good. Quality needs a real model,
-money, and judgement. Kata grades correctness of the harness, and says so.
+No layer proves the agent is *good*. Quality needs a real model, money and judgement. Kata
+grades whether the harness is correct, and says so.
 
 ## Adding a chapter
 
-1. `chapters/NN-slug/checks/chNN_test.go` with cases in the `grader.Suite` DSL.
-2. `internal/hints/hints.go` entries, three rungs each. The completeness test
-   fails if a case has no ladder or a ladder has no case.
-3. `reference/chNN/` with only the files this chapter changes.
-4. `overview.md`, `problem.md`, `example.md`, `README.md`.
-5. `kata verify`. It must be clean before the chapter counts as written.
+1. `chapters/NN-slug/` with `README.md`, `example.md`, `title` and `checks/chNN_test.go`.
+2. `internal/hints/hints.go` gets an `"NN"` entry with three hints per case. The
+   completeness test fails on a case with no ladder, or a ladder with no case.
+3. `reference/chNN/` with only the files the chapter changes.
+4. `kata verify` clean. Nothing else in the repository needs editing: the chapter list, the
+   site sidebar, the part grouping and the grading order all come from the directory names.
 
 ## Glossary
 
@@ -251,6 +203,6 @@ money, and judgement. Kata grades correctness of the harness, and says so.
 | Harness | The code around a model that turns text into actions: provider, tools, loop, state. |
 | Interface | A small set of methods you can swap for another implementation. |
 | Scripted model | A fixture that replays a fixed reply. Not a mock of your code. |
-| Case | One graded assertion with an id, a reason, and three hint rungs. |
+| Case | One graded assertion with an id, a reason, and three hints. |
 | Before state | The harness with chapters NN and later removed. |
 | After state | The harness with chapters 01 through NN applied. |
