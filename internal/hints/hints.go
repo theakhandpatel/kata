@@ -15,6 +15,48 @@ import "sort"
 
 // Table maps chapter number -> case id -> the three rungs.
 var Table = map[string]map[string][3]string{
+	"19": {
+		"creates-a-session": {
+			"A conversation needs an identity before it can be listed.",
+			"Open a database, create the tables, and insert a session row on the first run.",
+			"OpenStore runs the schema with CREATE TABLE IF NOT EXISTS. Create inserts the id, title and two timestamps.",
+		},
+		"lists-sessions": {
+			"A directory of files named by hand is a puzzle.",
+			"Print a table of sessions, most recently used first.",
+			"SELECT id, title, created, updated and a COUNT of messages, ORDER BY updated DESC, then print one line each.",
+		},
+		"title-from-first-prompt": {
+			"A list of timestamps is unreadable.",
+			"Use the first prompt as the title, trimmed to a readable length.",
+			"TitleFromPrompt collapses whitespace and cuts at 60 runes. Set it when the session is created.",
+		},
+		"resumes-by-id": {
+			"The point of storage is returning to an old conversation.",
+			"Add a -resume flag that loads a session by id before the loop runs.",
+			"SELECT the messages for that id ORDER BY ordinal, and prepend them to the history after the system message.",
+		},
+		"continue-uses-latest": {
+			"Typing an id every time is the chore.",
+			"Add -continue that picks the most recently updated session.",
+			"SELECT id FROM sessions ORDER BY updated DESC LIMIT 1, then resume that id. Touch updated on every append, or the ordering never changes.",
+		},
+		"tool-calls-round-trip": {
+			"Both halves of a tool pair have to survive the database.",
+			"Store the tool calls as JSON on the assistant row, and the id on the tool row.",
+			"Marshal m.ToolCalls into a text column, and read it back with json.Unmarshal. Keep tool_call_id and name as their own columns.",
+		},
+		"two-sessions-do-not-mix": {
+			"A store with no session column is one long thread.",
+			"Key every message row by session_id, and filter on it when loading.",
+			"messages(session_id, ordinal) with a UNIQUE constraint, and every SELECT filtered by session_id.",
+		},
+		"unknown-id-is-reported": {
+			"Starting a new conversation under a mistyped id loses the thread.",
+			"Check the id exists before loading, and exit non-zero when it does not.",
+			"SELECT 1 FROM sessions WHERE id = ?, and return an error like 'no such session: <id>' when there are no rows.",
+		},
+	},
 	"18": {
 		"required-fields-always-present": {
 			"A server needs all three to answer.",

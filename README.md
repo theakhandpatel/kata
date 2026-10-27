@@ -11,7 +11,7 @@ around it was.
 
 This is a course about the program around it.
 
-Over eighteen chapters you write one in Go, from an empty stub to something that can
+Over nineteen chapters you write one in Go, from an empty stub to something that can
 read a file, run a test, remember yesterday's conversation, and hand a whole job to a
 second copy of itself. You start by making a single HTTP request to a model. You end
 with 2,000 lines you understand completely, and you can point at the line that decides
@@ -99,6 +99,7 @@ about it.
 | 16 | The tool schema budget | twenty tools, four schemas, all reachable |
 | 17 | Skill scopes | a skill in the repo beats a general one with the same name |
 | 18 | Building the request body | a request with no limit carries no limit key |
+| 19 | Session storage | conversations in SQLite: list them, resume one, continue the last |
 
 Chapter 13 is optional. Chapters 01 to 05 already give you an agent you can point at
 Ollama or any OpenAI-compatible endpoint and use.
@@ -165,7 +166,7 @@ Design notes, diagrams, and the grading pipeline are in
 Go 1.26 or newer.
 
 The agent you build uses only the standard library, and keeps doing so through all
-eighteen chapters. The `kata` tool depends on Bubble Tea and Lip Gloss for the terminal
+nineteen chapters. The `kata` tool depends on Bubble Tea and Lip Gloss for the terminal
 interface. Publishing the site additionally needs Node, for VitePress; nothing you do
 as a learner does.
 
