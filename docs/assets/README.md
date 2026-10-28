@@ -28,11 +28,15 @@ The pipeline:
 3. **Crop and pad.** The tight bounding box of every pixel with alpha above 8, which gave
    855 by 853 pixels starting at (576, 123), then a 4% transparent margin so no artwork
    touches the canvas edge. Without the margin, 57 visible pixels sat on the border.
-4. **Downscale.** Box averaging rather than nearest neighbour, done in premultiplied alpha
-   so transparent pixels do not darken the edge toward black.
-5. **Quantise.** Colour was reduced to 8 levels per channel, with alpha kept exact. That cut
-   the PNG from 341 KB to 103 KB with no visible change at these sizes.
-6. **Square pad.** `logo-128.png` is centred on a square canvas with 6% margin so it never
+4. **Downscale.** Box averaging rather than nearest neighbour. Colour is averaged weighted
+   by alpha using non-premultiplied 8-bit samples, then that weight is divided out exactly
+   once. Dividing out alpha twice darkens the edge, which was the first version of this
+   program and is visible as a dark fringe.
+5. **Re-bleed.** Averaging coverage at a smaller size reintroduces edge smear, so the
+   colour-bleed pass runs again at the final size.
+6. **Quantise.** Colour was reduced to 8 levels per channel, with alpha kept exact. That cut
+   the PNG from 341 KB to 89.6 KB with no visible change at these sizes.
+7. **Square pad.** `logo-128.png` is centred on a square canvas with 6% margin so it never
    touches the edge of a navigation bar.
 
 ## Verification
@@ -43,9 +47,9 @@ Measured, not assumed:
 |---|---|
 | Transparent pixels | 82.2% of the source |
 | Corner pixels | fully transparent on all four corners |
-| Boundary luminance | edges matted against dark, 0.0% whitish anti-alias pixels |
-| White halo | none, verified numerically and by an independent visual review |
-| Bright-rim pixels over a dark page | 7, down from 1925 before the de-matte |
+| Edge accuracy, 512 px | mean error 0.0 against the predicted composite, 10 of 5171 pixels off by more than 8 levels |
+| Edge accuracy, 128 px | mean error 0.1, 39 of 1696 pixels off |
+| White halo | none, on black, white and checkered backgrounds |
 | Artwork touching the canvas edge | 0, down from 57 before the pad |
 | Opaque mean luminance | 147.6, so it reads on a light page (contrast 107) and a dark one (contrast 134) |
 | Size at 128 px | still recognisable |
@@ -53,8 +57,8 @@ Measured, not assumed:
 ## Regenerating
 
 The generator is not committed, because it was a one-off. If the source image changes, redo
-the five steps above with any image library: flood fill from the borders at tolerance 34,
-crop to non-transparent pixels, box-downscale, quantise, pad.
+the seven steps above with any image library: flood fill from the borders at tolerance 34,
+bleed edge colour, crop, pad, box-downscale in alpha-weighted space, bleed again, quantise.
 
 If you replace the art, update the width in the README's `<img>` tag and re-run
 `miyagi site` so the copied files under the site's public directory are refreshed.
