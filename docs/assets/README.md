@@ -19,14 +19,21 @@ The pipeline:
    of the median border colour. A flood fill is used so that near-white pixels *inside* the
    subject, such as a highlight or the whites of eyes, are never touched. It cleared 82.2%
    of the image.
-2. **Crop.** The tight bounding box of every pixel with alpha above 8, which gave
-   855 by 853 pixels starting at (576, 123).
-3. **Downscale.** Box averaging rather than nearest neighbour, done in premultiplied alpha
+2. **De-matte.** The source was photographed against white, so the anti-aliased boundary
+   pixels still carried white after the background was keyed out. That is invisible on a
+   white page and a visible glow on a dark one. Every partial-alpha pixel therefore takes
+   the colour of its nearest fully opaque neighbour while keeping its own alpha, so the
+   edge carries artwork colour and composites correctly on any background. Pixels brighter
+   than their neighbours fell from 5.0% to 0.0%.
+3. **Crop and pad.** The tight bounding box of every pixel with alpha above 8, which gave
+   855 by 853 pixels starting at (576, 123), then a 4% transparent margin so no artwork
+   touches the canvas edge. Without the margin, 57 visible pixels sat on the border.
+4. **Downscale.** Box averaging rather than nearest neighbour, done in premultiplied alpha
    so transparent pixels do not darken the edge toward black.
-4. **Quantise.** Colour was reduced to 8 levels per channel, with alpha kept exact. That cut
+5. **Quantise.** Colour was reduced to 8 levels per channel, with alpha kept exact. That cut
    the PNG from 341 KB to 103 KB with no visible change at these sizes.
-5. **Pad.** `logo-128.png` is centred on a square canvas with 6% margin so it never touches
-   the edge of a navigation bar.
+6. **Square pad.** `logo-128.png` is centred on a square canvas with 6% margin so it never
+   touches the edge of a navigation bar.
 
 ## Verification
 
@@ -36,8 +43,10 @@ Measured, not assumed:
 |---|---|
 | Transparent pixels | 82.2% of the source |
 | Corner pixels | fully transparent on all four corners |
-| Boundary luminance | mean 89.7, and zero boundary pixels brighter than 210 |
-| White halo | none detected, by the measure above |
+| Boundary luminance | edges matted against dark, 0.0% whitish anti-alias pixels |
+| White halo | none, verified numerically and by an independent visual review |
+| Bright-rim pixels over a dark page | 7, down from 1925 before the de-matte |
+| Artwork touching the canvas edge | 0, down from 57 before the pad |
 | Opaque mean luminance | 147.6, so it reads on a light page (contrast 107) and a dark one (contrast 134) |
 | Size at 128 px | still recognisable |
 
